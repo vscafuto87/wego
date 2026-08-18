@@ -175,12 +175,6 @@ Palette per ambiente (`theme/themes.js`), tema chiaro perché l'app si legge al 
 | city | #EFEBEF | #FBF9FB | #241F2B | #6F6878 | #DBD3DE | #6A4A9C | #B5502F | #E4DDE7 |
 | wild | #EBEEE4 | #F9FBF5 | #1D2618 | #68755E | #D5DCC7 | #4B7A2B | #A8621F | #DFE5D3 |
 
-Elemento firma: il **terreno**, curve SVG generate proceduralmente dietro l'header e le
-card dei viaggi — creste per montagna e natura, linee batimetriche per il mare. Sotto la
-tab attiva c'è una barra a tre bande accent/bianco/accent, come un segnavia CAI.
-Tutto il resto resta silenzioso: niente ombre, niente gradienti, niente animazioni oltre
-il feedback al tocco. Rispettare `prefers-reduced-motion`.
-
 Mobile-first: si progetta a 380px e si allarga fino a `max-w-2xl` centrato. Aree
 toccabili da almeno 44px. Focus visibile sempre.
 
@@ -224,3 +218,18 @@ invitare, indicatore di stato (sincronizzato / in coda / offline).
 giorno, mappa dei luoghi, esportazione dell'itinerario in calendario.
 
 Non anticipare le fasi successive mentre lavori su quella corrente.
+
+---
+
+## Design Context
+
+Il context strategico e visivo dettagliato per lo skill `impeccable` vive in due file
+a parte, generati da `/impeccable init`:
+
+- **[PRODUCT.md](PRODUCT.md)** — registro, utenti, scopo, personalità di brand,
+  anti-riferimenti, principi di design strategici.
+- **[DESIGN.md](DESIGN.md)** — token e sistema visivo (le 4 palette ambiente, la
+  gerarchia tipografica, i componenti), con sidecar in `.impeccable/design.json`.
+
+Le decisioni bloccate in questo file restano la fonte di verità in caso di conflitto;
+quei due file la espandono, non la sostituiscono.
