@@ -2,6 +2,18 @@ const PALETTES = ['mountain', 'sea', 'city', 'wild']
 const ICONS = ['map', 'check', 'note', 'ticket', 'food', 'bed', 'bus', 'star', 'people']
 const SECTION_TYPES = ['cards', 'checklist', 'notes']
 
+const DAY_ITEM_KINDS = ['', 'sentiero', 'spiaggia', 'pasto']
+
+const KIND_FIELDS = {
+  sentiero: ['durata', 'dislivello', 'difficolta'],
+  spiaggia: ['accesso', 'servizi'],
+  pasto: ['luogo', 'prenotato']
+}
+
+export function dayItemFieldsForKind(kind) {
+  return KIND_FIELDS[kind] ?? []
+}
+
 function makeId() {
   return crypto.randomUUID()
 }
@@ -16,15 +28,27 @@ function arr(value) {
 
 function normalizeDayItem(raw) {
   const item = raw && typeof raw === 'object' ? raw : {}
-  return {
+  const kind = DAY_ITEM_KINDS.includes(item.kind) ? item.kind : ''
+  const base = {
     id: makeId(),
     time: str(item.time),
     title: str(item.title),
+    kind,
     detail: str(item.detail),
     link: str(item.link),
     modifiedBy: str(item.modifiedBy),
     modifiedAt: str(item.modifiedAt)
   }
+  if (kind === 'sentiero') {
+    return { ...base, durata: str(item.durata), dislivello: str(item.dislivello), difficolta: str(item.difficolta) }
+  }
+  if (kind === 'spiaggia') {
+    return { ...base, accesso: str(item.accesso), servizi: str(item.servizi) }
+  }
+  if (kind === 'pasto') {
+    return { ...base, luogo: str(item.luogo), prenotato: item.prenotato === true }
+  }
+  return base
 }
 
 function normalizeDay(raw) {
