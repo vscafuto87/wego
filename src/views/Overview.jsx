@@ -73,6 +73,11 @@ export default function Overview({ trip, onUpdate, onDelete, syncActive, onOpenA
     }
   }
 
+  function isFixedSection(section) {
+    if (section.type === 'transport' || section.type === 'lodging' || section.type === 'map') return true
+    return section.type === 'cards' && section.title === 'Ristoranti'
+  }
+
   return (
     <div className="flex flex-col gap-6 pt-5">
       <div className="flex gap-6">
@@ -118,7 +123,7 @@ export default function Overview({ trip, onUpdate, onDelete, syncActive, onOpenA
           </button>
         </div>
         <ul className="mt-2 flex flex-col divide-y divide-[var(--line)] bg-[var(--card)] rounded-[24px] shadow-[0_1px_2px_rgb(var(--ink-rgb)/0.05)] overflow-hidden">
-          {trip.sections.map((section) => {
+          {trip.sections.filter((s) => !isFixedSection(s)).map((section) => {
             const Icon = ICONS[section.icon] ?? Star
             return (
               <li key={section.id} className="flex items-center gap-3 px-4 py-3.5">
@@ -130,7 +135,7 @@ export default function Overview({ trip, onUpdate, onDelete, syncActive, onOpenA
               </li>
             )
           })}
-          {trip.sections.length === 0 && <li className="px-4 py-3.5 text-base text-[var(--muted)]">Nessuna sezione ancora.</li>}
+          {trip.sections.filter((s) => !isFixedSection(s)).length === 0 && <li className="px-4 py-3.5 text-base text-[var(--muted)]">Nessuna sezione ancora.</li>}
         </ul>
       </div>
 
