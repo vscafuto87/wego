@@ -161,6 +161,24 @@ function normalizeSection(raw) {
   return { ...base, items: arr(section.items).map(normalizeCardItem) }
 }
 
+const FIXED_SECTIONS = [
+  { title: 'Trasporti', icon: 'bus', type: 'transport' },
+  { title: 'Pernottamento', icon: 'bed', type: 'lodging' },
+  { title: 'Ristoranti', icon: 'food', type: 'cards' },
+  { title: 'Mappa', icon: 'map', type: 'map' }
+]
+
+function withFixedSections(sections) {
+  const remaining = [...sections]
+  const fixed = FIXED_SECTIONS.map((f) => {
+    const idx = remaining.findIndex((s) => s.type === f.type && (f.type !== 'cards' || s.title === f.title))
+    if (idx === -1) return normalizeSection({ title: f.title, icon: f.icon, type: f.type })
+    const [match] = remaining.splice(idx, 1)
+    return match
+  })
+  return [...fixed, ...remaining]
+}
+
 // Accetta un oggetto viaggio "sporco" (da import, seed o Supabase), riempie i campi
 // mancanti e genera gli id locali. Lancia solo se manca il nome: è l'unico campo
 // senza cui il viaggio non ha senso da mostrare.
@@ -181,7 +199,7 @@ export function normalizeTrip(raw) {
     palette: PALETTES.includes(trip.palette) ? trip.palette : '',
     people: arr(trip.people).map(str),
     days: arr(trip.days).map(normalizeDay),
-    sections: arr(trip.sections).map(normalizeSection)
+    sections: withFixedSections(arr(trip.sections).map(normalizeSection))
   }
 }
 

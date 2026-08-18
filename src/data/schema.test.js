@@ -16,9 +16,12 @@ describe('normalizeTrip — attribuzione', () => {
     expect(trip.days[0].modifiedBy).toBe('')
     expect(trip.days[0].modifiedAt).toBe('')
     expect(trip.days[0].items[0].modifiedBy).toBe('')
-    expect(trip.sections[0].items[0].modifiedBy).toBe('')
-    expect(trip.sections[1].items[0].modifiedBy).toBe('')
-    expect(trip.sections[2].modifiedBy).toBe('')
+    const ristoranti = trip.sections.find((s) => s.type === 'cards' && s.title === 'Ristoranti')
+    const daFare = trip.sections.find((s) => s.type === 'checklist')
+    const note = trip.sections.find((s) => s.type === 'notes')
+    expect(ristoranti.items[0].modifiedBy).toBe('')
+    expect(daFare.items[0].modifiedBy).toBe('')
+    expect(note.modifiedBy).toBe('')
   })
 
   it('preserva modifiedBy/modifiedAt quando presenti', () => {
@@ -41,7 +44,8 @@ describe('exportTrip — attribuzione', () => {
     const exported = exportTrip(trip)
     expect(exported.days[0].modifiedBy).toBe('Vincenzo')
     expect(exported.days[0].items[0].modifiedBy).toBe('Giulia')
-    expect(exported.sections[0].modifiedBy).toBe('Giulia')
+    const notesSection = exported.sections.find((s) => s.type === 'notes')
+    expect(notesSection.modifiedBy).toBe('Giulia')
   })
 })
 
@@ -212,5 +216,61 @@ describe('normalizeTrip — sezione map', () => {
   it('campi mancanti diventano stringa vuota', () => {
     const section = tripWithMapSection([{ name: 'Punto' }]).sections.find((s) => s.type === 'map')
     expect(section.items[0]).toMatchObject({ name: 'Punto', category: '', mapsLink: '', note: '' })
+  })
+})
+
+describe('normalizeTrip — sezioni fisse garantite', () => {
+  it('un viaggio senza sezioni ha comunque le 4 fisse, in ordine, vuote', () => {
+    const trip = normalizeTrip({ name: 'X' })
+    expect(trip.sections.map((s) => [s.type, s.title])).toEqual([
+      ['transport', 'Trasporti'],
+      ['lodging', 'Pernottamento'],
+      ['cards', 'Ristoranti'],
+      ['map', 'Mappa']
+    ])
+    expect(trip.sections.every((s) => s.items.length === 0)).toBe(true)
+  })
+
+  it('una sezione Ristoranti esistente viene promossa, non duplicata', () => {
+    const trip = normalizeTrip({
+      name: 'X',
+      sections: [{ title: 'Ristoranti', icon: 'food', type: 'cards', items: [{ title: 'Da Assunta' }] }]
+    })
+    const ristoranti = trip.sections.filter((s) => s.type === 'cards' && s.title === 'Ristoranti')
+    expect(ristoranti).toHaveLength(1)
+    expect(ristoranti[0].items[0].title).toBe('Da Assunta')
+  })
+
+  it('una sezione cards con titolo diverso da Ristoranti non viene confusa con quella fissa', () => {
+    const trip = normalizeTrip({
+      name: 'X',
+      sections: [{ title: 'Riserve e alternative', icon: 'star', type: 'cards', items: [{ title: 'Piano B' }] }]
+    })
+    const ristoranti = trip.sections.find((s) => s.type === 'cards' && s.title === 'Ristoranti')
+    const riserve = trip.sections.find((s) => s.title === 'Riserve e alternative')
+    expect(ristoranti.items).toHaveLength(0)
+    expect(riserve.items[0].title).toBe('Piano B')
+  })
+
+  it('sezioni transport/lodging/map esistenti vengono promosse per tipo, non duplicate', () => {
+    const trip = normalizeTrip({
+      name: 'X',
+      sections: [{ title: 'I nostri spostamenti', icon: 'bus', type: 'transport', items: [{ mode: 'treno' }] }]
+    })
+    const trasporti = trip.sections.filter((s) => s.type === 'transport')
+    expect(trasporti).toHaveLength(1)
+    expect(trasporti[0].items[0].mode).toBe('treno')
+  })
+
+  it('le sezioni libere restano, dopo le 4 fisse, nell\'ordine originale', () => {
+    const trip = normalizeTrip({
+      name: 'X',
+      sections: [
+        { title: 'Zaino del giorno', icon: 'check', type: 'checklist', items: [] },
+        { title: 'Note', icon: 'note', type: 'notes', text: '' }
+      ]
+    })
+    const free = trip.sections.slice(4)
+    expect(free.map((s) => s.title)).toEqual(['Zaino del giorno', 'Note'])
   })
 })
