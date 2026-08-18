@@ -12,7 +12,12 @@ export const supabase = isCloudConfigured ? createClient(SUPABASE_URL, SUPABASE_
 
 export async function sendMagicLink(email) {
   if (!isCloudConfigured) throw new Error('La sincronizzazione non è configurata su questo dispositivo.')
-  const { error } = await supabase.auth.signInWithOtp({ email })
+  // Il magic link deve riportare l'utente dov'era: per un invitato è /j/<codice>,
+  // altrimenti il redirect di default lo scarica sulla lista dei viaggi.
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: window.location.href }
+  })
   if (error) throw new Error(error.message)
 }
 
