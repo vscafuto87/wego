@@ -3,7 +3,7 @@ import { ArrowLeft, Copy, Check } from 'lucide-react'
 import { themeStyle } from '../theme/themes.js'
 import Btn from '../components/Btn.jsx'
 
-const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-2xl px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
+const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-2xl px-4 py-3 text-base font-mono focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
 
 const PROMPT = `Trasforma questi appunti di viaggio grezzi in un JSON con questo schema esatto (nessun campo in più, nessuno in meno):
 
@@ -64,19 +64,19 @@ export default function ImportView({ onImport, onCancel }) {
   return (
     <div style={themeStyle('mountain')} className="min-h-screen bg-[var(--paper)] text-[var(--ink)] font-sans">
       <header className="px-5 pt-8 pb-4 flex items-center gap-3 max-w-2xl mx-auto">
-        <button onClick={onCancel} aria-label="Annulla" className="min-h-11 min-w-11 -ml-2 flex items-center justify-center rounded-full bg-[var(--tint)] active:scale-[0.97] transition-transform duration-150 ease-out">
-          <ArrowLeft size={20} />
+        <button onClick={onCancel} aria-label="Annulla" className="h-12 w-12 -ml-2 flex items-center justify-center rounded-full bg-[var(--tint)] active:scale-[0.97] transition-transform duration-150 ease-out">
+          <ArrowLeft size={21} />
         </button>
-        <h1 className="font-display text-2xl">Carica il viaggio</h1>
+        <h1 className="font-display font-semibold text-3xl">Carica il viaggio</h1>
       </header>
 
       <main className="px-5 max-w-2xl mx-auto flex flex-col gap-4 pb-16">
-        <p className="text-sm text-[var(--muted)]">
+        <p className="text-base text-[var(--muted)]">
           Incolla il JSON generato da Claude, oppure copia il prompt e incollalo in una chat insieme ai tuoi appunti grezzi.
         </p>
 
         <Btn variant="secondary" onClick={copyPrompt} className="self-start">
-          {copied ? <Check size={16} /> : <Copy size={16} />} {copied ? 'Copiato' : 'Copia il prompt per Claude'}
+          {copied ? <Check size={17} /> : <Copy size={17} />} {copied ? 'Copiato' : 'Copia il prompt per Claude'}
         </Btn>
 
         <form onSubmit={submit} className="flex flex-col gap-3">
@@ -88,7 +88,7 @@ export default function ImportView({ onImport, onCancel }) {
             rows={14}
             className={inputClass}
           />
-          {error && <p className="text-sm text-[var(--accent)]">{error}</p>}
+          {error && <p className="text-base text-[var(--accent)]">{error}</p>}
           <Btn type="submit">Carica il viaggio</Btn>
         </form>
       </main>

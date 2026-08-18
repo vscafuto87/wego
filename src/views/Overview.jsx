@@ -7,7 +7,7 @@ import Modal from '../components/Modal.jsx'
 import ExportPanel from './ExportPanel.jsx'
 
 const ICONS = { map: Map, check: CheckSquare, note: StickyNote, ticket: Ticket, food: Utensils, bed: Bed, bus: Bus, star: Star, people: Users }
-const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
+const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
 
 function tripStatus(trip) {
   if (!trip.start || !trip.end) return ''
@@ -83,43 +83,43 @@ export default function Overview({ trip, onUpdate, onDelete }) {
       {trip.people.length > 0 && (
         <div>
           <Label>Chi viene</Label>
-          <p className="mt-1 text-sm">{trip.people.join(', ')}</p>
+          <p className="mt-1 text-base">{trip.people.join(', ')}</p>
         </div>
       )}
 
       <div className="flex flex-wrap gap-2">
         <Btn variant="secondary" onClick={openEdit}>
-          <Pencil size={16} /> Modifica
+          <Pencil size={17} /> Modifica
         </Btn>
         <Btn variant="secondary" onClick={() => setExportOpen(true)}>
-          <Share2 size={16} /> Esporta
+          <Share2 size={17} /> Esporta
         </Btn>
         <Btn variant="danger" onClick={removeTrip}>
-          <Trash2 size={16} /> Elimina viaggio
+          <Trash2 size={17} /> Elimina viaggio
         </Btn>
       </div>
 
       <div>
         <div className="flex items-center justify-between">
           <Label>Sezioni</Label>
-          <button onClick={() => setSectionForm({ title: '', icon: 'star', type: 'cards' })} className="min-h-11 flex items-center gap-1 text-sm text-[var(--accent)]">
-            <Plus size={16} /> Aggiungi
+          <button onClick={() => setSectionForm({ title: '', icon: 'star', type: 'cards' })} className="min-h-12 flex items-center gap-1 text-base text-[var(--accent)]">
+            <Plus size={17} /> Aggiungi
           </button>
         </div>
-        <ul className="mt-2 flex flex-col divide-y divide-[var(--line)] bg-[var(--card)] rounded-[20px] shadow-[0_1px_2px_rgb(var(--ink-rgb)/0.05)] overflow-hidden">
+        <ul className="mt-2 flex flex-col divide-y divide-[var(--line)] bg-[var(--card)] rounded-[24px] shadow-[0_1px_2px_rgb(var(--ink-rgb)/0.05)] overflow-hidden">
           {trip.sections.map((section) => {
             const Icon = ICONS[section.icon] ?? Star
             return (
-              <li key={section.id} className="flex items-center gap-3 px-4 py-3">
-                <Icon size={18} className="text-[var(--muted)]" />
-                <span className="flex-1 text-sm">{section.title || 'Senza titolo'}</span>
-                <button onClick={() => removeSection(section)} aria-label={`Elimina ${section.title}`} className="min-h-11 min-w-11 flex items-center justify-center text-[var(--muted)]">
-                  <Trash2 size={16} />
+              <li key={section.id} className="flex items-center gap-3 px-4 py-3.5">
+                <Icon size={19} className="text-[var(--muted)]" />
+                <span className="flex-1 text-base">{section.title || 'Senza titolo'}</span>
+                <button onClick={() => removeSection(section)} aria-label={`Elimina ${section.title}`} className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
+                  <Trash2 size={17} />
                 </button>
               </li>
             )
           })}
-          {trip.sections.length === 0 && <li className="px-4 py-3 text-sm text-[var(--muted)]">Nessuna sezione ancora.</li>}
+          {trip.sections.length === 0 && <li className="px-4 py-3.5 text-base text-[var(--muted)]">Nessuna sezione ancora.</li>}
         </ul>
       </div>
 

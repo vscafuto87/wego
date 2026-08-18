@@ -7,8 +7,8 @@ export default function Empty({ icon: Icon = Compass, title, detail, action, cla
       <div className="flex items-center justify-center h-16 w-16 rounded-full bg-[var(--tint)]">
         <Icon size={26} className="text-[var(--muted)]" strokeWidth={1.5} />
       </div>
-      <p className="font-display text-xl">{title}</p>
-      {detail && <p className="text-sm text-[var(--muted)] max-w-xs">{detail}</p>}
+      <p className="font-display font-semibold text-2xl">{title}</p>
+      {detail && <p className="text-base text-[var(--muted)] max-w-xs">{detail}</p>}
       {action && <div className="mt-2">{action}</div>}
     </div>
   )

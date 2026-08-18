@@ -5,7 +5,7 @@ import Label from '../components/Label.jsx'
 import Modal from '../components/Modal.jsx'
 import Empty from '../components/Empty.jsx'
 
-const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
+const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
 
 function updateSection(trip, sectionId, fn) {
   return { ...trip, sections: trip.sections.map((s) => (s.id === sectionId ? fn(s) : s)) }
@@ -70,9 +70,9 @@ export default function Section({ trip, section, onUpdate }) {
   return (
     <div className="flex flex-col gap-4 pt-5">
       <div className="flex items-center justify-between">
-        <h2 className="font-display text-2xl">{section.title}</h2>
-        <button onClick={() => setHeaderForm({ title: section.title })} aria-label="Rinomina sezione" className="min-h-11 min-w-11 flex items-center justify-center text-[var(--muted)]">
-          <Pencil size={16} />
+        <h2 className="font-display font-semibold text-3xl">{section.title}</h2>
+        <button onClick={() => setHeaderForm({ title: section.title })} aria-label="Rinomina sezione" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
+          <Pencil size={17} />
         </button>
       </div>
 
@@ -81,33 +81,33 @@ export default function Section({ trip, section, onUpdate }) {
           {section.items.length === 0 && <Empty title="Nessuna scheda ancora" detail="Aggiungine una per iniziare." />}
           <div className="flex flex-col gap-3">
             {section.items.map((item) => (
-              <div key={item.id} className="rounded-[20px] p-4 bg-[var(--card)] shadow-[0_1px_2px_rgb(var(--ink-rgb)/0.05),0_10px_24px_-14px_rgb(var(--ink-rgb)/0.25)]">
+              <div key={item.id} className="rounded-[24px] p-5 bg-[var(--card)] shadow-[0_1px_2px_rgb(var(--ink-rgb)/0.05),0_10px_24px_-14px_rgb(var(--ink-rgb)/0.25)]">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="font-display text-lg">{item.title || 'Senza titolo'}</p>
+                  <p className="font-display font-semibold text-xl">{item.title || 'Senza titolo'}</p>
                   <div className="flex gap-1 -mr-2 -mt-1">
                     <button
                       onClick={() => setCardForm({ id: item.id, title: item.title, meta: item.meta, detail: item.detail, link: item.link, tags: item.tags.join(', ') })}
                       aria-label="Modifica scheda"
-                      className="min-h-11 min-w-11 flex items-center justify-center text-[var(--muted)]"
+                      className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]"
                     >
-                      <Pencil size={14} />
+                      <Pencil size={15} />
                     </button>
-                    <button onClick={() => removeCard(item)} aria-label="Elimina scheda" className="min-h-11 min-w-11 flex items-center justify-center text-[var(--muted)]">
-                      <Trash2 size={14} />
+                    <button onClick={() => removeCard(item)} aria-label="Elimina scheda" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
+                      <Trash2 size={15} />
                     </button>
                   </div>
                 </div>
-                {item.meta && <p className="font-mono text-xs text-[var(--muted)] mt-1">{item.meta}</p>}
-                {item.detail && <p className="text-sm mt-2">{item.detail}</p>}
+                {item.meta && <p className="font-mono text-sm text-[var(--muted)] mt-1">{item.meta}</p>}
+                {item.detail && <p className="text-base mt-2">{item.detail}</p>}
                 {item.link && (
-                  <a href={item.link} target="_blank" rel="noreferrer" className="text-sm text-[var(--accent)] underline mt-2 inline-block">
+                  <a href={item.link} target="_blank" rel="noreferrer" className="text-base text-[var(--accent)] underline mt-2 inline-block">
                     Apri il link
                   </a>
                 )}
                 {item.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-2">
                     {item.tags.map((tag) => (
-                      <Label key={tag} className="bg-[var(--tint)] px-2 py-0.5 rounded-full">
+                      <Label key={tag} className="bg-[var(--tint)] px-2.5 py-1 rounded-full">
                         {tag}
                       </Label>
                     ))}
@@ -117,7 +117,7 @@ export default function Section({ trip, section, onUpdate }) {
             ))}
           </div>
           <Btn variant="secondary" onClick={() => setCardForm({ title: '', meta: '', detail: '', link: '', tags: '' })} className="self-start">
-            <Plus size={16} /> Nuova scheda
+            <Plus size={17} /> Nuova scheda
           </Btn>
         </>
       )}
@@ -125,17 +125,17 @@ export default function Section({ trip, section, onUpdate }) {
       {section.type === 'checklist' && (
         <>
           {section.items.length === 0 && <Empty title="Niente da spuntare ancora" detail="Aggiungi la prima voce." />}
-          <ul className="flex flex-col divide-y divide-[var(--line)] bg-[var(--card)] rounded-[20px] shadow-[0_1px_2px_rgb(var(--ink-rgb)/0.05)] overflow-hidden">
+          <ul className="flex flex-col divide-y divide-[var(--line)] bg-[var(--card)] rounded-[24px] shadow-[0_1px_2px_rgb(var(--ink-rgb)/0.05)] overflow-hidden">
             {section.items.map((item) => (
               <li key={item.id} className="flex items-center gap-3 px-4 py-1">
-                <button onClick={() => toggleChecklistItem(item)} aria-pressed={item.done} aria-label={item.done ? 'Segna come da fare' : 'Segna come fatto'} className="min-h-11 min-w-11 flex items-center justify-center">
+                <button onClick={() => toggleChecklistItem(item)} aria-pressed={item.done} aria-label={item.done ? 'Segna come da fare' : 'Segna come fatto'} className="min-h-12 min-w-12 flex items-center justify-center">
                   <span className={`h-5 w-5 rounded border flex items-center justify-center ${item.done ? 'bg-[var(--accent)] border-[var(--accent)]' : 'border-[var(--line)]'}`}>
                     {item.done && <Check size={14} className="text-[var(--paper)]" />}
                   </span>
                 </button>
-                <span className={`flex-1 text-sm ${item.done ? 'line-through text-[var(--muted)]' : ''}`}>{item.text}</span>
-                <button onClick={() => removeChecklistItem(item)} aria-label="Elimina voce" className="min-h-11 min-w-11 flex items-center justify-center text-[var(--muted)]">
-                  <Trash2 size={14} />
+                <span className={`flex-1 text-base ${item.done ? 'line-through text-[var(--muted)]' : ''}`}>{item.text}</span>
+                <button onClick={() => removeChecklistItem(item)} aria-label="Elimina voce" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
+                  <Trash2 size={15} />
                 </button>
               </li>
             ))}
@@ -143,7 +143,7 @@ export default function Section({ trip, section, onUpdate }) {
           <form onSubmit={addChecklistItem} className="flex gap-2">
             <input placeholder="Nuova voce" value={checklistText} onChange={(e) => setChecklistText(e.target.value)} className={`flex-1 ${inputClass}`} />
             <Btn type="submit" variant="secondary">
-              <Plus size={16} />
+              <Plus size={17} />
             </Btn>
           </form>
         </>

@@ -5,7 +5,7 @@ import Label from '../components/Label.jsx'
 import Modal from '../components/Modal.jsx'
 import Empty from '../components/Empty.jsx'
 
-const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
+const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
 const DATE_FMT = new Intl.DateTimeFormat('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })
 
 function formatDate(date) {
@@ -75,15 +75,15 @@ export default function Days({ trip, onUpdate }) {
           <div className="flex items-start justify-between">
             <div>
               <Label>{formatDate(day.date)}</Label>
-              <p className="font-display text-xl">{day.title || 'Senza titolo'}</p>
-              {day.note && <p className="text-sm text-[var(--muted)] mt-1">{day.note}</p>}
+              <p className="font-display font-semibold text-2xl">{day.title || 'Senza titolo'}</p>
+              {day.note && <p className="text-base text-[var(--muted)] mt-1">{day.note}</p>}
             </div>
             <div className="flex gap-1 -mr-2">
-              <button onClick={() => setDayForm({ id: day.id, date: day.date, title: day.title, note: day.note })} aria-label="Modifica giorno" className="min-h-11 min-w-11 flex items-center justify-center text-[var(--muted)]">
-                <Pencil size={16} />
+              <button onClick={() => setDayForm({ id: day.id, date: day.date, title: day.title, note: day.note })} aria-label="Modifica giorno" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
+                <Pencil size={17} />
               </button>
-              <button onClick={() => removeDay(day)} aria-label="Elimina giorno" className="min-h-11 min-w-11 flex items-center justify-center text-[var(--muted)]">
-                <Trash2 size={16} />
+              <button onClick={() => removeDay(day)} aria-label="Elimina giorno" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
+                <Trash2 size={17} />
               </button>
             </div>
           </div>
@@ -93,11 +93,11 @@ export default function Days({ trip, onUpdate }) {
               {day.items.map((item) => (
                 <li key={item.id} className="flex items-start gap-1">
                   <div className="flex-1">
-                    {item.time && <span className="font-mono text-xs text-[var(--muted)] mr-2">{item.time}</span>}
-                    <span className="text-sm">{item.title}</span>
-                    {item.detail && <p className="text-xs text-[var(--muted)] mt-0.5">{item.detail}</p>}
+                    {item.time && <span className="font-mono text-sm text-[var(--muted)] mr-2">{item.time}</span>}
+                    <span className="text-base">{item.title}</span>
+                    {item.detail && <p className="text-sm text-[var(--muted)] mt-0.5">{item.detail}</p>}
                     {item.link && (
-                      <a href={item.link} target="_blank" rel="noreferrer" className="text-xs text-[var(--accent)] underline block mt-0.5">
+                      <a href={item.link} target="_blank" rel="noreferrer" className="text-sm text-[var(--accent)] underline block mt-0.5">
                         Apri il link
                       </a>
                     )}
@@ -105,27 +105,27 @@ export default function Days({ trip, onUpdate }) {
                   <button
                     onClick={() => setItemForm({ dayId: day.id, id: item.id, time: item.time, title: item.title, detail: item.detail, link: item.link })}
                     aria-label="Modifica voce"
-                    className="min-h-11 min-w-11 flex items-center justify-center text-[var(--muted)]"
+                    className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]"
                   >
-                    <Pencil size={14} />
+                    <Pencil size={15} />
                   </button>
-                  <button onClick={() => removeItem(day.id, item)} aria-label="Elimina voce" className="min-h-11 min-w-11 flex items-center justify-center text-[var(--muted)]">
-                    <Trash2 size={14} />
+                  <button onClick={() => removeItem(day.id, item)} aria-label="Elimina voce" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
+                    <Trash2 size={15} />
                   </button>
                 </li>
               ))}
             </ul>
           )}
 
-          <button onClick={() => setItemForm({ dayId: day.id, ...EMPTY_ITEM })} className="self-start flex items-center gap-1 text-sm text-[var(--accent)] min-h-11">
-            <Plus size={16} /> Aggiungi voce
+          <button onClick={() => setItemForm({ dayId: day.id, ...EMPTY_ITEM })} className="self-start flex items-center gap-1 text-base text-[var(--accent)] min-h-12">
+            <Plus size={17} /> Aggiungi voce
           </button>
         </div>
       ))}
 
       {trip.days.length > 0 && (
         <Btn variant="secondary" onClick={() => setDayForm(EMPTY_DAY)} className="self-start">
-          <Plus size={16} /> Nuovo giorno
+          <Plus size={17} /> Nuovo giorno
         </Btn>
       )}
 

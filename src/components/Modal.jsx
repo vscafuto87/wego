@@ -26,7 +26,7 @@ export default function Modal({ open, title, onClose, children, footer }) {
         aria-label={title}
       >
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-display text-xl">{title}</h2>
+          <h2 className="font-display font-semibold text-2xl">{title}</h2>
           <button
             onClick={onClose}
             aria-label="Chiudi"

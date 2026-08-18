@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { Plus, Upload, Trash2 } from 'lucide-react'
 import Terrain from '../theme/Terrain.jsx'
-import { themeStyle } from '../theme/themes.js'
+import { themeStyle, ACCENT_GRADIENT } from '../theme/themes.js'
 import Btn from '../components/Btn.jsx'
 import Modal from '../components/Modal.jsx'
 import Empty from '../components/Empty.jsx'
 
 const MONTH = new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short' })
-const inputClass = 'border border-[var(--line)] bg-[var(--paper)] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
+const inputClass = 'border border-[var(--line)] bg-[var(--paper)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
 
 function formatRange(start, end) {
   if (!start || !end) return ''
@@ -52,13 +52,13 @@ export default function Home({ trips, onOpen, onCreate, onImport, onDelete }) {
   return (
     <div style={themeStyle('mountain')} className="min-h-screen bg-[var(--paper)] text-[var(--ink)] font-sans pb-24">
       <header className="px-5 pt-8 pb-4 flex items-center justify-between max-w-2xl mx-auto">
-        <h1 className="font-display text-3xl tracking-wide">WeGo</h1>
-        <button onClick={onImport} aria-label="Carica il viaggio" className="min-h-11 min-w-11 flex items-center justify-center rounded-full bg-[var(--tint)] active:scale-[0.97] transition-transform duration-150 ease-out">
-          <Upload size={20} />
+        <h1 className="font-display font-semibold text-4xl tracking-wide">WeGo</h1>
+        <button onClick={onImport} aria-label="Carica il viaggio" className="h-12 w-12 flex items-center justify-center rounded-full bg-[var(--tint)] active:scale-[0.97] transition-transform duration-150 ease-out">
+          <Upload size={21} />
         </button>
       </header>
 
-      <main className="px-5 max-w-2xl mx-auto flex flex-col gap-4">
+      <main className="px-5 max-w-2xl mx-auto flex flex-col gap-5">
         {trips.length === 0 && (
           <Empty
             title="Nessun viaggio ancora"
@@ -73,31 +73,33 @@ export default function Home({ trips, onOpen, onCreate, onImport, onDelete }) {
             <div
               key={trip.id}
               style={themeStyle(trip.palette)}
-              className="relative overflow-hidden rounded-[24px] text-[var(--paper)] shadow-[0_1px_2px_rgb(var(--ink-rgb)/0.06),0_20px_40px_-16px_rgb(var(--accent-rgb)/0.55)]"
+              className="relative overflow-hidden rounded-[36px] text-[var(--paper)] shadow-[0_2px_4px_rgb(var(--ink-rgb)/0.08),0_30px_50px_-20px_rgb(var(--accent-rgb)/0.55)]"
             >
-              <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent2))' }} />
+              <div className="absolute inset-0" style={{ background: ACCENT_GRADIENT }} />
               <Terrain seed={trip.id} palette={trip.palette} stroke="var(--paper)" opacityRange={[0.15, 0.35]} className="absolute inset-0 h-full w-full" />
-              <button onClick={() => onOpen(trip.id)} className="relative block w-full text-left p-5">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl">{trip.emoji}</span>
-                  <span className="font-display text-2xl">{trip.name}</span>
-                </div>
-                {trip.place && <p className="text-sm text-[var(--paper)]/80 mt-1">{trip.place}</p>}
-                <div className="flex items-center justify-between mt-4">
-                  <span className="font-mono text-sm">{formatRange(trip.start, trip.end)}</span>
+              <button onClick={() => onOpen(trip.id)} className="relative block w-full text-left p-6">
+                <div className="flex items-start justify-between">
+                  <div className="h-12 w-12 rounded-2xl bg-[rgb(var(--paper-rgb)/0.2)] backdrop-blur-sm flex items-center justify-center text-2xl">
+                    {trip.emoji}
+                  </div>
                   {status && (
-                    <span className="font-mono text-[10.5px] font-semibold tracking-wide bg-[var(--paper)] text-[var(--accent)] px-2.5 py-1 rounded-full">
+                    <span className="font-mono text-xs font-medium bg-[rgb(var(--paper-rgb)/0.95)] text-[var(--ink)] px-3.5 py-2 rounded-full">
                       {status}
                     </span>
                   )}
                 </div>
+                <div className="mt-5">
+                  <span className="font-display font-semibold text-4xl leading-none block">{trip.name}</span>
+                  {trip.place && <p className="text-base text-[rgb(var(--paper-rgb)/0.85)] mt-2">{trip.place}</p>}
+                  <span className="font-mono text-sm mt-4 block opacity-90">{formatRange(trip.start, trip.end)}</span>
+                </div>
               </button>
-              <div className="relative border-t border-[var(--paper)]/25">
+              <div className="relative border-t border-[rgb(var(--paper-rgb)/0.25)]">
                 <button
                   onClick={() => remove(trip)}
-                  className="w-full min-h-11 flex items-center justify-center gap-1 text-sm text-[var(--paper)]/80"
+                  className="w-full min-h-12 flex items-center justify-center gap-1.5 text-base text-[rgb(var(--paper-rgb)/0.8)]"
                 >
-                  <Trash2 size={16} /> Elimina
+                  <Trash2 size={17} /> Elimina
                 </button>
               </div>
             </div>
@@ -106,7 +108,7 @@ export default function Home({ trips, onOpen, onCreate, onImport, onDelete }) {
 
         {trips.length > 0 && (
           <Btn variant="secondary" onClick={() => setForm(EMPTY_FORM)} className="self-start">
-            <Plus size={16} /> Nuovo viaggio
+            <Plus size={17} /> Nuovo viaggio
           </Btn>
         )}
       </main>

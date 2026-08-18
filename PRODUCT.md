@@ -36,11 +36,13 @@ di avvisare.
 - **Il terreno racconta l'ambiente**: creste per montagna e natura, linee batimetriche
   per il mare — è la palette (`theme/themes.js`) e non solo il colore a distinguere un
   viaggio dall'altro.
-- **Silenzio strutturale**: la gerarchia visiva viene da tipografia e spaziatura, non da
-  ombre o decorazioni; l'unico accento vistoso è la barra a tre bande sotto la tab
-  attiva, come un segnavia.
-- **Mobile-first, leggibile al sole**: si progetta a 380px, tema chiaro perché l'app si
-  usa all'aperto; aree toccabili da almeno 44px.
+- **Superfici tattili, non silenziose**: dalla Fase 0 "modernizzata" la gerarchia si
+  fa anche con bagliori colorati e profondità, non solo con tipografia e spaziatura —
+  ma resta puntuale: il bagliore `accent → accent2` vive solo su card viaggio, bottone
+  primario e tab attiva, mai diffuso su testo, icone o bordi.
+- **Mobile-first, leggibile al sole, con testo e bottoni grandi**: si progetta a
+  380px, tema chiaro perché l'app si usa all'aperto; aree toccabili ben oltre i 44px
+  minimi (bottoni primari/secondari a 60px), testo di corpo a 16px non 14px.
 - **Un solo schema, nessuna trasformazione**: lo stesso JSON del viaggio vale per stato
   in memoria, IndexedDB, import ed export — è ciò che rende possibile il caricamento
   rapido via Claude.

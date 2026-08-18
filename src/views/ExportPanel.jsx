@@ -16,9 +16,9 @@ export default function ExportPanel({ trip }) {
   return (
     <div className="flex flex-col gap-3">
       <Btn variant="secondary" onClick={copy} className="self-start">
-        {copied ? <Check size={16} /> : <Copy size={16} />} {copied ? 'Copiato' : 'Copia il JSON'}
+        {copied ? <Check size={17} /> : <Copy size={17} />} {copied ? 'Copiato' : 'Copia il JSON'}
       </Btn>
-      <pre className="bg-[var(--paper)] rounded-2xl p-4 text-xs font-mono overflow-auto max-h-[50vh] whitespace-pre-wrap">
+      <pre className="bg-[var(--paper)] rounded-2xl p-4 text-sm font-mono overflow-auto max-h-[50vh] whitespace-pre-wrap">
         {json}
       </pre>
     </div>
