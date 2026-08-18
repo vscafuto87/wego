@@ -28,3 +28,30 @@ export async function loadTrips() {
 export async function saveTrips(trips) {
   await set(TRIPS_KEY, trips)
 }
+
+const SYNC_PREFIX = 'wego:sync:'
+const DISPLAY_NAME_KEY = 'wego:display-name'
+
+export async function getSyncState(localTripId) {
+  const state = await get(SYNC_PREFIX + localTripId)
+  return state ?? null
+}
+
+export async function setSyncState(localTripId, state) {
+  await set(SYNC_PREFIX + localTripId, state)
+}
+
+export async function markDirty(localTripId) {
+  const state = await getSyncState(localTripId)
+  if (!state) return
+  await setSyncState(localTripId, { ...state, dirty: true })
+}
+
+export async function getDisplayNamePreference() {
+  const name = await get(DISPLAY_NAME_KEY)
+  return name ?? ''
+}
+
+export async function setDisplayNamePreference(name) {
+  await set(DISPLAY_NAME_KEY, name)
+}
