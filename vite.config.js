@@ -27,5 +27,8 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}']
       }
     })
-  ]
+  ],
+  test: {
+    passWithNoTests: true
+  }
 })
