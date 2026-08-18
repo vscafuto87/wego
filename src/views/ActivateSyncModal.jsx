@@ -16,8 +16,8 @@ export default function ActivateSyncModal({ open, trip, onClose, onActivated }) 
   useEffect(() => {
     if (!open) return
     getDisplayNamePreference().then(setNamePreference)
-    getSession().then((session) => { if (session) setStep('name') })
-    const unsubscribe = subscribeAuth((session) => { if (session) setStep('name') })
+    getSession().then((session) => { if (session) setStep((s) => (s === 'email' ? 'name' : s)) })
+    const unsubscribe = subscribeAuth((session) => { if (session) setStep((s) => (s === 'email' ? 'name' : s)) })
     return unsubscribe
   }, [open])
 
