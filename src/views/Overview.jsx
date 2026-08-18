@@ -5,6 +5,7 @@ import Label from '../components/Label.jsx'
 import Stat from '../components/Stat.jsx'
 import Modal from '../components/Modal.jsx'
 import ExportPanel from './ExportPanel.jsx'
+import { isCloudConfigured } from '../data/supabase.js'
 
 const ICONS = { map: Map, check: CheckSquare, note: StickyNote, ticket: Ticket, food: Utensils, bed: Bed, bus: Bus, star: Star, people: Users }
 const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-md px-3 py-2 text-sm'
@@ -23,7 +24,7 @@ function tripStatus(trip) {
   return 'concluso'
 }
 
-export default function Overview({ trip, onUpdate, onDelete }) {
+export default function Overview({ trip, onUpdate, onDelete, syncActive, onOpenActivate, onRestore }) {
   const [editForm, setEditForm] = useState(null)
   const [sectionForm, setSectionForm] = useState(null)
   const [exportOpen, setExportOpen] = useState(false)
@@ -94,6 +95,16 @@ export default function Overview({ trip, onUpdate, onDelete }) {
         <Btn variant="secondary" onClick={() => setExportOpen(true)}>
           <Share2 size={16} /> Esporta
         </Btn>
+        {!syncActive && isCloudConfigured && (
+          <Btn variant="secondary" onClick={onOpenActivate}>
+            <Share2 size={16} /> Attiva sync
+          </Btn>
+        )}
+        {onRestore && (
+          <Btn variant="secondary" onClick={onRestore}>
+            <Share2 size={16} /> Ripristina l'ultima versione
+          </Btn>
+        )}
         <Btn variant="danger" onClick={removeTrip}>
           <Trash2 size={16} /> Elimina viaggio
         </Btn>
