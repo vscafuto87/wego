@@ -18,4 +18,11 @@ describe('formatRelativeTime', () => {
     const then = new Date('2026-08-15T12:00:00.000Z')
     expect(formatRelativeTime(then.toISOString(), now)).toContain('giorni fa')
   })
+
+  it('data non leggibile: stringa vuota, nessun errore', () => {
+    expect(() => formatRelativeTime('not-a-date', now)).not.toThrow()
+    expect(formatRelativeTime('not-a-date', now)).toBe('')
+    expect(formatRelativeTime('18/08/2026', now)).toBe('')
+    expect(formatRelativeTime('', now)).toBe('')
+  })
 })
