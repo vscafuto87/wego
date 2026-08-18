@@ -4,6 +4,8 @@ import Btn from '../components/Btn.jsx'
 import Label from '../components/Label.jsx'
 import Modal from '../components/Modal.jsx'
 import Empty from '../components/Empty.jsx'
+import { stampModified } from '../data/schema.js'
+import ModifiedBy from '../components/ModifiedBy.jsx'
 
 const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
 
@@ -11,7 +13,7 @@ function updateSection(trip, sectionId, fn) {
   return { ...trip, sections: trip.sections.map((s) => (s.id === sectionId ? fn(s) : s)) }
 }
 
-export default function Section({ trip, section, onUpdate }) {
+export default function Section({ trip, section, onUpdate, activeDisplayName }) {
   const [headerForm, setHeaderForm] = useState(null)
   const [cardForm, setCardForm] = useState(null)
   const [checklistText, setChecklistText] = useState('')
@@ -29,9 +31,9 @@ export default function Section({ trip, section, onUpdate }) {
     onUpdate((t) =>
       updateSection(t, section.id, (s) => {
         if (cardForm.id) {
-          return { ...s, items: s.items.map((it) => (it.id === cardForm.id ? { ...it, ...cardForm, tags } : it)) }
+          return { ...s, items: s.items.map((it) => (it.id === cardForm.id ? stampModified({ ...it, ...cardForm, tags }, activeDisplayName) : it)) }
         }
-        return { ...s, items: [...s.items, { id: crypto.randomUUID(), ...cardForm, tags }] }
+        return { ...s, items: [...s.items, stampModified({ id: crypto.randomUUID(), ...cardForm, tags }, activeDisplayName)] }
       })
     )
     setCardForm(null)
@@ -56,7 +58,7 @@ export default function Section({ trip, section, onUpdate }) {
   }
 
   function toggleChecklistItem(item) {
-    onUpdate((t) => updateSection(t, section.id, (s) => ({ ...s, items: s.items.map((it) => (it.id === item.id ? { ...it, done: !it.done } : it)) })))
+    onUpdate((t) => updateSection(t, section.id, (s) => ({ ...s, items: s.items.map((it) => (it.id === item.id ? stampModified({ ...it, done: !it.done }, activeDisplayName) : it)) })))
   }
 
   function removeChecklistItem(item) {
@@ -64,7 +66,7 @@ export default function Section({ trip, section, onUpdate }) {
   }
 
   function saveNotes() {
-    onUpdate((t) => updateSection(t, section.id, (s) => ({ ...s, text: notesDraft })))
+    onUpdate((t) => updateSection(t, section.id, (s) => stampModified({ ...s, text: notesDraft }, activeDisplayName)))
   }
 
   return (
@@ -113,6 +115,7 @@ export default function Section({ trip, section, onUpdate }) {
                     ))}
                   </div>
                 )}
+                <ModifiedBy modifiedBy={item.modifiedBy} modifiedAt={item.modifiedAt} />
               </div>
             ))}
           </div>
@@ -133,7 +136,10 @@ export default function Section({ trip, section, onUpdate }) {
                     {item.done && <Check size={14} className="text-[var(--paper)]" />}
                   </span>
                 </button>
-                <span className={`flex-1 text-base ${item.done ? 'line-through text-[var(--muted)]' : ''}`}>{item.text}</span>
+                <div className="flex-1">
+                  <span className={`text-base ${item.done ? 'line-through text-[var(--muted)]' : ''}`}>{item.text}</span>
+                  <ModifiedBy modifiedBy={item.modifiedBy} modifiedAt={item.modifiedAt} />
+                </div>
                 <button onClick={() => removeChecklistItem(item)} aria-label="Elimina voce" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
                   <Trash2 size={15} />
                 </button>
@@ -150,14 +156,17 @@ export default function Section({ trip, section, onUpdate }) {
       )}
 
       {section.type === 'notes' && (
-        <textarea
-          value={notesDraft}
-          onChange={(e) => setNotesDraft(e.target.value)}
-          onBlur={saveNotes}
-          placeholder="Scrivi qui le tue note."
-          rows={10}
-          className={`${inputClass} font-sans`}
-        />
+        <>
+          <textarea
+            value={notesDraft}
+            onChange={(e) => setNotesDraft(e.target.value)}
+            onBlur={saveNotes}
+            placeholder="Scrivi qui le tue note."
+            rows={10}
+            className={`${inputClass} font-sans`}
+          />
+          <ModifiedBy modifiedBy={section.modifiedBy} modifiedAt={section.modifiedAt} />
+        </>
       )}
 
       <Modal open={!!headerForm} title="Rinomina sezione" onClose={() => setHeaderForm(null)}>

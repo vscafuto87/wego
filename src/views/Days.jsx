@@ -4,6 +4,8 @@ import Btn from '../components/Btn.jsx'
 import Label from '../components/Label.jsx'
 import Modal from '../components/Modal.jsx'
 import Empty from '../components/Empty.jsx'
+import { stampModified } from '../data/schema.js'
+import ModifiedBy from '../components/ModifiedBy.jsx'
 
 const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
 const DATE_FMT = new Intl.DateTimeFormat('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })
@@ -15,7 +17,7 @@ function formatDate(date) {
 const EMPTY_DAY = { date: '', title: '', note: '' }
 const EMPTY_ITEM = { time: '', title: '', detail: '', link: '' }
 
-export default function Days({ trip, onUpdate }) {
+export default function Days({ trip, onUpdate, activeDisplayName }) {
   const [dayForm, setDayForm] = useState(null)
   const [itemForm, setItemForm] = useState(null)
 
@@ -23,9 +25,9 @@ export default function Days({ trip, onUpdate }) {
     e.preventDefault()
     onUpdate((t) => {
       if (dayForm.id) {
-        return { ...t, days: t.days.map((d) => (d.id === dayForm.id ? { ...d, ...dayForm } : d)) }
+        return { ...t, days: t.days.map((d) => (d.id === dayForm.id ? stampModified({ ...d, ...dayForm }, activeDisplayName) : d)) }
       }
-      const day = { id: crypto.randomUUID(), items: [], ...dayForm }
+      const day = stampModified({ id: crypto.randomUUID(), items: [], ...dayForm }, activeDisplayName)
       return { ...t, days: [...t.days, day].sort((a, b) => a.date.localeCompare(b.date)) }
     })
     setDayForm(null)
@@ -44,8 +46,8 @@ export default function Days({ trip, onUpdate }) {
       ...t,
       days: t.days.map((d) => {
         if (d.id !== dayId) return d
-        if (id) return { ...d, items: d.items.map((it) => (it.id === id ? { ...it, ...fields } : it)) }
-        return { ...d, items: [...d.items, { id: crypto.randomUUID(), ...fields }] }
+        if (id) return { ...d, items: d.items.map((it) => (it.id === id ? stampModified({ ...it, ...fields }, activeDisplayName) : it)) }
+        return { ...d, items: [...d.items, stampModified({ id: crypto.randomUUID(), ...fields }, activeDisplayName)] }
       })
     }))
     setItemForm(null)
@@ -77,6 +79,7 @@ export default function Days({ trip, onUpdate }) {
               <Label>{formatDate(day.date)}</Label>
               <p className="font-display font-semibold text-2xl">{day.title || 'Senza titolo'}</p>
               {day.note && <p className="text-base text-[var(--muted)] mt-1">{day.note}</p>}
+              <ModifiedBy modifiedBy={day.modifiedBy} modifiedAt={day.modifiedAt} />
             </div>
             <div className="flex gap-1 -mr-2">
               <button onClick={() => setDayForm({ id: day.id, date: day.date, title: day.title, note: day.note })} aria-label="Modifica giorno" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
@@ -101,6 +104,7 @@ export default function Days({ trip, onUpdate }) {
                         Apri il link
                       </a>
                     )}
+                    <ModifiedBy modifiedBy={item.modifiedBy} modifiedAt={item.modifiedAt} />
                   </div>
                   <button
                     onClick={() => setItemForm({ dayId: day.id, id: item.id, time: item.time, title: item.title, detail: item.detail, link: item.link })}

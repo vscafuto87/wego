@@ -4,11 +4,17 @@ import { normalizeTrip } from './data/schema.js'
 import Home from './views/Home.jsx'
 import TripView from './views/TripView.jsx'
 import ImportView from './views/ImportView.jsx'
+import JoinView from './views/JoinView.jsx'
 
 export default function App() {
   const [trips, setTrips] = useState(null)
   const [view, setView] = useState('home')
   const [activeTripId, setActiveTripId] = useState(null)
+
+  const [joinCode] = useState(() => {
+    const match = window.location.pathname.match(/^\/j\/([A-Za-z0-9]{6})$/)
+    return match ? match[1] : null
+  })
 
   useEffect(() => {
     loadTrips().then(setTrips)
@@ -42,6 +48,17 @@ export default function App() {
     openTrip(newTrips[0].id)
   }
 
+  function finishJoin(trip) {
+    window.history.replaceState(null, '', '/')
+    persist([...trips, trip])
+    openTrip(trip.id)
+  }
+
+  function cancelJoin() {
+    window.history.replaceState(null, '', '/')
+    window.location.reload()
+  }
+
   function updateTrip(id, updater) {
     persist(trips.map((t) => (t.id === id ? updater(t) : t)))
   }
@@ -53,6 +70,10 @@ export default function App() {
 
   if (trips === null) {
     return <div className="min-h-screen flex items-center justify-center font-sans text-[#6E7B72]">Carico i viaggi…</div>
+  }
+
+  if (joinCode) {
+    return <JoinView code={joinCode} onJoined={finishJoin} onCancel={cancelJoin} />
   }
 
   if (view === 'import') {
