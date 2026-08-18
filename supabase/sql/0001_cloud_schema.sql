@@ -43,9 +43,18 @@ create policy "tv_trip_members_select" on tv_trip_members for select
     or exists (select 1 from tv_trips t where t.id = tv_trip_members.trip_id and t.owner_id = auth.uid())
   );
 
+-- Un utente può iscriversi da sé solo come viewer. Il ruolo editor se lo può dare
+-- soltanto l'owner del viaggio (serve alla propria iscrizione all'attivazione della
+-- sync): altrimenti chiunque conosca l'UUID di un viaggio potrebbe farsi editor.
 drop policy if exists "tv_trip_members_insert_self" on tv_trip_members;
 create policy "tv_trip_members_insert_self" on tv_trip_members for insert
-  with check (user_id = auth.uid());
+  with check (
+    user_id = auth.uid()
+    and (
+      role = 'viewer'
+      or exists (select 1 from tv_trips t where t.id = tv_trip_members.trip_id and t.owner_id = auth.uid())
+    )
+  );
 
 create or replace function join_trip(code text, display_name text)
 returns uuid
