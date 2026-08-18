@@ -21,7 +21,9 @@ function normalizeDayItem(raw) {
     time: str(item.time),
     title: str(item.title),
     detail: str(item.detail),
-    link: str(item.link)
+    link: str(item.link),
+    modifiedBy: str(item.modifiedBy),
+    modifiedAt: str(item.modifiedAt)
   }
 }
 
@@ -32,6 +34,8 @@ function normalizeDay(raw) {
     date: str(day.date),
     title: str(day.title),
     note: str(day.note),
+    modifiedBy: str(day.modifiedBy),
+    modifiedAt: str(day.modifiedAt),
     items: arr(day.items).map(normalizeDayItem)
   }
 }
@@ -44,7 +48,9 @@ function normalizeCardItem(raw) {
     meta: str(item.meta),
     detail: str(item.detail),
     link: str(item.link),
-    tags: arr(item.tags).map(str)
+    tags: arr(item.tags).map(str),
+    modifiedBy: str(item.modifiedBy),
+    modifiedAt: str(item.modifiedAt)
   }
 }
 
@@ -53,7 +59,9 @@ function normalizeChecklistItem(raw) {
   return {
     id: makeId(),
     text: str(item.text),
-    done: item.done === true
+    done: item.done === true,
+    modifiedBy: str(item.modifiedBy),
+    modifiedAt: str(item.modifiedAt)
   }
 }
 
@@ -67,7 +75,7 @@ function normalizeSection(raw) {
     return { ...base, items: arr(section.items).map(normalizeChecklistItem) }
   }
   if (type === 'notes') {
-    return { ...base, text: str(section.text) }
+    return { ...base, text: str(section.text), modifiedBy: str(section.modifiedBy), modifiedAt: str(section.modifiedAt) }
   }
   return { ...base, items: arr(section.items).map(normalizeCardItem) }
 }
@@ -115,14 +123,25 @@ export function exportTrip(trip) {
       date: day.date,
       title: day.title,
       note: day.note,
+      modifiedBy: day.modifiedBy,
+      modifiedAt: day.modifiedAt,
       items: day.items.map(withoutId)
     })),
     sections: trip.sections.map((section) => {
       const base = { title: section.title, icon: section.icon, type: section.type }
       if (section.type === 'notes') {
-        return { ...base, text: section.text }
+        return { ...base, text: section.text, modifiedBy: section.modifiedBy, modifiedAt: section.modifiedAt }
       }
       return { ...base, items: section.items.map(withoutId) }
     })
   }
+}
+
+// Usata dalle viste quando si modifica una voce di un viaggio con sync attiva:
+// se non c'è un nome (viaggio non attivo o dispositivo senza preferenza) il
+// nodo torna invariato, così l'attribuzione non appare mai per un viaggio
+// puramente locale.
+export function stampModified(node, displayName) {
+  if (!displayName) return node
+  return { ...node, modifiedBy: displayName, modifiedAt: new Date().toISOString() }
 }
