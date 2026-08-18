@@ -3,7 +3,7 @@ import { ArrowLeft, Copy, Check } from 'lucide-react'
 import { themeStyle } from '../theme/themes.js'
 import Btn from '../components/Btn.jsx'
 
-const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-md px-3 py-2 text-sm font-mono'
+const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-2xl px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
 
 const PROMPT = `Trasforma questi appunti di viaggio grezzi in un JSON con questo schema esatto (nessun campo in più, nessuno in meno):
 
@@ -64,7 +64,7 @@ export default function ImportView({ onImport, onCancel }) {
   return (
     <div style={themeStyle('mountain')} className="min-h-screen bg-[var(--paper)] text-[var(--ink)] font-sans">
       <header className="px-5 pt-8 pb-4 flex items-center gap-3 max-w-2xl mx-auto">
-        <button onClick={onCancel} aria-label="Annulla" className="min-h-11 min-w-11 -ml-2 flex items-center justify-center">
+        <button onClick={onCancel} aria-label="Annulla" className="min-h-11 min-w-11 -ml-2 flex items-center justify-center rounded-full bg-[var(--tint)] active:scale-[0.97] transition-transform duration-150 ease-out">
           <ArrowLeft size={20} />
         </button>
         <h1 className="font-display text-2xl">Carica il viaggio</h1>

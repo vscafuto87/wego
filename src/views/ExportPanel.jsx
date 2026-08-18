@@ -18,7 +18,7 @@ export default function ExportPanel({ trip }) {
       <Btn variant="secondary" onClick={copy} className="self-start">
         {copied ? <Check size={16} /> : <Copy size={16} />} {copied ? 'Copiato' : 'Copia il JSON'}
       </Btn>
-      <pre className="border border-[var(--line)] rounded-md p-3 text-xs font-mono overflow-auto max-h-[50vh] whitespace-pre-wrap">
+      <pre className="bg-[var(--paper)] rounded-2xl p-4 text-xs font-mono overflow-auto max-h-[50vh] whitespace-pre-wrap">
         {json}
       </pre>
     </div>

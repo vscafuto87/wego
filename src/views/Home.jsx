@@ -3,12 +3,11 @@ import { Plus, Upload, Trash2 } from 'lucide-react'
 import Terrain from '../theme/Terrain.jsx'
 import { themeStyle } from '../theme/themes.js'
 import Btn from '../components/Btn.jsx'
-import Label from '../components/Label.jsx'
 import Modal from '../components/Modal.jsx'
 import Empty from '../components/Empty.jsx'
 
 const MONTH = new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short' })
-const inputClass = 'border border-[var(--line)] bg-[var(--paper)] rounded-md px-3 py-2 text-sm'
+const inputClass = 'border border-[var(--line)] bg-[var(--paper)] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
 
 function formatRange(start, end) {
   if (!start || !end) return ''
@@ -54,7 +53,7 @@ export default function Home({ trips, onOpen, onCreate, onImport, onDelete }) {
     <div style={themeStyle('mountain')} className="min-h-screen bg-[var(--paper)] text-[var(--ink)] font-sans pb-24">
       <header className="px-5 pt-8 pb-4 flex items-center justify-between max-w-2xl mx-auto">
         <h1 className="font-display text-3xl tracking-wide">WeGo</h1>
-        <button onClick={onImport} aria-label="Carica il viaggio" className="min-h-11 min-w-11 flex items-center justify-center">
+        <button onClick={onImport} aria-label="Carica il viaggio" className="min-h-11 min-w-11 flex items-center justify-center rounded-full bg-[var(--tint)] active:scale-[0.97] transition-transform duration-150 ease-out">
           <Upload size={20} />
         </button>
       </header>
@@ -74,24 +73,29 @@ export default function Home({ trips, onOpen, onCreate, onImport, onDelete }) {
             <div
               key={trip.id}
               style={themeStyle(trip.palette)}
-              className="relative overflow-hidden rounded-xl bg-[var(--card)] border border-[var(--line)]"
+              className="relative overflow-hidden rounded-[24px] text-[var(--paper)] shadow-[0_1px_2px_rgb(var(--ink-rgb)/0.06),0_20px_40px_-16px_rgb(var(--accent-rgb)/0.55)]"
             >
-              <Terrain seed={trip.id} palette={trip.palette} className="absolute inset-0 h-full w-full" />
+              <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent2))' }} />
+              <Terrain seed={trip.id} palette={trip.palette} stroke="var(--paper)" opacityRange={[0.15, 0.35]} className="absolute inset-0 h-full w-full" />
               <button onClick={() => onOpen(trip.id)} className="relative block w-full text-left p-5">
                 <div className="flex items-baseline gap-2">
                   <span className="text-2xl">{trip.emoji}</span>
                   <span className="font-display text-2xl">{trip.name}</span>
                 </div>
-                {trip.place && <p className="text-sm text-[var(--muted)] mt-1">{trip.place}</p>}
+                {trip.place && <p className="text-sm text-[var(--paper)]/80 mt-1">{trip.place}</p>}
                 <div className="flex items-center justify-between mt-4">
                   <span className="font-mono text-sm">{formatRange(trip.start, trip.end)}</span>
-                  {status && <Label className="text-[var(--accent)]">{status}</Label>}
+                  {status && (
+                    <span className="font-mono text-[10.5px] font-semibold tracking-wide bg-[var(--paper)] text-[var(--accent)] px-2.5 py-1 rounded-full">
+                      {status}
+                    </span>
+                  )}
                 </div>
               </button>
-              <div className="relative border-t border-[var(--line)]">
+              <div className="relative border-t border-[var(--paper)]/25">
                 <button
                   onClick={() => remove(trip)}
-                  className="w-full min-h-11 flex items-center justify-center gap-1 text-sm text-[var(--muted)]"
+                  className="w-full min-h-11 flex items-center justify-center gap-1 text-sm text-[var(--paper)]/80"
                 >
                   <Trash2 size={16} /> Elimina
                 </button>

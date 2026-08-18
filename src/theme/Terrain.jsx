@@ -23,7 +23,7 @@ function mulberry32(seed) {
 // Curve di livello generate proceduralmente a partire da un seed: creste
 // irregolari per montagna/natura, linee batimetriche morbide per mare/città.
 // Stesso seed produce sempre lo stesso disegno.
-export default function Terrain({ seed = 'wego', palette = 'mountain', lines = 5, height = 160, className = '' }) {
+export default function Terrain({ seed = 'wego', palette = 'mountain', lines = 5, height = 160, className = '', stroke = 'var(--line)', opacityRange = [0.3, 0.7] }) {
   const random = mulberry32(hashSeed(`${palette}:${seed}`))
   const isWater = WATER_PALETTES.has(palette)
   const width = 400
@@ -42,6 +42,8 @@ export default function Terrain({ seed = 'wego', palette = 'mountain', lines = 5
     return points.join(' ')
   })
 
+  const [minOpacity, maxOpacity] = opacityRange
+
   return (
     <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className={className} aria-hidden="true">
       {polylines.map((points, i) => (
@@ -49,9 +51,9 @@ export default function Terrain({ seed = 'wego', palette = 'mountain', lines = 5
           key={i}
           points={points}
           fill="none"
-          stroke="var(--line)"
+          stroke={stroke}
           strokeWidth="1.5"
-          opacity={0.3 + (i / polylines.length) * 0.4}
+          opacity={minOpacity + (i / polylines.length) * (maxOpacity - minOpacity)}
         />
       ))}
     </svg>

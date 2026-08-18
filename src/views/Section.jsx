@@ -5,7 +5,7 @@ import Label from '../components/Label.jsx'
 import Modal from '../components/Modal.jsx'
 import Empty from '../components/Empty.jsx'
 
-const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-md px-3 py-2 text-sm'
+const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
 
 function updateSection(trip, sectionId, fn) {
   return { ...trip, sections: trip.sections.map((s) => (s.id === sectionId ? fn(s) : s)) }
@@ -81,7 +81,7 @@ export default function Section({ trip, section, onUpdate }) {
           {section.items.length === 0 && <Empty title="Nessuna scheda ancora" detail="Aggiungine una per iniziare." />}
           <div className="flex flex-col gap-3">
             {section.items.map((item) => (
-              <div key={item.id} className="border border-[var(--line)] rounded-lg p-4 bg-[var(--card)]">
+              <div key={item.id} className="rounded-[20px] p-4 bg-[var(--card)] shadow-[0_1px_2px_rgb(var(--ink-rgb)/0.05),0_10px_24px_-14px_rgb(var(--ink-rgb)/0.25)]">
                 <div className="flex items-start justify-between gap-2">
                   <p className="font-display text-lg">{item.title || 'Senza titolo'}</p>
                   <div className="flex gap-1 -mr-2 -mt-1">
@@ -125,9 +125,9 @@ export default function Section({ trip, section, onUpdate }) {
       {section.type === 'checklist' && (
         <>
           {section.items.length === 0 && <Empty title="Niente da spuntare ancora" detail="Aggiungi la prima voce." />}
-          <ul className="flex flex-col divide-y divide-[var(--line)] border border-[var(--line)] rounded-md">
+          <ul className="flex flex-col divide-y divide-[var(--line)] bg-[var(--card)] rounded-[20px] shadow-[0_1px_2px_rgb(var(--ink-rgb)/0.05)] overflow-hidden">
             {section.items.map((item) => (
-              <li key={item.id} className="flex items-center gap-3 px-3 py-1">
+              <li key={item.id} className="flex items-center gap-3 px-4 py-1">
                 <button onClick={() => toggleChecklistItem(item)} aria-pressed={item.done} aria-label={item.done ? 'Segna come da fare' : 'Segna come fatto'} className="min-h-11 min-w-11 flex items-center justify-center">
                   <span className={`h-5 w-5 rounded border flex items-center justify-center ${item.done ? 'bg-[var(--accent)] border-[var(--accent)]' : 'border-[var(--line)]'}`}>
                     {item.done && <Check size={14} className="text-[var(--paper)]" />}

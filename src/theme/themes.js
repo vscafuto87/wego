@@ -9,6 +9,12 @@ export function getTheme(palette) {
   return THEMES[palette] || THEMES.mountain
 }
 
+// "r g b" (spazio, non virgola) per comporre ombre tinte con rgb(var(--x) / alpha).
+function rgbTriplet(hex) {
+  const n = parseInt(hex.slice(1), 16)
+  return `${(n >> 16) & 255} ${(n >> 8) & 255} ${n & 255}`
+}
+
 // CSS custom properties da applicare come `style` sul contenitore che deve
 // vestirsi con il tema di un viaggio (root dell'app, card in Home, ecc).
 export function themeStyle(palette) {
@@ -21,6 +27,8 @@ export function themeStyle(palette) {
     '--line': t.line,
     '--accent': t.accent,
     '--accent2': t.accent2,
-    '--tint': t.tint
+    '--tint': t.tint,
+    '--ink-rgb': rgbTriplet(t.ink),
+    '--accent-rgb': rgbTriplet(t.accent)
   }
 }
