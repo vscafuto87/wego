@@ -10,6 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.112.3",
     "idb-keyval": "^6.2.1",
     "lucide-react": "^0.400.0",
     "react": "^18.3.1",
