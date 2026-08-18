@@ -120,6 +120,23 @@ function normalizeLodgingItem(raw) {
   }
 }
 
+function normalizeMapItem(raw) {
+  const item = raw && typeof raw === 'object' ? raw : {}
+  const lat = typeof item.lat === 'number' && Number.isFinite(item.lat) ? item.lat : null
+  const lng = typeof item.lng === 'number' && Number.isFinite(item.lng) ? item.lng : null
+  return {
+    id: makeId(),
+    name: str(item.name),
+    category: str(item.category),
+    mapsLink: str(item.mapsLink),
+    lat,
+    lng,
+    note: str(item.note),
+    modifiedBy: str(item.modifiedBy),
+    modifiedAt: str(item.modifiedAt)
+  }
+}
+
 function normalizeSection(raw) {
   const section = raw && typeof raw === 'object' ? raw : {}
   const type = SECTION_TYPES.includes(section.type) ? section.type : 'cards'
@@ -137,6 +154,9 @@ function normalizeSection(raw) {
   }
   if (type === 'lodging') {
     return { ...base, items: arr(section.items).map(normalizeLodgingItem) }
+  }
+  if (type === 'map') {
+    return { ...base, items: arr(section.items).map(normalizeMapItem) }
   }
   return { ...base, items: arr(section.items).map(normalizeCardItem) }
 }

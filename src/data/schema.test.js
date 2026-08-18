@@ -187,3 +187,30 @@ describe('normalizeTrip — sezione lodging', () => {
     expect(section.items[0]).toMatchObject({ name: 'Hotel', checkIn: '', checkOut: '', address: '', bookingLink: '', note: '' })
   })
 })
+
+describe('normalizeTrip — sezione map', () => {
+  function tripWithMapSection(items) {
+    return normalizeTrip({ name: 'X', sections: [{ title: 'Mappa', icon: 'map', type: 'map', items }] })
+  }
+
+  it('normalizza un punto con coordinate', () => {
+    const section = tripWithMapSection([
+      { name: 'Piscine Naturali', category: 'spiaggia', mapsLink: 'https://maps.x', lat: 40.897, lng: 12.958, note: '' }
+    ]).sections.find((s) => s.type === 'map')
+    expect(section.items[0]).toMatchObject({ name: 'Piscine Naturali', category: 'spiaggia', mapsLink: 'https://maps.x', lat: 40.897, lng: 12.958 })
+  })
+
+  it('coordinate assenti o non numeriche diventano null, non errore', () => {
+    const section = tripWithMapSection([{ name: 'Senza coordinate' }, { name: 'Coordinate testo', lat: 'quaranta', lng: '13' }])
+      .sections.find((s) => s.type === 'map')
+    expect(section.items[0].lat).toBeNull()
+    expect(section.items[0].lng).toBeNull()
+    expect(section.items[1].lat).toBeNull()
+    expect(section.items[1].lng).toBeNull()
+  })
+
+  it('campi mancanti diventano stringa vuota', () => {
+    const section = tripWithMapSection([{ name: 'Punto' }]).sections.find((s) => s.type === 'map')
+    expect(section.items[0]).toMatchObject({ name: 'Punto', category: '', mapsLink: '', note: '' })
+  })
+})
