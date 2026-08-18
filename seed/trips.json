@@ -11,12 +11,10 @@
       {
         "date": "2026-08-24",
         "title": "Arrivo + primo anello",
-        "note": "Base fissa in paese: si rientra a dormire a Forni ogni sera.",
+        "note": "Base fissa in paese: si rientra a dormire a Forni ogni sera. Verificare gli orari della seggiovia Varmost per l'Opzione A.",
         "items": [
-          { "time": "", "title": "Partenza da Bologna", "detail": "", "link": "" },
-          { "time": "", "title": "Check-in a Forni di Sopra", "detail": "", "link": "" },
-          { "time": "", "title": "Opzione A — Anello delle Malghe", "detail": "Varmost · Tartoi · Tragonia — 14,2 km · 480 m D+ · 1.320 m D− · 5h14, con seggiovia fino a Malga Varmost", "link": "https://www.komoot.com/it-it/tour/3188306727" },
-          { "time": "", "title": "Opzione B — Casera Montemaggiore · Biv. Francescutto · Casera Tragonia", "detail": "13,1 km · 970 m D+ · 1.100 m D− · 5h49, da Forni di Sopra", "link": "https://www.komoot.com/it-it/tour/3188224531" }
+          { "time": "", "title": "Opzione A — Anello delle Malghe", "kind": "sentiero", "detail": "Varmost · Tartoi · Tragonia — 14,2 km · 480 m D+ · 1.320 m D− · 5h14, con seggiovia fino a Malga Varmost", "link": "https://www.komoot.com/it-it/tour/3188306727", "durata": "5h14", "dislivello": "480 m D+ · 1.320 m D−", "difficolta": "" },
+          { "time": "", "title": "Opzione B — Casera Montemaggiore · Biv. Francescutto · Casera Tragonia", "kind": "sentiero", "detail": "13,1 km · 970 m D+ · 1.100 m D− · 5h49, da Forni di Sopra", "link": "https://www.komoot.com/it-it/tour/3188224531", "durata": "5h49", "dislivello": "970 m D+ · 1.100 m D−", "difficolta": "" }
         ]
       },
       {
@@ -24,7 +22,7 @@
         "title": "Truoi dai Sclops",
         "note": "Giornata lunga: sveglia presto.",
         "items": [
-          { "time": "", "title": "Sentiero delle Genziane", "detail": "20,2 km · 1.540 m D+ · 7h20 — senso Val di Suola/Flaiban prima, Giaf in chiusura", "link": "https://www.komoot.com/tour/3193704353" }
+          { "time": "", "title": "Sentiero delle Genziane", "kind": "sentiero", "detail": "20,2 km · 1.540 m D+ · 7h20 — senso Val di Suola/Flaiban prima, Giaf in chiusura", "link": "https://www.komoot.com/tour/3193704353", "durata": "7h20", "dislivello": "1.540 m D+", "difficolta": "" }
         ]
       },
       {
@@ -32,7 +30,7 @@
         "title": "Anello Domegge · Tita Barba · Rifugio Padova",
         "note": "",
         "items": [
-          { "time": "", "title": "Anello dei rifugi", "detail": "20,6 km · 1.300 m D+ — partenza dal parcheggio vicino a Domegge", "link": "https://www.komoot.com/tour/3188038187" }
+          { "time": "", "title": "Anello dei rifugi", "kind": "sentiero", "detail": "20,6 km · 1.300 m D+ — partenza dal parcheggio vicino a Domegge", "link": "https://www.komoot.com/tour/3188038187", "durata": "", "dislivello": "1.300 m D+", "difficolta": "" }
         ]
       },
       {
@@ -40,12 +38,24 @@
         "title": "Monte Clapsavon + rientro",
         "note": "Percorso difficile, versione senza ferrata.",
         "items": [
-          { "time": "", "title": "Da Forni di Sopra al Clapsavon", "detail": "15,6 km · 1.470 m D+/D− · 6h33", "link": "https://www.komoot.com/it-it/tour/3188372456" },
-          { "time": "", "title": "Rientro a Bologna", "detail": "", "link": "" }
+          { "time": "", "title": "Da Forni di Sopra al Clapsavon", "kind": "sentiero", "detail": "15,6 km · 1.470 m D+/D− · 6h33", "link": "https://www.komoot.com/it-it/tour/3188372456", "durata": "6h33", "dislivello": "1.470 m D+/D−", "difficolta": "difficile" }
         ]
       }
     ],
     "sections": [
+      {
+        "title": "Trasporti", "icon": "bus", "type": "transport",
+        "items": [
+          { "mode": "auto", "from": "Bologna", "to": "Forni di Sopra", "date": "2026-08-24", "time": "", "ticketLink": "", "note": "" },
+          { "mode": "auto", "from": "Forni di Sopra", "to": "Bologna", "date": "2026-08-27", "time": "", "ticketLink": "", "note": "" }
+        ]
+      },
+      {
+        "title": "Pernottamento", "icon": "bed", "type": "lodging",
+        "items": [
+          { "name": "Alloggio a Forni di Sopra", "checkIn": "2026-08-24", "checkOut": "2026-08-28", "address": "", "bookingLink": "", "note": "Niente pernotti in rifugio, tenda o bivacco." }
+        ]
+      },
       {
         "title": "Riserve e alternative",
         "icon": "star",
@@ -54,15 +64,6 @@
           { "title": "Giaf · Forcella Scodavacca · Anello di Bianchi", "meta": "11,8 km · 1.080 m D+ · 6h03", "detail": "Difficile.", "link": "https://www.komoot.com/tour/3193245322", "tags": ["riserva"] },
           { "title": "Campanile di Val Montanaia", "meta": "", "detail": "", "link": "", "tags": ["riserva"] },
           { "title": "Giro dei Laghetti e Pineta", "meta": "", "detail": "Ripiego per meteo incerto.", "link": "", "tags": ["pioggia"] }
-        ]
-      },
-      {
-        "title": "Logistica",
-        "icon": "bed",
-        "type": "cards",
-        "items": [
-          { "title": "Alloggio a Forni di Sopra", "meta": "base fissa", "detail": "Niente pernotti in rifugio, tenda o bivacco.", "link": "", "tags": [] },
-          { "title": "Seggiovia Varmost", "meta": "verificare orari", "detail": "Serve per l'Anello delle Malghe.", "link": "", "tags": [] }
         ]
       },
       {
@@ -101,10 +102,7 @@
         "title": "Arrivo",
         "note": "Si arriva nel tardo pomeriggio: niente spiaggia oggi.",
         "items": [
-          { "time": "", "title": "Treno da Bologna", "detail": "", "link": "" },
-          { "time": "", "title": "Aliscafo per Ponza", "detail": "", "link": "" },
-          { "time": "", "title": "Check-in zona Porto", "detail": "", "link": "" },
-          { "time": "", "title": "Cena in paese", "detail": "", "link": "" }
+          { "time": "", "title": "Cena in paese", "kind": "pasto", "detail": "", "link": "", "luogo": "", "prenotato": false }
         ]
       },
       { "date": "2026-08-31", "title": "Prima giornata di mare", "note": "Possibile giro dell'isola in barca.", "items": [] },
@@ -115,6 +113,20 @@
       { "date": "2026-09-05", "title": "Partenza", "note": "Si parte presto la mattina.", "items": [] }
     ],
     "sections": [
+      {
+        "title": "Trasporti", "icon": "bus", "type": "transport",
+        "items": [
+          { "mode": "treno", "from": "Bologna", "to": "Formia", "date": "2026-08-30", "time": "", "ticketLink": "", "note": "" },
+          { "mode": "aliscafo", "from": "Formia", "to": "Ponza", "date": "2026-08-30", "time": "", "ticketLink": "", "note": "" }
+        ]
+      },
+      {
+        "title": "Pernottamento", "icon": "bed", "type": "lodging",
+        "items": [
+          { "name": "Appartamento zona Porto", "checkIn": "2026-08-30", "checkOut": "2026-09-05", "address": "", "bookingLink": "", "note": "" }
+        ]
+      },
+      { "title": "Ristoranti", "icon": "food", "type": "cards", "items": [] },
       {
         "title": "Spiagge e cale",
         "icon": "map",
@@ -143,7 +155,6 @@
           { "text": "Ristorante per la prima sera", "done": false }
         ]
       },
-      { "title": "Ristoranti", "icon": "food", "type": "cards", "items": [] },
       {
         "title": "Note",
         "icon": "note",
