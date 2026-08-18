@@ -24,7 +24,7 @@ Ponza 30/08–05/09/2026).
 | Stile | Tailwind CSS | già usato nel prototipo |
 | PWA | `vite-plugin-pwa` (Workbox), `registerType: 'autoUpdate'` | precache dell'app shell, aggiornamento trasparente |
 | Persistenza locale | IndexedDB via `idb-keyval` | i viaggi devono sopravvivere offline e a Safari |
-| Backend (fase 1) | Supabase (progetto esistente `yloymohhoigvcchtexdb`), tabelle con prefisso `tv_` | già configurato |
+| Backend (fase 1) | Supabase (progetto esistente `txfgxxaabhltazckabud`), tabelle con prefisso `tv_` | già configurato |
 | Auth | Supabase magic link via email | nessuna password da spiegare agli amici |
 | Hosting | Vercel, deploy da GitHub | zero config, HTTPS necessario per la PWA |
 | Icona/nome | "WeGo", icona con le curve di livello | vedi Design system |
