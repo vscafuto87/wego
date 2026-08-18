@@ -26,6 +26,16 @@ const KIND_OPTIONS = [
 
 const KIND_ICONS = { sentiero: Mountain, spiaggia: Waves, pasto: Utensils }
 
+const ALL_KIND_FIELDS = ['durata', 'dislivello', 'difficolta', 'accesso', 'servizi', 'luogo', 'prenotato']
+
+function withoutKindFields(item) {
+  const clean = { ...item }
+  for (const field of ALL_KIND_FIELDS) {
+    delete clean[field]
+  }
+  return clean
+}
+
 function fieldsForForm(itemForm) {
   const common = { time: itemForm.time, title: itemForm.title, kind: itemForm.kind, detail: itemForm.detail, link: itemForm.link }
   for (const field of dayItemFieldsForKind(itemForm.kind)) {
@@ -64,8 +74,8 @@ export default function Days({ trip, onUpdate, activeDisplayName }) {
       ...t,
       days: t.days.map((d) => {
         if (d.id !== dayId) return d
-        if (id) return { ...d, items: d.items.map((it) => (it.id === id ? stampModified({ ...it, ...fields }, activeDisplayName) : it)) }
-        return { ...d, items: [...d.items, stampModified({ id: crypto.randomUUID(), ...fields }, activeDisplayName)] }
+        if (id) return { ...d, items: d.items.map((it) => (it.id === id ? stampModified({ ...withoutKindFields(it), ...fields }, activeDisplayName) : it)) }
+        return { ...d, items: [...d.items, stampModified(withoutKindFields({ id: crypto.randomUUID(), ...fields }), activeDisplayName)] }
       })
     }))
     setItemForm(null)
