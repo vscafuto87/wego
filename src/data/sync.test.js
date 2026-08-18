@@ -37,9 +37,9 @@ describe('generateShareCode', () => {
 
 import { vi, beforeEach } from 'vitest'
 
-const { mockFrom, mockGetSession } = vi.hoisted(() => ({ mockFrom: vi.fn(), mockGetSession: vi.fn() }))
+const { mockFrom, mockGetSession, mockRpc } = vi.hoisted(() => ({ mockFrom: vi.fn(), mockGetSession: vi.fn(), mockRpc: vi.fn() }))
 
-vi.mock('./supabase.js', () => ({ supabase: { from: mockFrom }, getSession: mockGetSession }))
+vi.mock('./supabase.js', () => ({ supabase: { from: mockFrom, rpc: mockRpc }, getSession: mockGetSession }))
 
 const { activateTripSync, pullTrip, pushTrip } = await import('./sync.js')
 const { normalizeTrip } = await import('./schema.js')
@@ -47,6 +47,7 @@ const { normalizeTrip } = await import('./schema.js')
 beforeEach(() => {
   mockFrom.mockReset()
   mockGetSession.mockReset()
+  mockRpc.mockReset()
 })
 
 describe('activateTripSync', () => {
@@ -102,5 +103,87 @@ describe('pushTrip', () => {
     const result = await pushTrip(trip, syncState)
     expect(result.syncState).toEqual({ ...syncState, lastSyncedAt: '2026-08-18T13:00:00Z', dirty: false })
     expect(updateFn).toHaveBeenCalledWith(expect.objectContaining({ previous_data: { name: 'Ponza vecchia' } }))
+  })
+})
+
+describe('joinTripByCode', () => {
+  it('chiama la RPC join_trip poi legge il viaggio, torna ruolo viewer', async () => {
+    mockGetSession.mockResolvedValue({ user: { id: 'user-2' } })
+    mockRpc.mockResolvedValue({ data: 'trip-remote-1', error: null })
+    mockFrom.mockReturnValue({
+      select: () => ({ eq: () => ({ single: async () => ({ data: { id: 'trip-remote-1', data: { name: 'Ponza' }, updated_at: '2026-08-18T10:00:00Z' }, error: null }) }) })
+    })
+    const { joinTripByCode } = await import('./sync.js')
+    const result = await joinTripByCode('AB12CD', 'Giulia')
+    expect(mockRpc).toHaveBeenCalledWith('join_trip', { code: 'AB12CD', display_name: 'Giulia' })
+    expect(result.trip.name).toBe('Ponza')
+    expect(result.syncState).toEqual({ remoteId: 'trip-remote-1', role: 'viewer', lastSyncedAt: '2026-08-18T10:00:00Z', dirty: false })
+  })
+})
+
+describe('syncTrip', () => {
+  it('torna noop se non c\'è syncState', async () => {
+    const { syncTrip } = await import('./sync.js')
+    const trip = normalizeTrip({ name: 'Ponza' })
+    const result = await syncTrip(trip, null)
+    expect(result).toEqual({ action: 'noop', trip, syncState: null })
+  })
+
+  it('pull quando non dirty e il remoto è più recente', async () => {
+    mockFrom.mockReturnValue({
+      select: () => ({ eq: () => ({ single: async () => ({ data: { data: { name: 'Ponza remota' }, updated_at: '2026-08-18T12:00:00Z' }, error: null }) }) })
+    })
+    const { syncTrip } = await import('./sync.js')
+    const trip = normalizeTrip({ name: 'Ponza locale' })
+    const syncState = { remoteId: 'trip-remote-1', role: 'viewer', lastSyncedAt: '2026-08-18T10:00:00Z', dirty: false }
+    const result = await syncTrip(trip, syncState)
+    expect(result.action).toBe('pull')
+    expect(result.trip.name).toBe('Ponza remota')
+  })
+
+  it('salta il push se il ruolo è viewer', async () => {
+    mockFrom.mockReturnValue({
+      select: () => ({ eq: () => ({ single: async () => ({ data: { updated_at: '2026-08-18T10:00:00Z' }, error: null }) }) })
+    })
+    const { syncTrip } = await import('./sync.js')
+    const trip = normalizeTrip({ name: 'Ponza locale' })
+    const syncState = { remoteId: 'trip-remote-1', role: 'viewer', lastSyncedAt: '2026-08-18T10:00:00Z', dirty: true }
+    const result = await syncTrip(trip, syncState)
+    expect(result.action).toBe('skipped-viewer')
+  })
+
+  it('conflict quando dirty e il remoto è cambiato, non sovrascrive nulla', async () => {
+    mockFrom.mockReturnValue({
+      select: () => ({ eq: () => ({ single: async () => ({ data: { data: { name: 'Ponza remota' }, updated_at: '2026-08-18T13:00:00Z' }, error: null }) }) })
+    })
+    const { syncTrip } = await import('./sync.js')
+    const trip = normalizeTrip({ name: 'Ponza locale' })
+    const syncState = { remoteId: 'trip-remote-1', role: 'editor', lastSyncedAt: '2026-08-18T10:00:00Z', dirty: true }
+    const result = await syncTrip(trip, syncState)
+    expect(result.action).toBe('conflict')
+    expect(result.trip.name).toBe('Ponza locale')
+    expect(result.conflict.remoteTrip.name).toBe('Ponza remota')
+  })
+})
+
+describe('restoreLastVersion', () => {
+  it('applica previous_data e lo azzera sul remoto, torna null se non c\'è nulla da ripristinare', async () => {
+    mockFrom.mockReturnValue({
+      select: () => ({ eq: () => ({ single: async () => ({ data: { previous_data: null }, error: null }) }) })
+    })
+    const { restoreLastVersion } = await import('./sync.js')
+    expect(await restoreLastVersion('trip-remote-1')).toBeNull()
+  })
+
+  it('ripristina quando previous_data esiste', async () => {
+    const updateFn = vi.fn().mockReturnValue({ eq: async () => ({ error: null }) })
+    mockFrom.mockReturnValue({
+      select: () => ({ eq: () => ({ single: async () => ({ data: { previous_data: { name: 'Ponza vecchia' } }, error: null }) }) }),
+      update: updateFn
+    })
+    const { restoreLastVersion } = await import('./sync.js')
+    const restored = await restoreLastVersion('trip-remote-1')
+    expect(restored.name).toBe('Ponza vecchia')
+    expect(updateFn).toHaveBeenCalledWith({ data: { name: 'Ponza vecchia' }, previous_data: null, updated_at: expect.any(String) })
   })
 })

@@ -80,3 +80,80 @@ export async function pushTrip(trip, syncState) {
     syncState: { ...syncState, lastSyncedAt: updated.updated_at, dirty: false }
   }
 }
+
+export async function joinTripByCode(code, displayName) {
+  const session = await getSession()
+  if (!session) throw new Error('Devi accedere prima di unirti al viaggio.')
+
+  const { data: remoteId, error: rpcError } = await supabase.rpc('join_trip', { code, display_name: displayName })
+  if (rpcError) throw new Error(rpcError.message)
+
+  const { data: row, error: selectError } = await supabase
+    .from('tv_trips')
+    .select('id, data, updated_at')
+    .eq('id', remoteId)
+    .single()
+  if (selectError) throw new Error(selectError.message)
+
+  return {
+    trip: normalizeTrip(row.data),
+    syncState: { remoteId: row.id, role: 'viewer', lastSyncedAt: row.updated_at, dirty: false }
+  }
+}
+
+export async function syncTrip(trip, syncState) {
+  if (!syncState) return { action: 'noop', trip, syncState }
+
+  const { data: row, error } = await supabase
+    .from('tv_trips')
+    .select('updated_at')
+    .eq('id', syncState.remoteId)
+    .single()
+  if (error) throw new Error(error.message)
+
+  const action = decideSyncAction({
+    dirty: syncState.dirty,
+    lastSyncedAt: syncState.lastSyncedAt,
+    remoteUpdatedAt: row.updated_at
+  })
+
+  if (action === 'noop') return { action, trip, syncState }
+
+  if (action === 'pull') {
+    const result = await pullTrip(syncState)
+    return { action, ...result }
+  }
+
+  if (action === 'conflict') {
+    const { data: full, error: fullError } = await supabase
+      .from('tv_trips')
+      .select('data, updated_at')
+      .eq('id', syncState.remoteId)
+      .single()
+    if (fullError) throw new Error(fullError.message)
+    return { action, trip, syncState, conflict: { remoteTrip: normalizeTrip(full.data), remoteUpdatedAt: full.updated_at } }
+  }
+
+  if (syncState.role === 'viewer') return { action: 'skipped-viewer', trip, syncState }
+
+  const result = await pushTrip(trip, syncState)
+  return { action, ...result }
+}
+
+export async function restoreLastVersion(remoteId) {
+  const { data: row, error } = await supabase
+    .from('tv_trips')
+    .select('previous_data')
+    .eq('id', remoteId)
+    .single()
+  if (error) throw new Error(error.message)
+  if (!row.previous_data) return null
+
+  const { error: updateError } = await supabase
+    .from('tv_trips')
+    .update({ data: row.previous_data, previous_data: null, updated_at: new Date().toISOString() })
+    .eq('id', remoteId)
+  if (updateError) throw new Error(updateError.message)
+
+  return normalizeTrip(row.previous_data)
+}
