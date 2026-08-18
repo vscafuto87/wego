@@ -1,6 +1,6 @@
 const PALETTES = ['mountain', 'sea', 'city', 'wild']
 const ICONS = ['map', 'check', 'note', 'ticket', 'food', 'bed', 'bus', 'star', 'people']
-const SECTION_TYPES = ['cards', 'checklist', 'notes']
+const SECTION_TYPES = ['cards', 'checklist', 'notes', 'transport', 'lodging', 'map']
 
 const DAY_ITEM_KINDS = ['', 'sentiero', 'spiaggia', 'pasto']
 
@@ -89,6 +89,37 @@ function normalizeChecklistItem(raw) {
   }
 }
 
+function normalizeTransportItem(raw) {
+  const item = raw && typeof raw === 'object' ? raw : {}
+  return {
+    id: makeId(),
+    mode: str(item.mode),
+    from: str(item.from),
+    to: str(item.to),
+    date: str(item.date),
+    time: str(item.time),
+    ticketLink: str(item.ticketLink),
+    note: str(item.note),
+    modifiedBy: str(item.modifiedBy),
+    modifiedAt: str(item.modifiedAt)
+  }
+}
+
+function normalizeLodgingItem(raw) {
+  const item = raw && typeof raw === 'object' ? raw : {}
+  return {
+    id: makeId(),
+    name: str(item.name),
+    checkIn: str(item.checkIn),
+    checkOut: str(item.checkOut),
+    address: str(item.address),
+    bookingLink: str(item.bookingLink),
+    note: str(item.note),
+    modifiedBy: str(item.modifiedBy),
+    modifiedAt: str(item.modifiedAt)
+  }
+}
+
 function normalizeSection(raw) {
   const section = raw && typeof raw === 'object' ? raw : {}
   const type = SECTION_TYPES.includes(section.type) ? section.type : 'cards'
@@ -100,6 +131,12 @@ function normalizeSection(raw) {
   }
   if (type === 'notes') {
     return { ...base, text: str(section.text), modifiedBy: str(section.modifiedBy), modifiedAt: str(section.modifiedAt) }
+  }
+  if (type === 'transport') {
+    return { ...base, items: arr(section.items).map(normalizeTransportItem) }
+  }
+  if (type === 'lodging') {
+    return { ...base, items: arr(section.items).map(normalizeLodgingItem) }
   }
   return { ...base, items: arr(section.items).map(normalizeCardItem) }
 }

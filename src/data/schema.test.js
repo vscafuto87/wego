@@ -139,3 +139,51 @@ describe('normalizeTrip — kind sulle voci del giorno', () => {
     })
   })
 })
+
+describe('normalizeTrip — sezione transport', () => {
+  function tripWithTransportSection(items) {
+    return normalizeTrip({ name: 'X', sections: [{ title: 'Trasporti', icon: 'bus', type: 'transport', items }] })
+  }
+
+  it('normalizza i campi di una voce di trasporto', () => {
+    const section = tripWithTransportSection([
+      { mode: 'aliscafo', from: 'Formia', to: 'Ponza', date: '2026-08-30', time: '14:30', ticketLink: 'https://x', note: 'posti assegnati' }
+    ]).sections.find((s) => s.type === 'transport')
+    expect(section.items[0]).toMatchObject({
+      mode: 'aliscafo', from: 'Formia', to: 'Ponza', date: '2026-08-30', time: '14:30', ticketLink: 'https://x', note: 'posti assegnati'
+    })
+    expect(section.items[0].id).toBeTypeOf('string')
+  })
+
+  it('campi mancanti diventano stringa vuota', () => {
+    const section = tripWithTransportSection([{ mode: 'treno' }]).sections.find((s) => s.type === 'transport')
+    expect(section.items[0]).toMatchObject({ mode: 'treno', from: '', to: '', date: '', time: '', ticketLink: '', note: '' })
+  })
+
+  it('exportTrip conserva i campi transport senza id', () => {
+    const trip = tripWithTransportSection([{ mode: 'treno', from: 'Bologna', to: 'Roma' }])
+    const exported = exportTrip(trip).sections.find((s) => s.type === 'transport')
+    expect(exported.items[0].id).toBeUndefined()
+    expect(exported.items[0].mode).toBe('treno')
+  })
+})
+
+describe('normalizeTrip — sezione lodging', () => {
+  function tripWithLodgingSection(items) {
+    return normalizeTrip({ name: 'X', sections: [{ title: 'Pernottamento', icon: 'bed', type: 'lodging', items }] })
+  }
+
+  it('normalizza i campi di una voce di alloggio', () => {
+    const section = tripWithLodgingSection([
+      { name: 'Appartamento Porto', checkIn: '2026-08-30', checkOut: '2026-09-05', address: 'Via Roma 1', bookingLink: 'https://x', note: '' }
+    ]).sections.find((s) => s.type === 'lodging')
+    expect(section.items[0]).toMatchObject({
+      name: 'Appartamento Porto', checkIn: '2026-08-30', checkOut: '2026-09-05', address: 'Via Roma 1', bookingLink: 'https://x'
+    })
+  })
+
+  it('campi mancanti diventano stringa vuota', () => {
+    const section = tripWithLodgingSection([{ name: 'Hotel' }]).sections.find((s) => s.type === 'lodging')
+    expect(section.items[0]).toMatchObject({ name: 'Hotel', checkIn: '', checkOut: '', address: '', bookingLink: '', note: '' })
+  })
+})
