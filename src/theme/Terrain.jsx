@@ -59,3 +59,34 @@ export default function Terrain({ seed = 'wego', palette = 'mountain', lines = 5
     </svg>
   )
 }
+
+// Sigillo compatto: le stesse creste/linee batimetriche di Terrain, chiuse in un
+// cerchio. Usato dove il terreno deve indicare l'ambiente di un viaggio invece
+// che decorare uno sfondo (es. la card viaggio in Home).
+export function TerrainSeal({ seed = 'wego', palette = 'mountain', size = 58 }) {
+  const random = mulberry32(hashSeed(`seal:${palette}:${seed}`))
+  const isWater = WATER_PALETTES.has(palette)
+  const width = 100
+  const height = 60
+  const segments = isWater ? 5 : 7
+
+  const polylines = Array.from({ length: 2 }, (_, i) => {
+    const baseY = height * (i === 0 ? 0.4 : 0.62)
+    const amplitude = isWater ? 6 + random() * 5 : 10 + random() * 12
+    const phase = random() * Math.PI * 2
+    const points = Array.from({ length: segments + 1 }, (_, s) => {
+      const x = (width / segments) * s
+      const wave = Math.sin(phase + s * (isWater ? 0.9 : 1.5)) * amplitude
+      const jitter = isWater ? 0 : (random() - 0.5) * amplitude * 0.5
+      return `${x.toFixed(1)},${(baseY + wave + jitter).toFixed(1)}`
+    })
+    return points.join(' ')
+  })
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} width={size * 0.7} height={size * 0.7} aria-hidden="true">
+      <polyline points={polylines[0]} fill="none" stroke="var(--accent)" strokeWidth="4.5" strokeLinecap="round" />
+      <polyline points={polylines[1]} fill="none" stroke="var(--accent2)" strokeWidth="4.5" strokeLinecap="round" opacity="0.75" />
+    </svg>
+  )
+}

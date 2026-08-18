@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Plus, Upload, Trash2 } from 'lucide-react'
-import Terrain from '../theme/Terrain.jsx'
-import { themeStyle, ACCENT_GRADIENT } from '../theme/themes.js'
+import { TerrainSeal } from '../theme/Terrain.jsx'
+import { themeStyle } from '../theme/themes.js'
 import Btn from '../components/Btn.jsx'
 import Modal from '../components/Modal.jsx'
 import Empty from '../components/Empty.jsx'
@@ -73,33 +73,33 @@ export default function Home({ trips, onOpen, onCreate, onImport, onDelete }) {
             <div
               key={trip.id}
               style={themeStyle(trip.palette)}
-              className="relative overflow-hidden rounded-[36px] text-[var(--paper)] shadow-[0_2px_4px_rgb(var(--ink-rgb)/0.08),0_30px_50px_-20px_rgb(var(--accent-rgb)/0.55)]"
+              className="relative rounded-[36px] bg-[var(--card)] border border-[var(--line)] text-[var(--ink)] shadow-[0_1px_2px_rgb(var(--ink-rgb)/0.05),0_10px_24px_-14px_rgb(var(--ink-rgb)/0.25)]"
             >
-              <div className="absolute inset-0" style={{ background: ACCENT_GRADIENT }} />
-              <Terrain seed={trip.id} palette={trip.palette} stroke="var(--paper)" opacityRange={[0.15, 0.35]} className="absolute inset-0 h-full w-full" />
-              <button onClick={() => onOpen(trip.id)} className="relative block w-full text-left p-6">
+              <div className="p-6">
                 <div className="flex items-start justify-between">
-                  <div className="h-12 w-12 rounded-2xl bg-[rgb(var(--paper-rgb)/0.2)] backdrop-blur-sm flex items-center justify-center text-2xl">
-                    {trip.emoji}
+                  <div className="h-[58px] w-[58px] rounded-full bg-[var(--tint)] flex items-center justify-center">
+                    <TerrainSeal seed={trip.id} palette={trip.palette} size={58} />
                   </div>
-                  {status && (
-                    <span className="font-mono text-xs font-medium bg-[rgb(var(--paper-rgb)/0.95)] text-[var(--ink)] px-3.5 py-2 rounded-full">
-                      {status}
-                    </span>
-                  )}
+                  <button
+                    onClick={() => remove(trip)}
+                    aria-label={`Elimina ${trip.name}`}
+                    className="h-11 w-11 flex items-center justify-center rounded-full text-[var(--muted)] active:scale-[0.94] transition-transform duration-150 ease-out"
+                  >
+                    <Trash2 size={18} />
+                  </button>
                 </div>
-                <div className="mt-5">
+                <button onClick={() => onOpen(trip.id)} className="block w-full text-left mt-4">
                   <span className="font-display font-semibold text-4xl leading-none block">{trip.name}</span>
-                  {trip.place && <p className="text-base text-[rgb(var(--paper-rgb)/0.85)] mt-2">{trip.place}</p>}
-                  <span className="font-mono text-sm mt-4 block opacity-90">{formatRange(trip.start, trip.end)}</span>
-                </div>
-              </button>
-              <div className="relative border-t border-[rgb(var(--paper-rgb)/0.25)]">
-                <button
-                  onClick={() => remove(trip)}
-                  className="w-full min-h-12 flex items-center justify-center gap-1.5 text-base text-[rgb(var(--paper-rgb)/0.8)]"
-                >
-                  <Trash2 size={17} /> Elimina
+                  {trip.place && <p className="text-base text-[var(--muted)] mt-1.5">{trip.place}</p>}
+                  <div className="flex items-baseline justify-between mt-4">
+                    <span className="font-mono text-sm text-[var(--muted)]">{formatRange(trip.start, trip.end)}</span>
+                    {status && (
+                      <span className="font-mono text-xs text-[var(--accent)] flex items-center gap-1.5">
+                        <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
+                        {status}
+                      </span>
+                    )}
+                  </div>
                 </button>
               </div>
             </div>

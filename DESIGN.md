@@ -120,10 +120,16 @@ components:
     height: "48px"
     padding: "0 20px"
   trip-card:
-    backgroundColor: "radial-gradient(130% 160% at 18% -10%, {colors.mountain-accent}, {colors.mountain-accent2})"
-    textColor: "{colors.mountain-paper}"
+    backgroundColor: "{colors.mountain-card}"
+    textColor: "{colors.mountain-ink}"
     rounded: "{rounded.2xl}"
     padding: "24px"
+  icon-button-ghost:
+    backgroundColor: "transparent"
+    textColor: "{colors.mountain-muted}"
+    rounded: "{rounded.pill}"
+    height: "44px"
+    width: "44px"
   modal-sheet:
     backgroundColor: "{colors.mountain-card}"
     textColor: "{colors.mountain-ink}"
@@ -140,21 +146,28 @@ components:
 
 WeGo si legge come un quaderno di viaggio passato di mano in mano tra amici, non come
 un cruscotto software. Ogni viaggio ha un ambiente — montagna, mare, città, natura — e
-l'app cambia letteralmente pelle per adattarvisi: il bagliore radiale della card, il
-terreno disegnato sotto l'header e la tab attiva sono la prima cosa che comunica dove
-sei diretto, prima ancora di leggere una parola. Il tono resta caldo e pratico, ma con
-la Fase 1 "moderna" la mano è più decisa: tipografia più grande e più pesante, bottoni
-più massicci, superfici più tattili — pensata per essere letta e toccata al volo, non
-solo sfogliata con calma.
+l'app cambia letteralmente pelle per adattarvisi: il terreno disegnato sotto l'header,
+il sigillo del terreno sulla card viaggio e la tab attiva sono la prima cosa che
+comunica dove sei diretto, prima ancora di leggere una parola. Il tono resta caldo e
+pratico, ma con la Fase 1 "moderna" la mano è più decisa: tipografia più grande e più
+pesante, bottoni più massicci, superfici più tattili — pensata per essere letta e
+toccata al volo, non solo sfogliata con calma. La card viaggio in Home, in particolare,
+è tornata piatta: comunica l'ambiente con un sigillo grafico invece che con un'emoji
+letterale o un intero sfondo acceso.
 
 **Key Characteristics:**
 - Quattro ambienti (mountain / sea / city / wild), stessa struttura di ruoli colore,
   valori diversi: il viaggio "sceglie" la propria identità visiva a runtime via CSS
   custom properties.
-- Superfici accese: card viaggio, bottone primario e tab attiva usano lo stesso
-  bagliore radiale `accent → accent2` dell'ambiente, decentrato in alto a sinistra
-  invece che un gradiente lineare piatto — più profondità, più "superficie che si
-  illumina" che semplice sfondo colorato.
+- Superfici accese: bottone primario e tab attiva usano lo stesso bagliore radiale
+  `accent → accent2` dell'ambiente, decentrato in alto a sinistra invece che un
+  gradiente lineare piatto — più profondità, più "superficie che si illumina" che
+  semplice sfondo colorato. Riservato a due sole superfici, entrambe azioni/stato di
+  navigazione: la card viaggio non lo porta più.
+- L'ambiente si comunica anche senza colore acceso: il sigillo del terreno
+  (`TerrainSeal`) è un piccolo disegno generativo — creste per montagna/natura, onde
+  per mare/città — non un'emoji di montagna o di onda. Stessa firma di `Terrain`,
+  applicata a un elemento puntuale invece che a uno sfondo intero.
 - Raggi molto generosi (28–36px su card e trip-card, pillola sui bottoni) e bottoni
   alti 60px: il primo segnale che rende l'interfaccia un'app tattile e non un
   documento da leggere.
@@ -197,10 +210,12 @@ Non si mescolano palette diverse nella stessa vista, nemmeno per un dettaglio.
 
 **The Accent Confidence Rule.** `accent` e `accent2` insieme, nello stesso bagliore
 radiale (`radial-gradient(130% 160% at 18% -10%, accent, accent2)`), formano l'unica
-superficie "accesa" per schermata: la card del viaggio in Home, il bottone primario, la
-tab attiva nella nav flottante. Non si usano come sfondo pieno altrove — il resto della
-UI resta su `paper`/`card`/`tint`; il bagliore non decora mai testo, icone o bordi al
-di fuori di queste tre superfici.
+superficie "accesa" per schermata: il bottone primario e la tab attiva nella nav
+flottante. Non si usano come sfondo pieno altrove — il resto della UI resta su
+`paper`/`card`/`tint`; il bagliore non decora mai testo, icone o bordi al di fuori di
+queste due superfici. La card viaggio in Home non porta più il bagliore: usa `accent`
+e `accent2` solo come tratto delle due polilinee del sigillo del terreno, mai come
+sfondo.
 
 ## 3. Typography
 
@@ -243,20 +258,20 @@ secondario, liste raggruppate) è un solo strato quasi impercettibile a contatto
 superficie; **card** (schede di una sezione) aggiunge una seconda ombra più ampia e
 morbida in `ink`; **modal** usa la stessa coppia di strati ma più estesa, per il foglio
 che copre lo schermo **e ora anche per la nav flottante in basso**, che è a tutti gli
-effetti un piccolo modale sempre visibile; **glow** è riservato alle tre superfici che
-portano il bagliore radiale `accent → accent2` (card viaggio, bottone primario, tab
-attiva) ed è tinto di `accent` invece che di `ink`, con uno strato di contatto più
-marcato rispetto a prima (`0 2px 4px` invece di `0 1px 2px`) per reggere la scala più
-grande delle superfici. Le curve del terreno restano il livello di profondità
-"ambientale" dietro header e card: dove disegnano sopra il bagliore (Home), le linee
-passano da stroke `line` a stroke `paper` con opacità ridotta (15–35% invece di
-30–70%) per restare leggibili sul fondo saturo.
+effetti un piccolo modale sempre visibile; **glow** è riservato alle due superfici che
+portano il bagliore radiale `accent → accent2` (bottone primario, tab attiva) ed è
+tinto di `accent` invece che di `ink`, con uno strato di contatto più marcato rispetto
+a prima (`0 2px 4px` invece di `0 1px 2px`) per reggere la scala più grande delle
+superfici. La card viaggio in Home è passata dal ruolo Glow al ruolo Card, con un
+bordo sottile `line` da 1px in più a separarla dalla pagina — non porta più
+un'illuminazione propria. Le curve del terreno restano il livello di profondità
+"ambientale" dietro l'header: le linee sono in stroke `line`, opacità 30%→70%.
 
 ### Shadow Vocabulary
 - **Contact** (`0 1px 2px rgb(ink / 5%)`): liste raggruppate.
-- **Card** (`0 1px 2px rgb(ink / 5%), 0 10px 24px -14px rgb(ink / 25%)`): schede di una sezione.
+- **Card** (`0 1px 2px rgb(ink / 5%), 0 10px 24px -14px rgb(ink / 25%)`): schede di una sezione **e la card viaggio in Home**, con un bordo `line` da 1px in aggiunta.
 - **Modal / Floating Nav** (`0 1px 2px rgb(ink / 6%), 0 20px 40px -18px rgb(ink / 30–35%)`): foglio modale e barra di navigazione flottante in basso (quest'ultima anche con `backdrop-blur` e sfondo `card` al 90% di opacità).
-- **Glow** (`0 2px 4px rgb(ink / 8%), 0 30px 50px -20px rgb(accent / 55%)` sulla card viaggio; `0 24px 38px -16px rgb(accent / 55%)` sul bottone primario; `0 10px 20px -10px rgb(accent / 55%)` sulla tab attiva): le tre superfici col bagliore `accent → accent2`.
+- **Glow** (`0 24px 38px -16px rgb(accent / 55%)` sul bottone primario; `0 10px 20px -10px rgb(accent / 55%)` sulla tab attiva): le due superfici col bagliore `accent → accent2`.
 
 ### Named Rules
 **The Colored-Shadow Rule.** Ogni ombra usa `ink` (neutra) o `accent` (Glow)
@@ -274,12 +289,14 @@ dell'identità del viaggio aperto.
 - **Stato:** `active:scale-[0.97]` (150ms ease-out) oltre a `active:opacity-70` come feedback al tocco; `disabled:opacity-40` senza cambi di forma. Entrambi disattivati sotto `prefers-reduced-motion`.
 
 ### Trip Card (segnavia component)
-- **Corner Style:** angoli molto grandi (`rounded-[36px]`, prima 24px).
-- **Background:** bagliore radiale `accent → accent2` dell'ambiente del viaggio, con `Terrain` in SVG (stroke `paper`, opacità 15–35%) a piena estensione dietro il contenuto; testo in `paper`.
-- **Header della card:** riga superiore con badge emoji in vetro (`rounded-2xl`, sfondo `paper` al 20% di opacità via `rgb(var(--paper-rgb)/0.2)`, `backdrop-blur`) a sinistra e pillola di stato in `paper` al 95% a destra — prima lo stato stava in basso accanto alla data, ora è la prima cosa che si legge.
-- **Elevazione:** ombra Glow (tinta `accent`), più marcata di prima; nessun bordo in `line`, il bagliore stesso separa la card dalla pagina.
-- **Internal Padding:** 24px (prima 20px).
-- **Comportamento:** l'intera card è un bottone (`onOpen`); un secondo bottone "Elimina" vive sotto un divisore interno in `paper` a opacità ridotta, mai sovrapposto al contenuto principale.
+- **Corner Style:** angoli molto grandi (`rounded-[36px]`).
+- **Background:** piatto, superficie `card` con un bordo sottile `line` da 1px — non più il bagliore accent → accent2 a piena card; quella superficie ora è riservata a bottone primario e tab attiva, non all'identità del viaggio.
+- **Identità dell'ambiente:** un sigillo circolare da 58px (sfondo `tint`) contiene il `TerrainSeal` — due polilinee in `accent`/`accent2` che riprendono il disegno del terreno di quel viaggio (creste per montagna/natura, onde per mare/città) — non un'emoji di montagna o di onda.
+- **Header della card:** riga superiore col sigillo a sinistra e, a destra, un bottone icona-sola per eliminare (44×44px, `icon-button-ghost`, testo `muted`, sfondo trasparente) — non più un bottone con etichetta "Elimina" in fondo alla card.
+- **Elevazione:** ombra Card (tinta `ink`), la stessa delle schede di sezione — la trip card non è più una delle superfici Glow.
+- **Corpo:** nome del viaggio in Display, luogo in `muted`, poi un solo rigo che affianca la data (mono, `muted`) e lo stato (mono, `accent`, con un punto `accent` davanti) — non più una pillola di stato separata in alto e la data isolata in basso.
+- **Internal Padding:** 24px.
+- **Comportamento:** apertura del viaggio (`onOpen`) ed eliminazione sono due bottoni fratelli, mai annidati — il bottone di apertura copre nome/luogo/data, il bottone elimina vive da solo nell'angolo in alto a destra, sempre raggiungibile e mai in competizione con l'apertura.
 
 ### Modal / Bottom Sheet
 - **Style:** foglio ancorato in basso su mobile (`rounded-t-[28px]`), centrato con angoli pieni da desktop in su (`rounded-[28px]`); sfondo `card`, ombra Modal; scrim di sfondo con leggero `backdrop-blur`.
@@ -309,20 +326,22 @@ un solo modo di presentare "un gruppo di righe correlate".
   all'header in cima solo il nome del viaggio — un cambio di posizione deliberato
   rispetto alla Fase 0, non solo un restyling della stessa barra.
 
-### Terrain (signature component)
+### Terrain / TerrainSeal (signature component)
 Curve di livello o linee batimetriche generate proceduralmente in SVG da un seed
 (l'id del viaggio) e dalla palette attiva: creste irregolari e fitte per gli ambienti
 mountain/wild, linee morbide e regolari per sea/city. Stesso seed produce sempre lo
 stesso disegno — è la "firma" visiva non ripetibile di ogni viaggio, non un pattern
-decorativo generico. Sull'header (sfondo `paper`) resta in `line`, opacità 30%→70%;
-sulla card viaggio (sfondo bagliore) passa a stroke `paper`, opacità 15%→35%, per
-restare leggibile senza appiattire il bagliore sottostante.
+decorativo generico. Due impieghi della stessa firma: `Terrain` disegna lo sfondo
+esteso sotto l'header (stroke `line`, opacità 30%→70%); `TerrainSeal` la comprime in
+due polilinee spesse (stroke `accent`/`accent2`) dentro un sigillo circolare da 58px —
+l'impiego sulla card viaggio in Home, dove il terreno deve identificare l'ambiente
+puntualmente invece di decorare uno sfondo intero.
 
 ## 6. Do's and Don'ts
 
 ### Do:
 - **Do** tenere ogni schermata dentro un solo ambiente/palette: tutte le variabili CSS (`--paper`…`--tint`) cambiano insieme, mai a metà.
-- **Do** usare il bagliore radiale `accent → accent2` solo sulle tre superfici piene (card viaggio, bottone primario, tab attiva). Se compare una quarta superficie piena nella stessa vista, è un errore.
+- **Do** usare il bagliore radiale `accent → accent2` solo su due superfici piene (bottone primario, tab attiva). Se compare una terza superficie piena nella stessa vista, è un errore — la card viaggio in Home comunica l'ambiente col `TerrainSeal`, non con lo sfondo.
 - **Do** portare ogni dato misurabile (data, orario, intervallo, valore) in IBM Plex Mono.
 - **Do** mantenere aree toccabili di almeno 44×44px su ogni elemento interattivo (i bottoni primari/secondari sono ora 60px, ben oltre la soglia).
 - **Do** comporre colori-con-opacità su variabili CSS come `rgb(var(--paper-rgb) / 0.2)`, mai come `bg-[var(--paper)]/20`: quest'ultima sintassi non applica l'opacità in questo progetto (Tailwind non sa scomporre una custom property in canali RGB) e produce uno sfondo invisibile o pieno.
@@ -331,7 +350,7 @@ restare leggibile senza appiattire il bagliore sottostante.
 
 ### Don't:
 - **Don't** applicare il bagliore `accent → accent2` a testo, icone o bordi: è un trattamento di sfondo per superfici piene, non un accento decorativo diffuso.
-- **Don't** introdurre vetro smerigliato (glassmorphism) decorativo ovunque: è ammesso solo sul badge emoji e sulla pillola di stato della trip-card e sulla nav flottante — tre usi puntuali, non un trattamento generale delle card.
+- **Don't** introdurre vetro smerigliato (glassmorphism) decorativo ovunque: è ammesso solo sulla nav flottante (`backdrop-blur-lg` con sfondo `card` al 90%) — un uso puntuale, non un trattamento generale delle card. La trip-card in Home non usa più il vetro: badge e sigillo sono sfondi piatti in `tint`.
 - **Don't** animare oltre il feedback al tocco e le transizioni di stato (150–250ms): niente ingressi coreografati, niente scroll-driven animation.
 - **Don't** introdurre un terzo peso di Barlow Condensed oltre 400/600 senza motivo.
 - **Don't** mescolare ambienti/palette diverse nella stessa schermata, nemmeno per un singolo dettaglio decorativo.

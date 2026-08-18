@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-18T15:32:01.000Z",
+  "generatedAt": "2026-08-18T19:09:23.000Z",
   "title": "Design System: WeGo",
   "extensions": {
     "colorMeta": {
@@ -38,20 +38,20 @@
       "wild-tint": { "role": "neutral", "displayName": "Pale Moss Tint", "canonical": "oklch(90% 0.02 115)" }
     },
     "typographyMeta": {
-      "display": { "displayName": "Display", "purpose": "Wordmark \"WeGo\" in Home e nome del viaggio nell'header di TripView." },
-      "headline": { "displayName": "Headline", "purpose": "Nome del viaggio sulle card di Home." },
-      "title": { "displayName": "Title", "purpose": "Titolo di modali e stati vuoti." },
-      "tab": { "displayName": "Tab Label", "purpose": "Etichette della navigazione a tab in TripView, in condensata." },
+      "display": { "displayName": "Display", "purpose": "Wordmark \"WeGo\" in Home, nome del viaggio nell'header di TripView, e nome del viaggio sulle card di Home." },
+      "headline": { "displayName": "Headline", "purpose": "Alias di Display, stessa scala." },
+      "sectionHeader": { "displayName": "Section Header", "purpose": "Titolo di una sezione dentro TripView." },
+      "title": { "displayName": "Title", "purpose": "Titolo di modali, stati vuoti, titolo di un giorno in Giorni." },
+      "tab": { "displayName": "Tab Label", "purpose": "Etichette della nav flottante in basso, in sans (non più condensata)." },
       "body": { "displayName": "Body", "purpose": "Testo di default: luogo, dettagli, campi dei form." },
       "label": { "displayName": "Eyebrow Label", "purpose": "Etichette di sezione e stato del viaggio, mono maiuscolo." },
       "mono": { "displayName": "Data Mono", "purpose": "Date, intervalli, orari, valori in Stat: qualunque dato misurabile." }
     },
     "shadows": [
       { "name": "contact", "value": "0 1px 2px rgba(28,39,33,0.05)", "purpose": "Bottone secondario e liste raggruppate: elevazione minima a contatto con la superficie." },
-      { "name": "card", "value": "0 1px 2px rgba(28,39,33,0.05), 0 10px 24px -14px rgba(28,39,33,0.25)", "purpose": "Schede di una sezione (type cards)." },
-      { "name": "modal", "value": "0 1px 2px rgba(28,39,33,0.06), 0 24px 48px -16px rgba(28,39,33,0.35)", "purpose": "Foglio modale / bottom sheet." },
-      { "name": "glow-card", "value": "0 1px 2px rgba(28,39,33,0.06), 0 20px 40px -16px rgba(181,80,47,0.55)", "purpose": "Card viaggio in Home: ombra ampia tinta dell'accent dell'ambiente." },
-      { "name": "glow-button", "value": "0 10px 24px -8px rgba(181,80,47,0.45)", "purpose": "Bottone primario e tab attiva: stessa logica della glow, più contenuta." }
+      { "name": "card", "value": "0 1px 2px rgba(28,39,33,0.05), 0 10px 24px -14px rgba(28,39,33,0.25)", "purpose": "Schede di una sezione e, ora, la card viaggio in Home (con un bordo line da 1px in più)." },
+      { "name": "modal", "value": "0 1px 2px rgba(28,39,33,0.06), 0 20px 40px -18px rgba(28,39,33,0.3)", "purpose": "Foglio modale / bottom sheet e nav flottante in basso (quest'ultima anche con backdrop-blur e sfondo card al 90%)." },
+      { "name": "glow", "value": "0 24px 38px -16px rgba(181,80,47,0.55) sul bottone primario; 0 10px 20px -10px rgba(181,80,47,0.55) sulla tab attiva", "purpose": "Le due sole superfici col bagliore radiale accent → accent2: bottone primario e tab attiva. La card viaggio non la porta più." }
     ],
     "motion": [
       { "name": "touch-feedback-scale", "value": "transform 0.15s cubic-bezier(0.16,1,0.3,1)", "purpose": "active:scale-[0.97] su bottoni, tab e icone di navigazione." },
@@ -71,7 +71,7 @@
       "refersTo": "button-primary",
       "description": "Azione principale della schermata: creare un viaggio, salvare un form.",
       "html": "<button class=\"ds-btn-primary\">Crea il viaggio</button>",
-      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 20px; border-radius: 9999px; border: none; font-family: 'IBM Plex Sans', sans-serif; font-weight: 500; font-size: 14px; color: #F0EDE3; background: linear-gradient(135deg, #B5502F, #2F6B52); box-shadow: 0 10px 24px -8px rgba(181,80,47,0.45); transition: transform 0.15s cubic-bezier(0.16,1,0.3,1), opacity 0.15s ease-out; } .ds-btn-primary:hover { filter: brightness(1.05); } .ds-btn-primary:focus-visible { outline: 2px solid #B5502F; outline-offset: 2px; } .ds-btn-primary:active { transform: scale(0.97); opacity: 0.7; } .ds-btn-primary:disabled { opacity: 0.4; pointer-events: none; }"
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 60px; padding: 0 28px; border-radius: 9999px; border: none; font-family: 'IBM Plex Sans', sans-serif; font-weight: 500; font-size: 16px; color: #F0EDE3; background: radial-gradient(130% 160% at 18% -10%, #B5502F, #2F6B52); box-shadow: 0 2px 4px rgba(28,39,33,0.08), 0 24px 38px -16px rgba(181,80,47,0.55); transition: transform 0.15s cubic-bezier(0.16,1,0.3,1), opacity 0.15s ease-out; } .ds-btn-primary:hover { filter: brightness(1.05); } .ds-btn-primary:focus-visible { outline: 2px solid #B5502F; outline-offset: 2px; } .ds-btn-primary:active { transform: scale(0.97); opacity: 0.7; } .ds-btn-primary:disabled { opacity: 0.4; pointer-events: none; }"
     },
     {
       "name": "Secondary Button",
@@ -79,23 +79,23 @@
       "refersTo": "button-secondary",
       "description": "Azione alternativa, meno prioritaria della primaria (es. \"Nuovo viaggio\" quando la lista non è vuota).",
       "html": "<button class=\"ds-btn-secondary\">+ Nuovo viaggio</button>",
-      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 20px; border-radius: 9999px; border: none; background: #E6E1D1; color: #1C2721; font-family: 'IBM Plex Sans', sans-serif; font-weight: 500; font-size: 14px; box-shadow: 0 1px 2px rgba(28,39,33,0.05); transition: transform 0.15s cubic-bezier(0.16,1,0.3,1), opacity 0.15s ease-out; } .ds-btn-secondary:hover { filter: brightness(0.97); } .ds-btn-secondary:focus-visible { outline: 2px solid #B5502F; outline-offset: 2px; } .ds-btn-secondary:active { transform: scale(0.97); opacity: 0.7; }"
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 60px; padding: 0 28px; border-radius: 9999px; border: none; background: #E6E1D1; color: #1C2721; font-family: 'IBM Plex Sans', sans-serif; font-weight: 500; font-size: 16px; box-shadow: 0 1px 2px rgba(28,39,33,0.05); transition: transform 0.15s cubic-bezier(0.16,1,0.3,1), opacity 0.15s ease-out; } .ds-btn-secondary:hover { filter: brightness(0.97); } .ds-btn-secondary:focus-visible { outline: 2px solid #B5502F; outline-offset: 2px; } .ds-btn-secondary:active { transform: scale(0.97); opacity: 0.7; }"
     },
     {
       "name": "Trip Card",
       "kind": "card",
       "refersTo": "trip-card",
-      "description": "Card cliccabile in Home: gradiente accent → accent2 dell'ambiente, terreno in overlay, nome, luogo, data e stato del viaggio.",
-      "html": "<div class=\"ds-trip-card\"><button class=\"ds-trip-card-open\"><div class=\"ds-trip-card-title-row\"><span class=\"ds-trip-card-emoji\">🏔️</span><span class=\"ds-trip-card-name\">Dolomiti Friulane</span></div><p class=\"ds-trip-card-place\">Forni di Sopra (UD)</p><div class=\"ds-trip-card-meta\"><span class=\"ds-trip-card-date\">24–28 ago 2026</span><span class=\"ds-trip-card-status\">tra 6 giorni</span></div></button><div class=\"ds-trip-card-footer\"><button class=\"ds-trip-card-delete\">🗑 Elimina</button></div></div>",
-      "css": ".ds-trip-card { position: relative; overflow: hidden; border-radius: 24px; background: linear-gradient(135deg, #B5502F, #2F6B52); box-shadow: 0 1px 2px rgba(28,39,33,0.06), 0 20px 40px -16px rgba(181,80,47,0.55); color: #F0EDE3; } .ds-trip-card-open { display: block; width: 100%; text-align: left; padding: 20px; background: none; border: none; cursor: pointer; } .ds-trip-card-title-row { display: flex; align-items: baseline; gap: 8px; } .ds-trip-card-emoji { font-size: 24px; } .ds-trip-card-name { font-family: 'Barlow Condensed', sans-serif; font-size: 24px; color: #F0EDE3; } .ds-trip-card-place { font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; color: rgba(240,237,227,0.8); margin-top: 4px; } .ds-trip-card-meta { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; } .ds-trip-card-date { font-family: 'IBM Plex Mono', monospace; font-size: 14px; } .ds-trip-card-status { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; font-weight: 600; letter-spacing: 0.02em; background: #F0EDE3; color: #B5502F; padding: 4px 10px; border-radius: 9999px; } .ds-trip-card-footer { border-top: 1px solid rgba(240,237,227,0.25); } .ds-trip-card-delete { width: 100%; min-height: 44px; background: none; border: none; color: rgba(240,237,227,0.8); font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; cursor: pointer; } .ds-trip-card-open:focus-visible, .ds-trip-card-delete:focus-visible { outline: 2px solid #F0EDE3; outline-offset: -2px; }"
+      "description": "Card cliccabile in Home: superficie piatta con bordo sottile, un sigillo circolare col disegno del terreno indica l'ambiente, poi nome, luogo e un rigo con data e stato.",
+      "html": "<div class=\"ds-trip-card\"><div class=\"ds-trip-card-toprow\"><div class=\"ds-trip-card-seal\"><svg viewBox=\"0 0 100 60\" width=\"40\" height=\"40\"><polyline points=\"0,24 14,10 26,20 40,4 54,18 68,8 82,20 100,10\" fill=\"none\" stroke=\"#B5502F\" stroke-width=\"4.5\" stroke-linecap=\"round\"/><polyline points=\"0,38 16,28 30,34 46,20 60,32 76,22 90,34 100,26\" fill=\"none\" stroke=\"#2F6B52\" stroke-width=\"4.5\" stroke-linecap=\"round\" opacity=\"0.75\"/></svg></div><button class=\"ds-trip-card-delete\" aria-label=\"Elimina Dolomiti Friulane\">🗑</button></div><button class=\"ds-trip-card-open\"><span class=\"ds-trip-card-name\">Dolomiti Friulane</span><p class=\"ds-trip-card-place\">Forni di Sopra (UD)</p><div class=\"ds-trip-card-meta\"><span class=\"ds-trip-card-date\">24–28 ago 2026</span><span class=\"ds-trip-card-status\">● tra 6 giorni</span></div></button></div>",
+      "css": ".ds-trip-card { border-radius: 36px; background: #FBFAF4; border: 1px solid #DED7C6; box-shadow: 0 1px 2px rgba(28,39,33,0.05), 0 10px 24px -14px rgba(28,39,33,0.25); padding: 24px; color: #1C2721; } .ds-trip-card-toprow { display: flex; align-items: flex-start; justify-content: space-between; } .ds-trip-card-seal { width: 58px; height: 58px; border-radius: 9999px; background: #E6E1D1; display: flex; align-items: center; justify-content: center; overflow: hidden; } .ds-trip-card-delete { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 9999px; background: none; border: none; color: #6E7B72; cursor: pointer; transition: transform 0.15s cubic-bezier(0.16,1,0.3,1); } .ds-trip-card-delete:active { transform: scale(0.94); } .ds-trip-card-delete:focus-visible { outline: 2px solid #B5502F; outline-offset: 2px; } .ds-trip-card-open { display: block; width: 100%; text-align: left; background: none; border: none; cursor: pointer; margin-top: 16px; } .ds-trip-card-open:focus-visible { outline: 2px solid #B5502F; outline-offset: 2px; } .ds-trip-card-name { font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 36px; line-height: 1; display: block; } .ds-trip-card-place { font-family: 'IBM Plex Sans', sans-serif; font-size: 16px; color: #6E7B72; margin-top: 6px; } .ds-trip-card-meta { display: flex; align-items: baseline; justify-content: space-between; margin-top: 16px; } .ds-trip-card-date { font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: #6E7B72; } .ds-trip-card-status { font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; color: #B5502F; }"
     },
     {
       "name": "Tab Navigation",
       "kind": "nav",
       "refersTo": "nav-tab",
-      "description": "Navigazione a tab di TripView: ogni tab è una pillola indipendente, quella attiva porta il gradiente accent → accent2.",
+      "description": "Barra flottante ancorata in fondo a TripView, non più sticky in cima: pillola su sfondo card al 90% con backdrop-blur, quella attiva porta il bagliore radiale accent → accent2.",
       "html": "<nav class=\"ds-tabs\"><button class=\"ds-tab ds-tab-active\">Panoramica</button><button class=\"ds-tab\">Giorni</button><button class=\"ds-tab\">Ristoranti</button></nav>",
-      "css": ".ds-tabs { display: flex; gap: 8px; padding: 12px 0; background: #F0EDE3; } .ds-tab { flex-shrink: 0; padding: 8px 16px; border-radius: 9999px; border: none; background: none; font-family: 'Barlow Condensed', sans-serif; font-size: 16px; color: #6E7B72; cursor: pointer; transition: transform 0.15s cubic-bezier(0.16,1,0.3,1); } .ds-tab-active { background: linear-gradient(135deg, #B5502F, #2F6B52); color: #F0EDE3; box-shadow: 0 10px 20px -10px rgba(181,80,47,0.55); } .ds-tab:active { transform: scale(0.97); } .ds-tab:focus-visible { outline: 2px solid #B5502F; outline-offset: 2px; }"
+      "css": ".ds-tabs { display: flex; align-items: center; gap: 4px; overflow-x: auto; padding: 6px; border-radius: 9999px; background: rgba(251,250,244,0.9); backdrop-filter: blur(16px); box-shadow: 0 2px 4px rgba(28,39,33,0.08), 0 20px 40px -18px rgba(28,39,33,0.3); } .ds-tab { flex-shrink: 0; height: 48px; padding: 0 20px; border-radius: 9999px; border: none; background: none; font-family: 'IBM Plex Sans', sans-serif; font-weight: 500; font-size: 16px; color: #6E7B72; white-space: nowrap; cursor: pointer; transition: transform 0.15s cubic-bezier(0.16,1,0.3,1); } .ds-tab-active { background: radial-gradient(130% 160% at 18% -10%, #B5502F, #2F6B52); color: #F0EDE3; box-shadow: 0 10px 20px -10px rgba(181,80,47,0.55); } .ds-tab:active { transform: scale(0.97); } .ds-tab:focus-visible { outline: 2px solid #B5502F; outline-offset: 2px; }"
     },
     {
       "name": "Bottom Sheet Modal",
@@ -103,7 +103,7 @@
       "refersTo": "modal-sheet",
       "description": "Foglio modale ancorato in basso su mobile, centrato da desktop in su, con scrim sfocato dietro.",
       "html": "<div class=\"ds-modal-backdrop\"><div class=\"ds-modal-sheet\"><div class=\"ds-modal-header\"><h2 class=\"ds-modal-title\">Nuovo viaggio</h2><button class=\"ds-modal-close\" aria-label=\"Chiudi\">✕</button></div><p class=\"ds-modal-body\">Contenuto del form...</p></div></div>",
-      "css": ".ds-modal-backdrop { position: fixed; inset: 0; display: flex; align-items: flex-end; justify-content: center; background: rgba(0,0,0,0.3); backdrop-filter: blur(4px); } .ds-modal-sheet { width: 100%; max-width: 448px; max-height: 90vh; overflow-y: auto; border-radius: 28px 28px 0 0; background: #FBFAF4; color: #1C2721; padding: 20px; box-shadow: 0 1px 2px rgba(28,39,33,0.06), 0 24px 48px -16px rgba(28,39,33,0.35); } .ds-modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; } .ds-modal-title { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; } .ds-modal-close { min-height: 44px; min-width: 44px; display: flex; align-items: center; justify-content: center; background: #E6E1D1; border-radius: 9999px; border: none; cursor: pointer; transition: transform 0.15s cubic-bezier(0.16,1,0.3,1); } .ds-modal-close:active { transform: scale(0.97); } .ds-modal-close:focus-visible { outline: 2px solid #B5502F; outline-offset: 2px; } .ds-modal-body { font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; }"
+      "css": ".ds-modal-backdrop { position: fixed; inset: 0; display: flex; align-items: flex-end; justify-content: center; background: rgba(0,0,0,0.3); backdrop-filter: blur(4px); } .ds-modal-sheet { width: 100%; max-width: 448px; max-height: 90vh; overflow-y: auto; border-radius: 28px 28px 0 0; background: #FBFAF4; color: #1C2721; padding: 20px; box-shadow: 0 1px 2px rgba(28,39,33,0.06), 0 24px 48px -16px rgba(28,39,33,0.35); } .ds-modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; } .ds-modal-title { font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 24px; } .ds-modal-close { min-height: 44px; min-width: 44px; display: flex; align-items: center; justify-content: center; background: #E6E1D1; border-radius: 9999px; border: none; cursor: pointer; transition: transform 0.15s cubic-bezier(0.16,1,0.3,1); } .ds-modal-close:active { transform: scale(0.97); } .ds-modal-close:focus-visible { outline: 2px solid #B5502F; outline-offset: 2px; } .ds-modal-body { font-family: 'IBM Plex Sans', sans-serif; font-size: 16px; }"
     },
     {
       "name": "Grouped List",
@@ -111,7 +111,7 @@
       "refersTo": "grouped-list",
       "description": "Lista raggruppata usata per le sezioni in Panoramica e per le checklist: righe divise da un separatore interno dentro un'unica card con ombra.",
       "html": "<ul class=\"ds-grouped-list\"><li class=\"ds-grouped-list-row\"><span>Ristoranti</span><button class=\"ds-grouped-list-action\" aria-label=\"Elimina\">🗑</button></li><li class=\"ds-grouped-list-row\"><span>Da prenotare</span><button class=\"ds-grouped-list-action\" aria-label=\"Elimina\">🗑</button></li></ul>",
-      "css": ".ds-grouped-list { list-style: none; margin: 0; padding: 0; background: #FBFAF4; border-radius: 20px; box-shadow: 0 1px 2px rgba(28,39,33,0.05); overflow: hidden; } .ds-grouped-list-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; color: #1C2721; border-bottom: 1px solid #DED7C6; } .ds-grouped-list-row:last-child { border-bottom: none; } .ds-grouped-list-action { min-height: 44px; min-width: 44px; background: none; border: none; color: #6E7B72; cursor: pointer; } .ds-grouped-list-action:focus-visible { outline: 2px solid #B5502F; outline-offset: 2px; }"
+      "css": ".ds-grouped-list { list-style: none; margin: 0; padding: 0; background: #FBFAF4; border-radius: 24px; box-shadow: 0 1px 2px rgba(28,39,33,0.05); overflow: hidden; } .ds-grouped-list-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; font-family: 'IBM Plex Sans', sans-serif; font-size: 16px; color: #1C2721; border-bottom: 1px solid #DED7C6; } .ds-grouped-list-row:last-child { border-bottom: none; } .ds-grouped-list-action { min-height: 44px; min-width: 44px; background: none; border: none; color: #6E7B72; cursor: pointer; } .ds-grouped-list-action:focus-visible { outline: 2px solid #B5502F; outline-offset: 2px; }"
     },
     {
       "name": "Empty State",
@@ -119,38 +119,39 @@
       "refersTo": "empty-state",
       "description": "Schermata vuota come invito, non come avviso: icona dentro un cerchio tinto, titolo, dettaglio, azione opzionale.",
       "html": "<div class=\"ds-empty\"><div class=\"ds-empty-icon\">🧭</div><p class=\"ds-empty-title\">Nessun viaggio ancora</p><p class=\"ds-empty-detail\">Aggiungilo a mano oppure incolla degli appunti grezzi e lascia che Claude prepari il JSON da caricare.</p></div>",
-      "css": ".ds-empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px; padding: 48px 24px; } .ds-empty-icon { display: flex; align-items: center; justify-content: center; height: 64px; width: 64px; border-radius: 9999px; background: #E6E1D1; font-size: 26px; } .ds-empty-title { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; color: #1C2721; } .ds-empty-detail { font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; color: #6E7B72; max-width: 280px; }"
+      "css": ".ds-empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px; padding: 48px 24px; } .ds-empty-icon { display: flex; align-items: center; justify-content: center; height: 64px; width: 64px; border-radius: 9999px; background: #E6E1D1; color: #6E7B72; font-size: 26px; } .ds-empty-title { font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 24px; color: #1C2721; } .ds-empty-detail { font-family: 'IBM Plex Sans', sans-serif; font-size: 16px; color: #6E7B72; max-width: 20rem; }"
     }
   ],
   "narrative": {
     "northStar": "Il Diario di Viaggio Condiviso",
-    "overview": "WeGo si legge come un quaderno di viaggio passato di mano in mano tra amici, non come un cruscotto software. Ogni viaggio ha un ambiente — montagna, mare, città, natura — e l'app cambia letteralmente pelle per adattarvisi: il gradiente della card, il terreno disegnato sotto l'header e la tab attiva sono la prima cosa che comunica dove sei diretto, prima ancora di leggere una parola. Il tono è caldo e pratico: niente burocrazia visiva, niente schermate che chiedono conferme superflue.",
+    "overview": "WeGo si legge come un quaderno di viaggio passato di mano in mano tra amici, non come un cruscotto software. Ogni viaggio ha un ambiente — montagna, mare, città, natura — e l'app cambia letteralmente pelle per adattarvisi: il terreno disegnato sotto l'header, il sigillo del terreno sulla card viaggio e la tab attiva sono la prima cosa che comunica dove sei diretto, prima ancora di leggere una parola. Il tono resta caldo e pratico, ma con la Fase 1 \"moderna\" la mano è più decisa: tipografia più grande e più pesante, bottoni più massicci, superfici più tattili. La card viaggio in Home è tornata piatta: comunica l'ambiente con un sigillo grafico invece che con un'emoji letterale o un intero sfondo acceso.",
     "keyCharacteristics": [
       "Quattro ambienti (mountain / sea / city / wild), stessa struttura di ruoli colore, valori diversi: il viaggio \"sceglie\" la propria identità visiva a runtime via CSS custom properties.",
-      "Superfici elevate: card viaggio, bottone primario e tab attiva usano un gradiente a due toni accent → accent2 dell'ambiente con un'ombra soffusa dello stesso colore.",
-      "Raggi generosi (20–28px su liste/card/modali, pillola sui bottoni) al posto degli angoli squadrati.",
-      "Tre famiglie tipografiche con ruoli netti e non intercambiabili: condensata per titoli e tab, sans per il corpo del testo, mono per dati."
+      "Superfici accese: bottone primario e tab attiva usano lo stesso bagliore radiale accent → accent2 dell'ambiente, decentrato in alto a sinistra. Riservato a due sole superfici, entrambe azioni/stato di navigazione: la card viaggio non lo porta più.",
+      "L'ambiente si comunica anche senza colore acceso: il sigillo del terreno (TerrainSeal) è un piccolo disegno generativo, creste per montagna/natura, onde per mare/città, non un'emoji di montagna o di onda.",
+      "Raggi molto generosi (28–36px su card e trip-card, pillola sui bottoni) e bottoni alti 60px: il primo segnale che rende l'interfaccia un'app tattile e non un documento da leggere."
     ],
     "rules": [
       { "name": "The One Environment Rule", "body": "Una sola palette per schermata: quando si entra in un viaggio, ogni componente su quella pagina legge le stesse otto variabili CSS (--paper, --card, --ink, --muted, --line, --accent, --accent2, --tint). Non si mescolano palette diverse nella stessa vista, nemmeno per un dettaglio.", "section": "colors" },
-      { "name": "The Accent Confidence Rule", "body": "accent e accent2 insieme, in gradiente a 135°, formano l'unica superficie \"piena\" per schermata: la card del viaggio in Home, il bottone primario, la tab attiva. Non si usano come sfondo pieno altrove; il gradiente non decora mai testo, icone o bordi al di fuori di queste tre superfici.", "section": "colors" },
-      { "name": "The One Weight Rule", "body": "Solo il peso regular (400) è caricato per Barlow Condensed nei titoli attivi nel codice; la gerarchia si fa con la dimensione e con la forma condensata, non con il grassetto.", "section": "typography" },
+      { "name": "The Accent Confidence Rule", "body": "accent e accent2 insieme, nello stesso bagliore radiale, formano l'unica superficie \"accesa\" per schermata: il bottone primario e la tab attiva nella nav flottante. Non si usano come sfondo pieno altrove; il bagliore non decora mai testo, icone o bordi al di fuori di queste due superfici. La card viaggio in Home non porta più il bagliore: usa accent e accent2 solo come tratto delle due polilinee del sigillo del terreno, mai come sfondo.", "section": "colors" },
+      { "name": "The Two Weight Rule", "body": "Barlow Condensed carica due pesi, regular (400) e semi-bold (600, tutti i ruoli display/headline/section-header/title). Il 600 è una scelta attiva per una UI più moderna e leggibile a colpo d'occhio, non un bold decorativo: non introdurre un terzo peso senza motivo.", "section": "typography" },
       { "name": "The Mono-For-Data Rule", "body": "Qualunque cosa sia un dato misurabile, data, intervallo di giorni, orario, valore in una Stat, va in IBM Plex Mono, mai in sans o condensata.", "section": "typography" },
       { "name": "The Colored-Shadow Rule", "body": "Ogni ombra usa ink (neutra) o accent (Glow) dell'ambiente attivo, mai un grigio o nero generico: anche l'elevazione fa parte dell'identità del viaggio aperto.", "section": "elevation" }
     ],
     "dos": [
       "Do tenere ogni schermata dentro un solo ambiente/palette: tutte le variabili CSS (--paper…--tint) cambiano insieme, mai a metà.",
-      "Do usare il gradiente accent → accent2 solo sulle tre superfici piene (card viaggio, bottone primario, tab attiva). Se compare una quarta superficie piena nella stessa vista, è un errore.",
+      "Do usare il bagliore radiale accent → accent2 solo su due superfici piene (bottone primario, tab attiva). Se compare una terza superficie piena nella stessa vista, è un errore, la card viaggio in Home comunica l'ambiente col TerrainSeal, non con lo sfondo.",
       "Do portare ogni dato misurabile (data, orario, intervallo, valore) in IBM Plex Mono.",
-      "Do mantenere aree toccabili di almeno 44×44px su ogni elemento interattivo.",
+      "Do mantenere aree toccabili di almeno 44×44px su ogni elemento interattivo (i bottoni primari/secondari sono ora 60px, ben oltre la soglia).",
+      "Do comporre colori-con-opacità su variabili CSS come rgb(var(--paper-rgb) / 0.2), mai come bg-[var(--paper)]/20, quest'ultima sintassi non applica l'opacità in questo progetto.",
       "Do rispettare prefers-reduced-motion: transizioni e active:scale si disattivano, resta solo il cambio di stato.",
       "Do tingere ogni ombra con ink o accent dell'ambiente attivo, mai grigio/nero puro."
     ],
     "donts": [
-      "Don't applicare il gradiente accent → accent2 a testo, icone o bordi: è un trattamento di sfondo per superfici piene, non un accento decorativo diffuso.",
-      "Don't introdurre vetro smerigliato (glassmorphism) decorativo sulle card: il blur è ammesso solo sullo scrim dietro un modale.",
+      "Don't applicare il bagliore accent → accent2 a testo, icone o bordi: è un trattamento di sfondo per superfici piene, non un accento decorativo diffuso.",
+      "Don't introdurre vetro smerigliato (glassmorphism) decorativo ovunque: è ammesso solo sulla nav flottante, un uso puntuale, non un trattamento generale delle card. La trip-card in Home non usa più il vetro.",
       "Don't animare oltre il feedback al tocco e le transizioni di stato (150–250ms): niente ingressi coreografati, niente scroll-driven animation.",
-      "Don't usare il grassetto sui titoli in Barlow Condensed: la gerarchia è già nella dimensione e nella forma condensata.",
+      "Don't introdurre un terzo peso di Barlow Condensed oltre 400/600 senza motivo.",
       "Don't mescolare ambienti/palette diverse nella stessa schermata, nemmeno per un singolo dettaglio decorativo.",
       "Don't introdurre un quinto tipo di sezione oltre cards / checklist / notes per \"arricchire\" una vista: la flessibilità sta nel numero di sezioni, non nella loro varietà."
     ]
