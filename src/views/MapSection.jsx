@@ -66,8 +66,6 @@ export default function MapSection({ trip, section, onUpdate, activeDisplayName 
 
   return (
     <div className="flex flex-col gap-4 pt-5">
-      <h2 className="font-display font-semibold text-3xl">{section.title}</h2>
-
       {online && center && (
         <div className="rounded-[24px] overflow-hidden h-64 border border-[var(--line)]">
           <MapContainer center={center} zoom={12} style={{ height: '100%', width: '100%' }}>

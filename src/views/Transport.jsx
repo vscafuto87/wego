@@ -47,8 +47,6 @@ export default function Transport({ trip, section, onUpdate, activeDisplayName }
 
   return (
     <div className="flex flex-col gap-4 pt-5">
-      <h2 className="font-display font-semibold text-3xl">{section.title}</h2>
-
       {sorted.length === 0 && (
         <Empty title="Nessun trasporto ancora" detail="Aggiungi treni, voli, aliscafi o altri spostamenti." action={<Btn onClick={() => setForm(EMPTY_ITEM)}>Aggiungi un trasporto</Btn>} />
       )}

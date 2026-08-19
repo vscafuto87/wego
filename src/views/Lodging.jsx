@@ -36,8 +36,6 @@ export default function Lodging({ trip, section, onUpdate, activeDisplayName }) 
 
   return (
     <div className="flex flex-col gap-4 pt-5">
-      <h2 className="font-display font-semibold text-3xl">{section.title}</h2>
-
       {sorted.length === 0 && (
         <Empty icon={Bed} title="Nessun alloggio ancora" detail="Aggiungi hotel o appartamenti prenotati." action={<Btn onClick={() => setForm(EMPTY_ITEM)}>Aggiungi un alloggio</Btn>} />
       )}
