@@ -51,7 +51,7 @@ beforeEach(() => {
 })
 
 describe('activateTripSync', () => {
-  it('crea la riga tv_trips e la membership owner, torna remoteId/shareCode', async () => {
+  it('crea la riga tv_trips e la membership owner, torna remoteId/shareCode/ownerId', async () => {
     mockGetSession.mockResolvedValue({ user: { id: 'user-1' } })
     const insertTrip = vi.fn().mockReturnValue({
       select: () => ({ single: async () => ({ data: { id: 'trip-remote-1', share_code: 'AB12CD', updated_at: '2026-08-18T10:00:00Z' }, error: null }) })
@@ -66,7 +66,7 @@ describe('activateTripSync', () => {
     const trip = normalizeTrip({ name: 'Ponza' })
     const result = await activateTripSync(trip, 'Vincenzo')
 
-    expect(result).toEqual({ remoteId: 'trip-remote-1', shareCode: 'AB12CD', lastSyncedAt: '2026-08-18T10:00:00Z', role: 'editor', dirty: false })
+    expect(result).toEqual({ remoteId: 'trip-remote-1', shareCode: 'AB12CD', lastSyncedAt: '2026-08-18T10:00:00Z', role: 'editor', dirty: false, ownerId: 'user-1' })
     expect(insertMember).toHaveBeenCalledWith({ trip_id: 'trip-remote-1', user_id: 'user-1', role: 'editor', display_name: 'Vincenzo' })
   })
 
@@ -78,14 +78,14 @@ describe('activateTripSync', () => {
 })
 
 describe('pullTrip', () => {
-  it('normalizza il viaggio remoto e aggiorna lastSyncedAt', async () => {
+  it('normalizza il viaggio remoto, aggiorna lastSyncedAt e ownerId', async () => {
     mockFrom.mockReturnValue({
-      select: () => ({ eq: () => ({ single: async () => ({ data: { data: { name: 'Ponza' }, updated_at: '2026-08-18T12:00:00Z' }, error: null }) }) })
+      select: () => ({ eq: () => ({ single: async () => ({ data: { data: { name: 'Ponza' }, updated_at: '2026-08-18T12:00:00Z', owner_id: 'user-1' }, error: null }) }) })
     })
     const syncState = { remoteId: 'trip-remote-1', role: 'viewer', lastSyncedAt: '2026-08-18T10:00:00Z', dirty: false }
     const result = await pullTrip(syncState)
     expect(result.trip.name).toBe('Ponza')
-    expect(result.syncState).toEqual({ ...syncState, lastSyncedAt: '2026-08-18T12:00:00Z', dirty: false })
+    expect(result.syncState).toEqual({ ...syncState, lastSyncedAt: '2026-08-18T12:00:00Z', dirty: false, ownerId: 'user-1' })
   })
 })
 
@@ -107,17 +107,17 @@ describe('pushTrip', () => {
 })
 
 describe('joinTripByCode', () => {
-  it('chiama la RPC join_trip poi legge il viaggio, torna ruolo viewer', async () => {
+  it('chiama la RPC join_trip poi legge il viaggio, torna ruolo viewer e ownerId', async () => {
     mockGetSession.mockResolvedValue({ user: { id: 'user-2' } })
     mockRpc.mockResolvedValue({ data: 'trip-remote-1', error: null })
     mockFrom.mockReturnValue({
-      select: () => ({ eq: () => ({ single: async () => ({ data: { id: 'trip-remote-1', data: { name: 'Ponza' }, updated_at: '2026-08-18T10:00:00Z' }, error: null }) }) })
+      select: () => ({ eq: () => ({ single: async () => ({ data: { id: 'trip-remote-1', data: { name: 'Ponza' }, updated_at: '2026-08-18T10:00:00Z', owner_id: 'user-1' }, error: null }) }) })
     })
     const { joinTripByCode } = await import('./sync.js')
     const result = await joinTripByCode('AB12CD', 'Giulia')
     expect(mockRpc).toHaveBeenCalledWith('join_trip', { code: 'AB12CD', display_name: 'Giulia' })
     expect(result.trip.name).toBe('Ponza')
-    expect(result.syncState).toEqual({ remoteId: 'trip-remote-1', role: 'viewer', lastSyncedAt: '2026-08-18T10:00:00Z', dirty: false })
+    expect(result.syncState).toEqual({ remoteId: 'trip-remote-1', role: 'viewer', lastSyncedAt: '2026-08-18T10:00:00Z', dirty: false, ownerId: 'user-1' })
   })
 })
 
@@ -185,5 +185,23 @@ describe('restoreLastVersion', () => {
     const restored = await restoreLastVersion('trip-remote-1')
     expect(restored.name).toBe('Ponza vecchia')
     expect(updateFn).toHaveBeenCalledWith({ data: { name: 'Ponza vecchia' }, previous_data: null, updated_at: expect.any(String) })
+  })
+})
+
+describe('fetchTripOwnerId', () => {
+  it('legge solo owner_id per il viaggio remoto', async () => {
+    mockFrom.mockReturnValue({
+      select: () => ({ eq: () => ({ single: async () => ({ data: { owner_id: 'user-9' }, error: null }) }) })
+    })
+    const { fetchTripOwnerId } = await import('./sync.js')
+    expect(await fetchTripOwnerId('trip-remote-1')).toBe('user-9')
+  })
+
+  it('rilancia l\'errore Supabase come Error leggibile', async () => {
+    mockFrom.mockReturnValue({
+      select: () => ({ eq: () => ({ single: async () => ({ data: null, error: { message: 'non trovato' } }) }) })
+    })
+    const { fetchTripOwnerId } = await import('./sync.js')
+    await expect(fetchTripOwnerId('trip-remote-1')).rejects.toThrow('non trovato')
   })
 })

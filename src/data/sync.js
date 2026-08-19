@@ -38,7 +38,7 @@ export async function activateTripSync(trip, displayName) {
         .from('tv_trip_members')
         .insert({ trip_id: data.id, user_id: session.user.id, role: 'editor', display_name: displayName })
       if (memberError) throw new Error(memberError.message)
-      return { remoteId: data.id, shareCode: data.share_code, lastSyncedAt: data.updated_at, role: 'editor', dirty: false }
+      return { remoteId: data.id, shareCode: data.share_code, lastSyncedAt: data.updated_at, role: 'editor', dirty: false, ownerId: session.user.id }
     }
     lastError = error
     if (error.code !== '23505') break
@@ -49,13 +49,13 @@ export async function activateTripSync(trip, displayName) {
 export async function pullTrip(syncState) {
   const { data: row, error } = await supabase
     .from('tv_trips')
-    .select('data, updated_at')
+    .select('data, updated_at, owner_id')
     .eq('id', syncState.remoteId)
     .single()
   if (error) throw new Error(error.message)
   return {
     trip: normalizeTrip(row.data),
-    syncState: { ...syncState, lastSyncedAt: row.updated_at, dirty: false }
+    syncState: { ...syncState, lastSyncedAt: row.updated_at, dirty: false, ownerId: row.owner_id }
   }
 }
 
@@ -90,14 +90,14 @@ export async function joinTripByCode(code, displayName) {
 
   const { data: row, error: selectError } = await supabase
     .from('tv_trips')
-    .select('id, data, updated_at')
+    .select('id, data, updated_at, owner_id')
     .eq('id', remoteId)
     .single()
   if (selectError) throw new Error(selectError.message)
 
   return {
     trip: normalizeTrip(row.data),
-    syncState: { remoteId: row.id, role: 'viewer', lastSyncedAt: row.updated_at, dirty: false }
+    syncState: { remoteId: row.id, role: 'viewer', lastSyncedAt: row.updated_at, dirty: false, ownerId: row.owner_id }
   }
 }
 
@@ -156,4 +156,14 @@ export async function restoreLastVersion(remoteId) {
   if (updateError) throw new Error(updateError.message)
 
   return normalizeTrip(row.previous_data)
+}
+
+export async function fetchTripOwnerId(remoteId) {
+  const { data, error } = await supabase
+    .from('tv_trips')
+    .select('owner_id')
+    .eq('id', remoteId)
+    .single()
+  if (error) throw new Error(error.message)
+  return data.owner_id
 }
