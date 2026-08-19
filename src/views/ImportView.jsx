@@ -5,7 +5,7 @@ import Btn from '../components/Btn.jsx'
 
 const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-2xl px-4 py-3 text-base font-mono focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
 
-const PROMPT = `Trasforma questi appunti di viaggio grezzi in un JSON con questo schema esatto (nessun campo in più, nessuno in meno):
+const PROMPT = `Trasforma questi appunti di viaggio grezzi in un JSON con questo schema esatto (nessun campo in più, nessuno in meno, a parte i campi condizionati da "kind" e "type" descritti sotto):
 
 {
   "name": "string",
@@ -20,7 +20,7 @@ const PROMPT = `Trasforma questi appunti di viaggio grezzi in un JSON con questo
       "items": [ { "time": "HH:MM o vuoto", "title": "string", "detail": "string", "link": "string o vuoto" } ] }
   ],
   "sections": [
-    { "title": "string", "icon": "map|check|note|ticket|food|bed|bus|star|people", "type": "cards",
+    { "title": "Ristoranti", "icon": "food", "type": "cards",
       "items": [ { "title": "string", "meta": "string", "detail": "string", "link": "string", "tags": ["string"] } ] },
     { "title": "string", "icon": "check", "type": "checklist",
       "items": [ { "text": "string", "done": false } ] },
@@ -28,7 +28,30 @@ const PROMPT = `Trasforma questi appunti di viaggio grezzi in un JSON con questo
   ]
 }
 
-Regole: solo i tre tipi di sezione cards/checklist/notes. Usa stringhe vuote per i campi che non conosci, non inventare dati. Rispondi solo con il JSON, senza testo attorno.
+Ogni voce di "days[].items[]" può avere anche un campo "kind" opzionale, che determina
+quali campi in più aggiungere alla voce (solo quelli del kind scelto, nessun altro):
+
+- "kind": "" (o assente) → voce generica, nessun campo in più.
+- "kind": "sentiero" → aggiungi "durata", "dislivello", "difficolta" (string).
+  Es: { "time": "9:00", "title": "Salita al rifugio", "kind": "sentiero", "durata": "3h", "dislivello": "800m", "difficolta": "E", "detail": "", "link": "" }
+- "kind": "spiaggia" → aggiungi "accesso", "servizi" (string).
+  Es: { "time": "", "title": "Cala Fetovaia", "kind": "spiaggia", "accesso": "sentiero 15 min", "servizi": "bar, noleggio", "detail": "", "link": "" }
+- "kind": "pasto" → aggiungi "luogo" (string), "prenotato" (boolean).
+  Es: { "time": "20:00", "title": "Cena", "kind": "pasto", "luogo": "Trattoria da Mario", "prenotato": true, "detail": "", "link": "" }
+
+Oltre a cards/checklist/notes, "sections[].type" può valere anche "transport", "lodging"
+o "map": in quel caso gli "items" hanno la forma specifica del tipo (nessun campo delle
+altre forme):
+
+- "type": "transport" → items: { "mode": "string (treno, aereo, aliscafo...)", "from": "string", "to": "string", "date": "AAAA-MM-GG", "time": "HH:MM o vuoto", "ticketLink": "string", "note": "string" }
+- "type": "lodging" → items: { "name": "string", "checkIn": "AAAA-MM-GG", "checkOut": "AAAA-MM-GG", "address": "string", "bookingLink": "string", "note": "string" }
+- "type": "map" → items: { "name": "string", "category": "string", "mapsLink": "string", "lat": numero o null, "lng": numero o null, "note": "string" }
+
+Regole: i tipi di sezione validi sono cards, checklist, notes, transport, lodging, map
+(sei in tutto, non inventarne altri). I campi extra di "kind" e i campi degli items delle
+sezioni transport/lodging/map sono le uniche parti condizionate: dipendono da quale kind o
+type scegli, non aggiungerli se non pertinenti. Per tutto il resto usa stringhe vuote per i
+campi che non conosci, non inventare dati. Rispondi solo con il JSON, senza testo attorno.
 
 Appunti:
 `

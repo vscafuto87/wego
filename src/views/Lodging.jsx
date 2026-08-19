@@ -35,7 +35,7 @@ export default function Lodging({ trip, section, onUpdate, activeDisplayName }) 
   const sorted = [...section.items].sort((a, b) => (a.checkIn || '').localeCompare(b.checkIn || ''))
 
   return (
-    <div className="flex flex-col gap-4 pt-5">
+    <div className="flex flex-col gap-4">
       {sorted.length === 0 && (
         <Empty icon={Bed} title="Nessun alloggio ancora" detail="Aggiungi hotel o appartamenti prenotati." action={<Btn onClick={() => setForm(EMPTY_ITEM)}>Aggiungi un alloggio</Btn>} />
       )}

@@ -45,7 +45,12 @@ export default function MapSection({ trip, section, onUpdate, activeDisplayName 
   function saveItem(e) {
     e.preventDefault()
     const { id, ...raw } = form
-    const fields = { ...raw, lat: raw.lat === '' ? null : Number(raw.lat), lng: raw.lng === '' ? null : Number(raw.lng) }
+    const toCoord = (value) => {
+      if (value === '') return null
+      const n = Number(value)
+      return Number.isFinite(n) ? n : null
+    }
+    const fields = { ...raw, lat: toCoord(raw.lat), lng: toCoord(raw.lng) }
     updateItems((items) => {
       if (id) return items.map((it) => (it.id === id ? stampModified({ ...it, ...fields }, activeDisplayName) : it))
       return [...items, stampModified({ id: crypto.randomUUID(), ...fields }, activeDisplayName)]
@@ -65,7 +70,7 @@ export default function MapSection({ trip, section, onUpdate, activeDisplayName 
     : null
 
   return (
-    <div className="flex flex-col gap-4 pt-5">
+    <div className="flex flex-col gap-4">
       {online && center && (
         <div className="rounded-[24px] overflow-hidden h-64 border border-[var(--line)]">
           <MapContainer center={center} zoom={12} style={{ height: '100%', width: '100%' }}>

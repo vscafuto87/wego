@@ -80,6 +80,7 @@ src/
   components/             # Btn, Label, Modal, Empty, Stripe, Stat
   views/
     Home.jsx  TripView.jsx  Overview.jsx  Days.jsx  Section.jsx
+    Transport.jsx  Lodging.jsx  MapSection.jsx
     ImportView.jsx  ExportPanel.jsx
 seed/trips.json
 ```
@@ -114,14 +115,29 @@ possibile, quindi non introdurre un formato interno diverso.
       "items": [ { "title": "", "meta": "", "detail": "", "link": "", "tags": [] } ] },
     { "title": "Da prenotare", "icon": "check", "type": "checklist",
       "items": [ { "text": "", "done": false } ] },
-    { "title": "Note", "icon": "note", "type": "notes", "text": "" }
+    { "title": "Note", "icon": "note", "type": "notes", "text": "" },
+    { "title": "Trasporti", "icon": "bus", "type": "transport",
+      "items": [ { "mode": "", "from": "", "to": "", "date": "", "time": "", "ticketLink": "", "note": "" } ] },
+    { "title": "Pernottamento", "icon": "bed", "type": "lodging",
+      "items": [ { "name": "", "checkIn": "", "checkOut": "", "address": "", "bookingLink": "", "note": "" } ] },
+    { "title": "Mappa", "icon": "map", "type": "map",
+      "items": [ { "name": "", "category": "", "mapsLink": "", "lat": null, "lng": null, "note": "" } ] }
   ]
 }
 ```
 
-Solo tre tipi di sezione: `cards`, `checklist`, `notes`. **Non aggiungerne altri**:
-la flessibilità sta nel numero di sezioni, non nella varietà dei tipi. Un tipo nuovo
-va discusso prima, perché rompe l'import e le sezioni già scritte.
+Sei tipi di sezione: `cards`, `checklist`, `notes`, `transport`, `lodging`, `map`.
+**Non aggiungerne altri**: la flessibilità sta nel numero di sezioni, non nella varietà
+dei tipi. Un tipo nuovo va discusso prima, perché rompe l'import e le sezioni già scritte
+(gli ultimi tre — transport/lodging/map — sono già stati discussi e approvati, vedi lo
+spec in `docs/superpowers/specs/2026-08-18-sezioni-fisse-viaggio-design.md`).
+
+Quattro sezioni sono fisse (garantite da `normalizeTrip()`, non cancellabili dalla
+gestione manuale): Trasporti (`transport`), Pernottamento (`lodging`), Ristoranti
+(`cards` con titolo "Ristoranti") e Mappa (`map`). `transport` gestisce spostamenti
+(mezzo, da, a, data/ora, link biglietto); `lodging` gestisce alloggi (nome, check-in/out,
+indirizzo, link prenotazione); `map` gestisce punti d'interesse con coordinate mostrate
+su una mappa Leaflet (nome, categoria, link maps, lat/lng, nota).
 
 `icon` ∈ `map, check, note, ticket, food, bed, bus, star, people`.
 Gli `id` sono generati al caricamento e non vengono mai esportati.
@@ -193,7 +209,8 @@ scusarsi. Le schermate vuote sono un invito, non un avviso.
 - Fai solo ciò che è stato chiesto. Non aggiungere feature, dipendenze o astrazioni
   non richieste; non rifattorizzare codice che funziona per il gusto di farlo.
 - Prima di installare una dipendenza nuova, chiedi. Il budget è: React, Tailwind,
-  lucide-react, idb-keyval, @supabase/supabase-js, vite-plugin-pwa. Nient'altro.
+  lucide-react, idb-keyval, @supabase/supabase-js, vite-plugin-pwa, leaflet,
+  react-leaflet. Nient'altro.
 - Dopo ogni step scrivi in una riga cosa hai completato.
 - Fermati e chiedi prima di: cancellare file, cambiare lo schema del viaggio, toccare
   le migrazioni Supabase, modificare i token del design system.

@@ -46,9 +46,9 @@ export default function Transport({ trip, section, onUpdate, activeDisplayName }
   const sorted = [...section.items].sort((a, b) => sortKey(a).localeCompare(sortKey(b)))
 
   return (
-    <div className="flex flex-col gap-4 pt-5">
+    <div className="flex flex-col gap-4">
       {sorted.length === 0 && (
-        <Empty title="Nessun trasporto ancora" detail="Aggiungi treni, voli, aliscafi o altri spostamenti." action={<Btn onClick={() => setForm(EMPTY_ITEM)}>Aggiungi un trasporto</Btn>} />
+        <Empty icon={Bus} title="Nessun trasporto ancora" detail="Aggiungi treni, voli, aliscafi o altri spostamenti." action={<Btn onClick={() => setForm(EMPTY_ITEM)}>Aggiungi un trasporto</Btn>} />
       )}
 
       <div className="flex flex-col gap-3">
