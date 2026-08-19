@@ -41,6 +41,7 @@ const { mockFrom, mockGetSession, mockRpc } = vi.hoisted(() => ({ mockFrom: vi.f
 
 vi.mock('./supabase.js', () => ({ supabase: { from: mockFrom, rpc: mockRpc }, getSession: mockGetSession }))
 
+const { supabase } = await import('./supabase.js')
 const { activateTripSync, pullTrip, pushTrip } = await import('./sync.js')
 const { normalizeTrip } = await import('./schema.js')
 
@@ -185,5 +186,52 @@ describe('restoreLastVersion', () => {
     const restored = await restoreLastVersion('trip-remote-1')
     expect(restored.name).toBe('Ponza vecchia')
     expect(updateFn).toHaveBeenCalledWith({ data: { name: 'Ponza vecchia' }, previous_data: null, updated_at: expect.any(String) })
+  })
+})
+
+describe('uploadLodgingAttachment / removeLodgingAttachment / getAttachmentSignedUrl', () => {
+  it('uploadLodgingAttachment carica sul path <remoteId>/<uuid>.pdf e lo ritorna', async () => {
+    const upload = vi.fn().mockResolvedValue({ error: null })
+    const storageFrom = vi.fn().mockReturnValue({ upload })
+    supabase.storage = { from: storageFrom }
+
+    const { uploadLodgingAttachment } = await import('./sync.js')
+    const file = new Blob(['contenuto'], { type: 'application/pdf' })
+    const path = await uploadLodgingAttachment('trip-remote-1', file)
+
+    expect(storageFrom).toHaveBeenCalledWith('trip-attachments')
+    expect(path).toMatch(/^trip-remote-1\/[0-9a-f-]{36}\.pdf$/)
+    expect(upload).toHaveBeenCalledWith(path, file, { contentType: 'application/pdf' })
+  })
+
+  it('uploadLodgingAttachment propaga l\'errore di Supabase', async () => {
+    const upload = vi.fn().mockResolvedValue({ error: { message: 'bucket pieno' } })
+    supabase.storage = { from: vi.fn().mockReturnValue({ upload }) }
+
+    const { uploadLodgingAttachment } = await import('./sync.js')
+    await expect(uploadLodgingAttachment('trip-remote-1', new Blob())).rejects.toThrow('bucket pieno')
+  })
+
+  it('removeLodgingAttachment cancella il path indicato', async () => {
+    const remove = vi.fn().mockResolvedValue({ error: null })
+    const storageFrom = vi.fn().mockReturnValue({ remove })
+    supabase.storage = { from: storageFrom }
+
+    const { removeLodgingAttachment } = await import('./sync.js')
+    await removeLodgingAttachment('trip-remote-1/abc.pdf')
+
+    expect(storageFrom).toHaveBeenCalledWith('trip-attachments')
+    expect(remove).toHaveBeenCalledWith(['trip-remote-1/abc.pdf'])
+  })
+
+  it('getAttachmentSignedUrl torna l\'URL firmato', async () => {
+    const createSignedUrl = vi.fn().mockResolvedValue({ data: { signedUrl: 'https://x/signed' }, error: null })
+    supabase.storage = { from: vi.fn().mockReturnValue({ createSignedUrl }) }
+
+    const { getAttachmentSignedUrl } = await import('./sync.js')
+    const url = await getAttachmentSignedUrl('trip-remote-1/abc.pdf')
+
+    expect(url).toBe('https://x/signed')
+    expect(createSignedUrl).toHaveBeenCalledWith('trip-remote-1/abc.pdf', 120)
   })
 })

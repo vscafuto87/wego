@@ -157,3 +157,25 @@ export async function restoreLastVersion(remoteId) {
 
   return normalizeTrip(row.previous_data)
 }
+
+export async function uploadLodgingAttachment(remoteId, file) {
+  const path = `${remoteId}/${crypto.randomUUID()}.pdf`
+  const { error } = await supabase.storage
+    .from('trip-attachments')
+    .upload(path, file, { contentType: 'application/pdf' })
+  if (error) throw new Error(error.message)
+  return path
+}
+
+export async function removeLodgingAttachment(path) {
+  const { error } = await supabase.storage.from('trip-attachments').remove([path])
+  if (error) throw new Error(error.message)
+}
+
+export async function getAttachmentSignedUrl(path) {
+  const { data, error } = await supabase.storage
+    .from('trip-attachments')
+    .createSignedUrl(path, 120)
+  if (error) throw new Error(error.message)
+  return data.signedUrl
+}
