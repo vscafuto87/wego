@@ -8,6 +8,7 @@ import { stampModified } from '../data/schema.js'
 import ModifiedBy from '../components/ModifiedBy.jsx'
 import Transport from './Transport.jsx'
 import Lodging from './Lodging.jsx'
+import MapSection from './MapSection.jsx'
 
 const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
 
@@ -174,6 +175,8 @@ export default function Section({ trip, section, onUpdate, activeDisplayName }) 
       {section.type === 'transport' && <Transport trip={trip} section={section} onUpdate={onUpdate} activeDisplayName={activeDisplayName} />}
 
       {section.type === 'lodging' && <Lodging trip={trip} section={section} onUpdate={onUpdate} activeDisplayName={activeDisplayName} />}
+
+      {section.type === 'map' && <MapSection trip={trip} section={section} onUpdate={onUpdate} activeDisplayName={activeDisplayName} />}
 
       <Modal open={!!headerForm} title="Rinomina sezione" onClose={() => setHeaderForm(null)}>
         {headerForm && (
