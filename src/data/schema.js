@@ -5,9 +5,9 @@ const SECTION_TYPES = ['cards', 'checklist', 'notes', 'transport', 'lodging', 'm
 const DAY_ITEM_KINDS = ['', 'sentiero', 'spiaggia', 'pasto']
 
 const KIND_FIELDS = {
-  sentiero: ['durata', 'dislivello', 'difficolta'],
-  spiaggia: ['accesso', 'servizi'],
-  pasto: ['luogo', 'prenotato']
+  sentiero: ['durata', 'dislivello', 'difficolta', 'lat', 'lng'],
+  spiaggia: ['accesso', 'servizi', 'lat', 'lng'],
+  pasto: ['luogo', 'prenotato', 'lat', 'lng']
 }
 
 export function dayItemFieldsForKind(kind) {
@@ -44,13 +44,13 @@ function normalizeDayItem(raw) {
     modifiedAt: str(item.modifiedAt)
   }
   if (kind === 'sentiero') {
-    return { ...base, durata: str(item.durata), dislivello: str(item.dislivello), difficolta: str(item.difficolta) }
+    return { ...base, durata: str(item.durata), dislivello: str(item.dislivello), difficolta: str(item.difficolta), lat: toCoord(item.lat), lng: toCoord(item.lng) }
   }
   if (kind === 'spiaggia') {
-    return { ...base, accesso: str(item.accesso), servizi: str(item.servizi) }
+    return { ...base, accesso: str(item.accesso), servizi: str(item.servizi), lat: toCoord(item.lat), lng: toCoord(item.lng) }
   }
   if (kind === 'pasto') {
-    return { ...base, luogo: str(item.luogo), prenotato: item.prenotato === true }
+    return { ...base, luogo: str(item.luogo), prenotato: item.prenotato === true, lat: toCoord(item.lat), lng: toCoord(item.lng) }
   }
   return base
 }

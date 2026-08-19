@@ -70,13 +70,13 @@ function tripWithItem(item) {
 
 describe('dayItemFieldsForKind', () => {
   it('sentiero', () => {
-    expect(dayItemFieldsForKind('sentiero')).toEqual(['durata', 'dislivello', 'difficolta'])
+    expect(dayItemFieldsForKind('sentiero')).toEqual(['durata', 'dislivello', 'difficolta', 'lat', 'lng'])
   })
   it('spiaggia', () => {
-    expect(dayItemFieldsForKind('spiaggia')).toEqual(['accesso', 'servizi'])
+    expect(dayItemFieldsForKind('spiaggia')).toEqual(['accesso', 'servizi', 'lat', 'lng'])
   })
   it('pasto', () => {
-    expect(dayItemFieldsForKind('pasto')).toEqual(['luogo', 'prenotato'])
+    expect(dayItemFieldsForKind('pasto')).toEqual(['luogo', 'prenotato', 'lat', 'lng'])
   })
   it('generico o sconosciuto: nessun campo proprio', () => {
     expect(dayItemFieldsForKind('')).toEqual([])
@@ -139,7 +139,7 @@ describe('normalizeTrip — kind sulle voci del giorno', () => {
     expect(item.id).toBeUndefined()
     expect(item).toEqual({
       time: '', title: 'Anello', kind: 'sentiero', detail: '', link: '',
-      modifiedBy: '', modifiedAt: '', durata: '5h14', dislivello: '', difficolta: ''
+      modifiedBy: '', modifiedAt: '', durata: '5h14', dislivello: '', difficolta: '', lat: null, lng: null
     })
   })
 })
@@ -316,5 +316,59 @@ describe('normalizeTrip — coordinate opzionali sulle schede (cards)', () => {
     expect(exported.items[0].lat).toBe(40.9)
     expect(exported.items[0].lng).toBe(12.9)
     expect(exported.items[0].id).toBeUndefined()
+  })
+})
+
+describe('dayItemFieldsForKind — include lat/lng per sentiero/spiaggia/pasto', () => {
+  it('sentiero', () => {
+    expect(dayItemFieldsForKind('sentiero')).toEqual(['durata', 'dislivello', 'difficolta', 'lat', 'lng'])
+  })
+  it('spiaggia', () => {
+    expect(dayItemFieldsForKind('spiaggia')).toEqual(['accesso', 'servizi', 'lat', 'lng'])
+  })
+  it('pasto', () => {
+    expect(dayItemFieldsForKind('pasto')).toEqual(['luogo', 'prenotato', 'lat', 'lng'])
+  })
+  it('voce generica: ancora nessun campo proprio', () => {
+    expect(dayItemFieldsForKind('')).toEqual([])
+  })
+})
+
+describe('normalizeTrip — coordinate su sentiero/spiaggia/pasto', () => {
+  it('sentiero con coordinate valide', () => {
+    const item = tripWithItem({ title: 'Anello', kind: 'sentiero', lat: 46.4, lng: 12.6 }).days[0].items[0]
+    expect(item.lat).toBe(46.4)
+    expect(item.lng).toBe(12.6)
+  })
+
+  it('spiaggia con coordinate valide', () => {
+    const item = tripWithItem({ title: 'Frontone', kind: 'spiaggia', lat: 40.9, lng: 12.9 }).days[0].items[0]
+    expect(item.lat).toBe(40.9)
+    expect(item.lng).toBe(12.9)
+  })
+
+  it('pasto con coordinate valide', () => {
+    const item = tripWithItem({ title: 'Cena', kind: 'pasto', lat: 40.9, lng: 12.9 }).days[0].items[0]
+    expect(item.lat).toBe(40.9)
+    expect(item.lng).toBe(12.9)
+  })
+
+  it('sentiero/spiaggia/pasto senza coordinate: null, non errore', () => {
+    const sentiero = tripWithItem({ title: 'Anello', kind: 'sentiero' }).days[0].items[0]
+    expect(sentiero.lat).toBeNull()
+    expect(sentiero.lng).toBeNull()
+  })
+
+  it('voce generica: nessun campo lat/lng', () => {
+    const item = tripWithItem({ title: 'Partenza', lat: 40.9, lng: 12.9 }).days[0].items[0]
+    expect(item.lat).toBeUndefined()
+    expect(item.lng).toBeUndefined()
+  })
+
+  it('exportTrip conserva lat/lng sulle voci giorno tipizzate', () => {
+    const trip = tripWithItem({ title: 'Anello', kind: 'sentiero', lat: 46.4, lng: 12.6 })
+    const exported = exportTrip(trip).days[0].items[0]
+    expect(exported.lat).toBe(46.4)
+    expect(exported.lng).toBe(12.6)
   })
 })
