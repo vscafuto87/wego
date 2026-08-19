@@ -275,3 +275,36 @@ export function parseCoordsFromMapsLink(url) {
   }
   return null
 }
+
+const DAY_MAP_KINDS = ['sentiero', 'spiaggia', 'pasto']
+
+// Punti con coordinate che vivono in altre sezioni/giorni del viaggio, utili
+// per la mappa aggregata. Calcolo derivato, nessuna copia salvata: chiamare
+// di nuovo dopo ogni modifica del viaggio, mai persistere il risultato.
+export function collectExternalMapPoints(trip) {
+  const fromCards = trip.sections
+    .filter((s) => s.type === 'cards')
+    .flatMap((s) => s.items
+      .filter((i) => i.lat !== null && i.lng !== null)
+      .map((i) => ({
+        id: i.id,
+        name: i.title,
+        lat: i.lat,
+        lng: i.lng,
+        link: i.link,
+        categoryGroup: 'schede',
+        origin: { tab: s.id, sectionTitle: s.title }
+      })))
+  const fromDays = trip.days.flatMap((d) => d.items
+    .filter((i) => DAY_MAP_KINDS.includes(i.kind) && i.lat !== null && i.lng !== null)
+    .map((i) => ({
+      id: i.id,
+      name: i.title,
+      lat: i.lat,
+      lng: i.lng,
+      link: i.link,
+      categoryGroup: i.kind,
+      origin: { tab: 'days', dayDate: d.date, itemTitle: i.title }
+    })))
+  return [...fromCards, ...fromDays]
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { normalizeTrip, exportTrip, stampModified, dayItemFieldsForKind, parseCoordsFromMapsLink } from './schema.js'
+import { normalizeTrip, exportTrip, stampModified, dayItemFieldsForKind, parseCoordsFromMapsLink, collectExternalMapPoints } from './schema.js'
 
 describe('normalizeTrip — attribuzione', () => {
   it('riempie modifiedBy/modifiedAt vuoti quando assenti', () => {
@@ -405,5 +405,68 @@ describe('parseCoordsFromMapsLink', () => {
     expect(parseCoordsFromMapsLink('')).toBeNull()
     expect(() => parseCoordsFromMapsLink(undefined)).not.toThrow()
     expect(parseCoordsFromMapsLink(undefined)).toBeNull()
+  })
+})
+
+describe('collectExternalMapPoints', () => {
+  function baseTrip(overrides) {
+    return normalizeTrip({
+      name: 'X',
+      days: [{ date: '2026-08-30', items: [
+        { title: 'Anello delle Malghe', kind: 'sentiero', lat: 46.4, lng: 12.6 },
+        { title: 'Frontone', kind: 'spiaggia', lat: 40.9, lng: 12.9 },
+        { title: 'Cena in paese', kind: 'pasto', lat: 40.91, lng: 12.91 },
+        { title: 'Partenza', lat: 40.0, lng: 12.0 }
+      ] }],
+      sections: [
+        { title: 'Ristoranti', type: 'cards', items: [{ title: 'Da Assunta', lat: 40.897, lng: 12.958 }] },
+        { title: 'Bar consigliati', type: 'cards', items: [{ title: 'Senza coordinate' }] }
+      ],
+      ...overrides
+    })
+  }
+
+  it('include le schede con coordinate, escludendo quelle senza', () => {
+    const points = collectExternalMapPoints(baseTrip())
+    const schede = points.filter((p) => p.categoryGroup === 'schede')
+    expect(schede).toHaveLength(1)
+    expect(schede[0]).toMatchObject({ name: 'Da Assunta', lat: 40.897, lng: 12.958, link: '' })
+    expect(schede[0].origin.sectionTitle).toBe('Ristoranti')
+  })
+
+  it('conserva il link generico dell\'item, se presente', () => {
+    const trip = normalizeTrip({
+      name: 'X',
+      sections: [{ title: 'Ristoranti', type: 'cards', items: [{ title: 'Da Assunta', lat: 40.897, lng: 12.958, link: 'https://example.com' }] }]
+    })
+    const [point] = collectExternalMapPoints(trip)
+    expect(point.link).toBe('https://example.com')
+  })
+
+  it('include sentiero/spiaggia/pasto con coordinate, non la voce generica', () => {
+    const points = collectExternalMapPoints(baseTrip())
+    expect(points.filter((p) => p.categoryGroup === 'sentiero')).toHaveLength(1)
+    expect(points.filter((p) => p.categoryGroup === 'spiaggia')).toHaveLength(1)
+    expect(points.filter((p) => p.categoryGroup === 'pasto')).toHaveLength(1)
+    expect(points.find((p) => p.name === 'Partenza')).toBeUndefined()
+  })
+
+  it('origin delle voci giorno porta alla tab Itinerario con data e titolo', () => {
+    const points = collectExternalMapPoints(baseTrip())
+    const sentiero = points.find((p) => p.categoryGroup === 'sentiero')
+    expect(sentiero.origin).toEqual({ tab: 'days', dayDate: '2026-08-30', itemTitle: 'Anello delle Malghe' })
+  })
+
+  it('non include mai i punti della sezione Mappa stessa', () => {
+    const trip = normalizeTrip({
+      name: 'X',
+      sections: [{ title: 'Mappa', type: 'map', items: [{ name: 'Punto manuale', lat: 40.9, lng: 12.9 }] }]
+    })
+    expect(collectExternalMapPoints(trip)).toEqual([])
+  })
+
+  it('viaggio senza punti esterni: array vuoto', () => {
+    const trip = normalizeTrip({ name: 'X' })
+    expect(collectExternalMapPoints(trip)).toEqual([])
   })
 })
