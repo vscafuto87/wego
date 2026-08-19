@@ -122,6 +122,8 @@ function normalizeLodgingItem(raw) {
     bookingLink: str(item.bookingLink),
     lat: toCoord(item.lat),
     lng: toCoord(item.lng),
+    bookingFilePath: str(item.bookingFilePath),
+    bookingFileName: str(item.bookingFileName),
     note: str(item.note),
     modifiedBy: str(item.modifiedBy),
     modifiedAt: str(item.modifiedAt)

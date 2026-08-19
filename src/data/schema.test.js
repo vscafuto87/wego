@@ -210,6 +210,28 @@ describe('normalizeTrip — sezione lodging', () => {
     expect(exported.items[0].lng).toBe(12.958)
     expect(exported.items[0].id).toBeUndefined()
   })
+
+  it('normalizza bookingFilePath/bookingFileName quando presenti', () => {
+    const section = tripWithLodgingSection([
+      { name: 'Hotel', bookingFilePath: 'trip-1/abc.pdf', bookingFileName: 'conferma.pdf' }
+    ]).sections.find((s) => s.type === 'lodging')
+    expect(section.items[0].bookingFilePath).toBe('trip-1/abc.pdf')
+    expect(section.items[0].bookingFileName).toBe('conferma.pdf')
+  })
+
+  it('bookingFilePath/bookingFileName mancanti diventano stringa vuota', () => {
+    const section = tripWithLodgingSection([{ name: 'Hotel' }]).sections.find((s) => s.type === 'lodging')
+    expect(section.items[0].bookingFilePath).toBe('')
+    expect(section.items[0].bookingFileName).toBe('')
+  })
+
+  it('exportTrip conserva bookingFilePath/bookingFileName, senza id', () => {
+    const trip = tripWithLodgingSection([{ name: 'Hotel', bookingFilePath: 'trip-1/abc.pdf', bookingFileName: 'conferma.pdf' }])
+    const exported = exportTrip(trip).sections.find((s) => s.type === 'lodging')
+    expect(exported.items[0].bookingFilePath).toBe('trip-1/abc.pdf')
+    expect(exported.items[0].bookingFileName).toBe('conferma.pdf')
+    expect(exported.items[0].id).toBeUndefined()
+  })
 })
 
 describe('normalizeTrip — sezione map', () => {
