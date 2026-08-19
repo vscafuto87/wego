@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { Plus, Pencil, Trash2, Check } from 'lucide-react'
 import Btn from '../components/Btn.jsx'
 import Label from '../components/Label.jsx'
@@ -6,6 +6,15 @@ import Modal from '../components/Modal.jsx'
 import Empty from '../components/Empty.jsx'
 import { stampModified } from '../data/schema.js'
 import ModifiedBy from '../components/ModifiedBy.jsx'
+import Transport from './Transport.jsx'
+import Lodging from './Lodging.jsx'
+
+const MapSection = lazy(() => import('./MapSection.jsx'))
+
+function isFixedSection(section) {
+  if (section.type === 'transport' || section.type === 'lodging' || section.type === 'map') return true
+  return section.type === 'cards' && section.title === 'Ristoranti'
+}
 
 const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
 
@@ -73,9 +82,11 @@ export default function Section({ trip, section, onUpdate, activeDisplayName }) 
     <div className="flex flex-col gap-4 pt-5">
       <div className="flex items-center justify-between">
         <h2 className="font-display font-semibold text-3xl">{section.title}</h2>
-        <button onClick={() => setHeaderForm({ title: section.title })} aria-label="Rinomina sezione" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
-          <Pencil size={17} />
-        </button>
+        {!isFixedSection(section) && (
+          <button onClick={() => setHeaderForm({ title: section.title })} aria-label="Rinomina sezione" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
+            <Pencil size={17} />
+          </button>
+        )}
       </div>
 
       {section.type === 'cards' && (
@@ -167,6 +178,16 @@ export default function Section({ trip, section, onUpdate, activeDisplayName }) 
           />
           <ModifiedBy modifiedBy={section.modifiedBy} modifiedAt={section.modifiedAt} />
         </>
+      )}
+
+      {section.type === 'transport' && <Transport trip={trip} section={section} onUpdate={onUpdate} activeDisplayName={activeDisplayName} />}
+
+      {section.type === 'lodging' && <Lodging trip={trip} section={section} onUpdate={onUpdate} activeDisplayName={activeDisplayName} />}
+
+      {section.type === 'map' && (
+        <Suspense fallback={<p className="text-base text-[var(--muted)]">Caricamento mappa…</p>}>
+          <MapSection trip={trip} section={section} onUpdate={onUpdate} activeDisplayName={activeDisplayName} />
+        </Suspense>
       )}
 
       <Modal open={!!headerForm} title="Rinomina sezione" onClose={() => setHeaderForm(null)}>

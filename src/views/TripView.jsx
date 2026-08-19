@@ -16,7 +16,7 @@ const SYNC_DEBOUNCE_MS = 2000
 export default function TripView({ trip, onBack, onUpdate, onDelete }) {
   const tabs = [
     { key: 'overview', label: 'Panoramica' },
-    { key: 'days', label: 'Giorni' },
+    { key: 'days', label: 'Itinerario' },
     ...trip.sections.map((s) => ({ key: s.id, label: s.title || 'Sezione' }))
   ]
   const [activeTab, setActiveTab] = useState('overview')

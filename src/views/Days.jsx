@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { Plus, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, Mountain, Waves, Utensils } from 'lucide-react'
 import Btn from '../components/Btn.jsx'
 import Label from '../components/Label.jsx'
 import Modal from '../components/Modal.jsx'
 import Empty from '../components/Empty.jsx'
-import { stampModified } from '../data/schema.js'
+import { stampModified, dayItemFieldsForKind } from '../data/schema.js'
 import ModifiedBy from '../components/ModifiedBy.jsx'
 
 const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
@@ -15,7 +15,34 @@ function formatDate(date) {
 }
 
 const EMPTY_DAY = { date: '', title: '', note: '' }
-const EMPTY_ITEM = { time: '', title: '', detail: '', link: '' }
+const EMPTY_ITEM = { kind: '', time: '', title: '', detail: '', link: '', durata: '', dislivello: '', difficolta: '', accesso: '', servizi: '', luogo: '', prenotato: false }
+
+const KIND_OPTIONS = [
+  { value: '', label: 'Generica' },
+  { value: 'sentiero', label: 'Sentiero' },
+  { value: 'spiaggia', label: 'Spiaggia' },
+  { value: 'pasto', label: 'Pasto' }
+]
+
+const KIND_ICONS = { sentiero: Mountain, spiaggia: Waves, pasto: Utensils }
+
+const ALL_KIND_FIELDS = ['durata', 'dislivello', 'difficolta', 'accesso', 'servizi', 'luogo', 'prenotato']
+
+function withoutKindFields(item) {
+  const clean = { ...item }
+  for (const field of ALL_KIND_FIELDS) {
+    delete clean[field]
+  }
+  return clean
+}
+
+function fieldsForForm(itemForm) {
+  const common = { time: itemForm.time, title: itemForm.title, kind: itemForm.kind, detail: itemForm.detail, link: itemForm.link }
+  for (const field of dayItemFieldsForKind(itemForm.kind)) {
+    common[field] = itemForm[field]
+  }
+  return common
+}
 
 export default function Days({ trip, onUpdate, activeDisplayName }) {
   const [dayForm, setDayForm] = useState(null)
@@ -41,13 +68,14 @@ export default function Days({ trip, onUpdate, activeDisplayName }) {
 
   function saveItem(e) {
     e.preventDefault()
-    const { dayId, id, ...fields } = itemForm
+    const { dayId, id } = itemForm
+    const fields = fieldsForForm(itemForm)
     onUpdate((t) => ({
       ...t,
       days: t.days.map((d) => {
         if (d.id !== dayId) return d
-        if (id) return { ...d, items: d.items.map((it) => (it.id === id ? stampModified({ ...it, ...fields }, activeDisplayName) : it)) }
-        return { ...d, items: [...d.items, stampModified({ id: crypto.randomUUID(), ...fields }, activeDisplayName)] }
+        if (id) return { ...d, items: d.items.map((it) => (it.id === id ? stampModified({ ...withoutKindFields(it), ...fields }, activeDisplayName) : it)) }
+        return { ...d, items: [...d.items, stampModified(withoutKindFields({ id: crypto.randomUUID(), ...fields }), activeDisplayName)] }
       })
     }))
     setItemForm(null)
@@ -97,8 +125,27 @@ export default function Days({ trip, onUpdate, activeDisplayName }) {
                 <li key={item.id} className="flex items-start gap-1">
                   <div className="flex-1">
                     {item.time && <span className="font-mono text-sm text-[var(--muted)] mr-2">{item.time}</span>}
+                    {KIND_ICONS[item.kind] && (() => {
+                      const Icon = KIND_ICONS[item.kind]
+                      return <Icon size={15} className="inline mr-1.5 -mt-0.5 text-[var(--muted)]" />
+                    })()}
                     <span className="text-base">{item.title}</span>
                     {item.detail && <p className="text-sm text-[var(--muted)] mt-0.5">{item.detail}</p>}
+                    {item.kind === 'sentiero' && (item.durata || item.dislivello || item.difficolta) && (
+                      <p className="font-mono text-xs text-[var(--muted)] mt-0.5">
+                        {[item.durata, item.dislivello, item.difficolta].filter(Boolean).join(' · ')}
+                      </p>
+                    )}
+                    {item.kind === 'spiaggia' && (item.accesso || item.servizi) && (
+                      <p className="text-xs text-[var(--muted)] mt-0.5">
+                        {[item.accesso, item.servizi].filter(Boolean).join(' · ')}
+                      </p>
+                    )}
+                    {item.kind === 'pasto' && (item.luogo || item.prenotato) && (
+                      <p className="text-xs text-[var(--muted)] mt-0.5">
+                        {[item.luogo, item.prenotato ? 'prenotato' : ''].filter(Boolean).join(' · ')}
+                      </p>
+                    )}
                     {item.link && (
                       <a href={item.link} target="_blank" rel="noreferrer" className="text-sm text-[var(--accent)] underline block mt-0.5">
                         Apri il link
@@ -107,7 +154,7 @@ export default function Days({ trip, onUpdate, activeDisplayName }) {
                     <ModifiedBy modifiedBy={item.modifiedBy} modifiedAt={item.modifiedAt} />
                   </div>
                   <button
-                    onClick={() => setItemForm({ dayId: day.id, id: item.id, time: item.time, title: item.title, detail: item.detail, link: item.link })}
+                    onClick={() => setItemForm({ dayId: day.id, id: item.id, ...EMPTY_ITEM, ...item })}
                     aria-label="Modifica voce"
                     className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]"
                   >
@@ -147,10 +194,39 @@ export default function Days({ trip, onUpdate, activeDisplayName }) {
       <Modal open={!!itemForm} title={itemForm?.id ? 'Modifica voce' : 'Nuova voce'} onClose={() => setItemForm(null)}>
         {itemForm && (
           <form onSubmit={saveItem} className="flex flex-col gap-3">
+            <select value={itemForm.kind} onChange={(e) => setItemForm({ ...itemForm, kind: e.target.value })} className={inputClass}>
+              {KIND_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
             <input type="time" value={itemForm.time} onChange={(e) => setItemForm({ ...itemForm, time: e.target.value })} className={inputClass} />
             <input required placeholder="Titolo" value={itemForm.title} onChange={(e) => setItemForm({ ...itemForm, title: e.target.value })} className={inputClass} />
             <textarea placeholder="Dettaglio" value={itemForm.detail} onChange={(e) => setItemForm({ ...itemForm, detail: e.target.value })} className={inputClass} rows={2} />
             <input placeholder="Link" value={itemForm.link} onChange={(e) => setItemForm({ ...itemForm, link: e.target.value })} className={inputClass} />
+
+            {itemForm.kind === 'sentiero' && (
+              <>
+                <input placeholder="Durata (es. 5h14)" value={itemForm.durata} onChange={(e) => setItemForm({ ...itemForm, durata: e.target.value })} className={inputClass} />
+                <input placeholder="Dislivello (es. 480 m D+)" value={itemForm.dislivello} onChange={(e) => setItemForm({ ...itemForm, dislivello: e.target.value })} className={inputClass} />
+                <input placeholder="Difficoltà (es. media, EE)" value={itemForm.difficolta} onChange={(e) => setItemForm({ ...itemForm, difficolta: e.target.value })} className={inputClass} />
+              </>
+            )}
+            {itemForm.kind === 'spiaggia' && (
+              <>
+                <input placeholder="Come arrivarci" value={itemForm.accesso} onChange={(e) => setItemForm({ ...itemForm, accesso: e.target.value })} className={inputClass} />
+                <input placeholder="Servizi (bar, ombrelloni...)" value={itemForm.servizi} onChange={(e) => setItemForm({ ...itemForm, servizi: e.target.value })} className={inputClass} />
+              </>
+            )}
+            {itemForm.kind === 'pasto' && (
+              <>
+                <input placeholder="Nome del locale" value={itemForm.luogo} onChange={(e) => setItemForm({ ...itemForm, luogo: e.target.value })} className={inputClass} />
+                <label className="flex items-center gap-2 text-base">
+                  <input type="checkbox" checked={itemForm.prenotato} onChange={(e) => setItemForm({ ...itemForm, prenotato: e.target.checked })} />
+                  Prenotato
+                </label>
+              </>
+            )}
+
             <Btn type="submit">Salva</Btn>
           </form>
         )}

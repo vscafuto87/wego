@@ -1,6 +1,18 @@
 const PALETTES = ['mountain', 'sea', 'city', 'wild']
 const ICONS = ['map', 'check', 'note', 'ticket', 'food', 'bed', 'bus', 'star', 'people']
-const SECTION_TYPES = ['cards', 'checklist', 'notes']
+const SECTION_TYPES = ['cards', 'checklist', 'notes', 'transport', 'lodging', 'map']
+
+const DAY_ITEM_KINDS = ['', 'sentiero', 'spiaggia', 'pasto']
+
+const KIND_FIELDS = {
+  sentiero: ['durata', 'dislivello', 'difficolta'],
+  spiaggia: ['accesso', 'servizi'],
+  pasto: ['luogo', 'prenotato']
+}
+
+export function dayItemFieldsForKind(kind) {
+  return KIND_FIELDS[kind] ?? []
+}
 
 function makeId() {
   return crypto.randomUUID()
@@ -16,15 +28,27 @@ function arr(value) {
 
 function normalizeDayItem(raw) {
   const item = raw && typeof raw === 'object' ? raw : {}
-  return {
+  const kind = DAY_ITEM_KINDS.includes(item.kind) ? item.kind : ''
+  const base = {
     id: makeId(),
     time: str(item.time),
     title: str(item.title),
+    kind,
     detail: str(item.detail),
     link: str(item.link),
     modifiedBy: str(item.modifiedBy),
     modifiedAt: str(item.modifiedAt)
   }
+  if (kind === 'sentiero') {
+    return { ...base, durata: str(item.durata), dislivello: str(item.dislivello), difficolta: str(item.difficolta) }
+  }
+  if (kind === 'spiaggia') {
+    return { ...base, accesso: str(item.accesso), servizi: str(item.servizi) }
+  }
+  if (kind === 'pasto') {
+    return { ...base, luogo: str(item.luogo), prenotato: item.prenotato === true }
+  }
+  return base
 }
 
 function normalizeDay(raw) {
@@ -65,6 +89,54 @@ function normalizeChecklistItem(raw) {
   }
 }
 
+function normalizeTransportItem(raw) {
+  const item = raw && typeof raw === 'object' ? raw : {}
+  return {
+    id: makeId(),
+    mode: str(item.mode),
+    from: str(item.from),
+    to: str(item.to),
+    date: str(item.date),
+    time: str(item.time),
+    ticketLink: str(item.ticketLink),
+    note: str(item.note),
+    modifiedBy: str(item.modifiedBy),
+    modifiedAt: str(item.modifiedAt)
+  }
+}
+
+function normalizeLodgingItem(raw) {
+  const item = raw && typeof raw === 'object' ? raw : {}
+  return {
+    id: makeId(),
+    name: str(item.name),
+    checkIn: str(item.checkIn),
+    checkOut: str(item.checkOut),
+    address: str(item.address),
+    bookingLink: str(item.bookingLink),
+    note: str(item.note),
+    modifiedBy: str(item.modifiedBy),
+    modifiedAt: str(item.modifiedAt)
+  }
+}
+
+function normalizeMapItem(raw) {
+  const item = raw && typeof raw === 'object' ? raw : {}
+  const lat = typeof item.lat === 'number' && Number.isFinite(item.lat) ? item.lat : null
+  const lng = typeof item.lng === 'number' && Number.isFinite(item.lng) ? item.lng : null
+  return {
+    id: makeId(),
+    name: str(item.name),
+    category: str(item.category),
+    mapsLink: str(item.mapsLink),
+    lat,
+    lng,
+    note: str(item.note),
+    modifiedBy: str(item.modifiedBy),
+    modifiedAt: str(item.modifiedAt)
+  }
+}
+
 function normalizeSection(raw) {
   const section = raw && typeof raw === 'object' ? raw : {}
   const type = SECTION_TYPES.includes(section.type) ? section.type : 'cards'
@@ -77,7 +149,34 @@ function normalizeSection(raw) {
   if (type === 'notes') {
     return { ...base, text: str(section.text), modifiedBy: str(section.modifiedBy), modifiedAt: str(section.modifiedAt) }
   }
+  if (type === 'transport') {
+    return { ...base, items: arr(section.items).map(normalizeTransportItem) }
+  }
+  if (type === 'lodging') {
+    return { ...base, items: arr(section.items).map(normalizeLodgingItem) }
+  }
+  if (type === 'map') {
+    return { ...base, items: arr(section.items).map(normalizeMapItem) }
+  }
   return { ...base, items: arr(section.items).map(normalizeCardItem) }
+}
+
+const FIXED_SECTIONS = [
+  { title: 'Trasporti', icon: 'bus', type: 'transport' },
+  { title: 'Pernottamento', icon: 'bed', type: 'lodging' },
+  { title: 'Ristoranti', icon: 'food', type: 'cards' },
+  { title: 'Mappa', icon: 'map', type: 'map' }
+]
+
+function withFixedSections(sections) {
+  const remaining = [...sections]
+  const fixed = FIXED_SECTIONS.map((f) => {
+    const idx = remaining.findIndex((s) => s.type === f.type && (f.type !== 'cards' || s.title === f.title))
+    if (idx === -1) return normalizeSection({ title: f.title, icon: f.icon, type: f.type })
+    const [match] = remaining.splice(idx, 1)
+    return match
+  })
+  return [...fixed, ...remaining]
 }
 
 // Accetta un oggetto viaggio "sporco" (da import, seed o Supabase), riempie i campi
@@ -100,7 +199,7 @@ export function normalizeTrip(raw) {
     palette: PALETTES.includes(trip.palette) ? trip.palette : '',
     people: arr(trip.people).map(str),
     days: arr(trip.days).map(normalizeDay),
-    sections: arr(trip.sections).map(normalizeSection)
+    sections: withFixedSections(arr(trip.sections).map(normalizeSection))
   }
 }
 
