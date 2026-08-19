@@ -26,6 +26,10 @@ function arr(value) {
   return Array.isArray(value) ? value : []
 }
 
+function toCoord(value) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
 function normalizeDayItem(raw) {
   const item = raw && typeof raw === 'object' ? raw : {}
   const kind = DAY_ITEM_KINDS.includes(item.kind) ? item.kind : ''
@@ -73,6 +77,8 @@ function normalizeCardItem(raw) {
     detail: str(item.detail),
     link: str(item.link),
     tags: arr(item.tags).map(str),
+    lat: toCoord(item.lat),
+    lng: toCoord(item.lng),
     modifiedBy: str(item.modifiedBy),
     modifiedAt: str(item.modifiedAt)
   }
@@ -122,8 +128,8 @@ function normalizeLodgingItem(raw) {
 
 function normalizeMapItem(raw) {
   const item = raw && typeof raw === 'object' ? raw : {}
-  const lat = typeof item.lat === 'number' && Number.isFinite(item.lat) ? item.lat : null
-  const lng = typeof item.lng === 'number' && Number.isFinite(item.lng) ? item.lng : null
+  const lat = toCoord(item.lat)
+  const lng = toCoord(item.lng)
   return {
     id: makeId(),
     name: str(item.name),

@@ -274,3 +274,47 @@ describe('normalizeTrip — sezioni fisse garantite', () => {
     expect(free.map((s) => s.title)).toEqual(['Zaino del giorno', 'Note'])
   })
 })
+
+describe('normalizeTrip — coordinate opzionali sulle schede (cards)', () => {
+  function tripWithCardItem(item) {
+    return normalizeTrip({ name: 'X', sections: [{ title: 'Bar consigliati', type: 'cards', items: [item] }] })
+  }
+
+  it('scheda con coordinate valide', () => {
+    const item = tripWithCardItem({ title: 'Trattoria da Assunta', lat: 40.897, lng: 12.958 })
+      .sections.find((s) => s.title === 'Bar consigliati').items[0]
+    expect(item.lat).toBe(40.897)
+    expect(item.lng).toBe(12.958)
+  })
+
+  it('scheda senza coordinate: null, non errore', () => {
+    const item = tripWithCardItem({ title: 'Senza coordinate' })
+      .sections.find((s) => s.title === 'Bar consigliati').items[0]
+    expect(item.lat).toBeNull()
+    expect(item.lng).toBeNull()
+  })
+
+  it('coordinate non numeriche diventano null', () => {
+    const item = tripWithCardItem({ title: 'X', lat: 'quaranta', lng: '13' })
+      .sections.find((s) => s.title === 'Bar consigliati').items[0]
+    expect(item.lat).toBeNull()
+    expect(item.lng).toBeNull()
+  })
+
+  it('si applica anche alla sezione fissa Ristoranti, non solo alle sezioni cards custom', () => {
+    const trip = normalizeTrip({
+      name: 'X',
+      sections: [{ title: 'Ristoranti', type: 'cards', items: [{ title: 'Da Assunta', lat: 40.9, lng: 12.9 }] }]
+    })
+    const ristoranti = trip.sections.find((s) => s.type === 'cards' && s.title === 'Ristoranti')
+    expect(ristoranti.items[0].lat).toBe(40.9)
+  })
+
+  it('exportTrip conserva lat/lng sulle schede, senza id', () => {
+    const trip = tripWithCardItem({ title: 'X', lat: 40.9, lng: 12.9 })
+    const exported = exportTrip(trip).sections.find((s) => s.title === 'Bar consigliati')
+    expect(exported.items[0].lat).toBe(40.9)
+    expect(exported.items[0].lng).toBe(12.9)
+    expect(exported.items[0].id).toBeUndefined()
+  })
+})
