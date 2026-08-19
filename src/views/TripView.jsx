@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { ArrowLeft, Compass, CalendarDays } from 'lucide-react'
-import { themeStyle, ACCENT_GRADIENT } from '../theme/themes.js'
+import { themeStyle, getTheme, ACCENT_GRADIENT } from '../theme/themes.js'
 import Terrain from '../theme/Terrain.jsx'
 import Overview, { ICONS } from './Overview.jsx'
 import Days from './Days.jsx'
@@ -41,6 +41,21 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
 
   useEffect(() => { tripRef.current = trip }, [trip])
   useEffect(() => { syncStateRef.current = syncState }, [syncState])
+
+  // Lo sfondo di body è quello che si vede sotto la status bar in standalone
+  // iOS, e il meta theme-color colora la status bar su Android: entrambi
+  // devono seguire l'ambiente del viaggio aperto, non restare fissi.
+  useEffect(() => {
+    const paper = getTheme(trip.palette).paper
+    const meta = document.querySelector('meta[name="theme-color"]')
+    const previousMeta = meta?.getAttribute('content')
+    document.body.style.backgroundColor = paper
+    meta?.setAttribute('content', paper)
+    return () => {
+      document.body.style.backgroundColor = ''
+      if (previousMeta) meta?.setAttribute('content', previousMeta)
+    }
+  }, [trip.palette])
 
   async function runSync(state) {
     const seqAtStart = editSeqRef.current
@@ -238,7 +253,7 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
   return (
     <div style={themeStyle(trip.palette)} className="min-h-screen bg-[var(--paper)] text-[var(--ink)] font-sans">
       <header className="sticky top-0 z-30 overflow-hidden" style={{ boxShadow: `0 1px 0 rgb(var(--ink-rgb) / ${collapse * 0.08})` }}>
-        <div className="absolute inset-0" style={{ background: 'var(--card)', opacity: collapse }} />
+        <div className="absolute inset-0" style={{ background: 'var(--paper)', opacity: collapse }} />
         <div className="absolute inset-0" style={{ opacity: 1 - collapse }}>
           <Terrain seed={trip.id} palette={trip.palette} height={140} className="h-full w-full" />
         </div>
