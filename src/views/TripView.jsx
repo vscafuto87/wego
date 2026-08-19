@@ -220,7 +220,7 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
       </main>
 
       <nav className="fixed inset-x-0 bottom-0 z-20 px-5 pb-[calc(env(safe-area-inset-bottom)+16px)] pt-2">
-        <div className="max-w-2xl mx-auto flex items-center gap-1 overflow-x-auto bg-[rgb(var(--card-rgb)/0.9)] backdrop-blur-lg rounded-full p-1.5 shadow-[0_2px_4px_rgb(var(--ink-rgb)/0.08),0_20px_40px_-18px_rgb(var(--ink-rgb)/0.3)]">
+        <div className="max-w-2xl mx-auto flex items-center gap-1 overflow-x-auto no-scrollbar bg-[rgb(var(--card-rgb)/0.9)] backdrop-blur-lg rounded-full p-1.5 shadow-[0_2px_4px_rgb(var(--ink-rgb)/0.08),0_20px_40px_-18px_rgb(var(--ink-rgb)/0.3)]">
           {tabs.map((tab) => {
             const active = currentTab === tab.key
             return (
