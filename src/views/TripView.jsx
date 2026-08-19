@@ -1,8 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { ArrowLeft, Compass, CalendarDays } from 'lucide-react'
+import { ArrowLeft, Settings as SettingsIcon, Sun, CalendarDays } from 'lucide-react'
 import { themeStyle, getTheme, ACCENT_GRADIENT } from '../theme/themes.js'
 import Terrain from '../theme/Terrain.jsx'
-import Overview, { ICONS } from './Overview.jsx'
+import Today from './Today.jsx'
+import Settings, { ICONS } from './Settings.jsx'
 import Days from './Days.jsx'
 import Section from './Section.jsx'
 import { getSyncState, setSyncState as persistSyncState, markDirty, getDisplayNamePreference } from '../data/storage.js'
@@ -21,11 +22,12 @@ const HEADER_SHRINK = 184
 
 export default function TripView({ trip, onBack, onUpdate, onDelete }) {
   const tabs = [
-    { key: 'overview', label: 'Panoramica', icon: Compass },
+    { key: 'today', label: 'Oggi', icon: Sun },
     { key: 'days', label: 'Itinerario', icon: CalendarDays },
     ...trip.sections.map((s) => ({ key: s.id, label: s.title || 'Sezione', icon: ICONS[s.icon] }))
   ]
-  const [activeTab, setActiveTab] = useState('overview')
+  const [activeTab, setActiveTab] = useState('today')
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [syncState, setSyncStateValue] = useState(null)
   const [cloudDisplayName, setCloudDisplayName] = useState('')
   const [activateOpen, setActivateOpen] = useState(false)
@@ -260,8 +262,8 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
 
   const status = syncStatus()
   // Un pull rigenera gli id delle sezioni: se la tab aperta non esiste più si
-  // torna alla panoramica invece di mostrare una pagina vuota.
-  const currentTab = tabs.some((t) => t.key === activeTab) ? activeTab : 'overview'
+  // torna a "Oggi" invece di mostrare una pagina vuota.
+  const currentTab = tabs.some((t) => t.key === activeTab) ? activeTab : 'today'
   // Un viewer non può scrivere sul server: non gli si offre di forzare la propria
   // versione, sarebbe un pulsante che la RLS rifiuta sempre.
   const canPush = !!syncState && syncState.role === 'editor'
@@ -270,23 +272,40 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
 
   return (
     <div style={themeStyle(trip.palette)} className="min-h-screen bg-[var(--paper)] text-[var(--ink)] font-sans">
+      {settingsOpen ? (
+        <Settings
+          trip={trip}
+          onUpdate={handleUpdate}
+          onDelete={onDelete}
+          syncActive={!!syncState}
+          onOpenActivate={() => setActivateOpen(true)}
+          onRestore={syncState && syncState.role === 'editor' ? handleRestore : null}
+          onClose={() => setSettingsOpen(false)}
+        />
+      ) : (
+      <>
       <header className="sticky top-0 z-30 overflow-hidden" style={{ boxShadow: `0 1px 0 rgb(var(--ink-rgb) / ${collapse * 0.08})` }}>
         <div className="absolute inset-0" style={{ background: 'var(--paper)', opacity: collapse }} />
         <div className="absolute inset-0" style={{ opacity: 1 - collapse }}>
           <Terrain seed={trip.id} palette={trip.palette} height={140} className="h-full w-full" />
         </div>
         <div className="relative px-5 max-w-2xl mx-auto" style={{ paddingTop: 32 - collapse * 8, paddingBottom: 24 - collapse * 16 }}>
-          <div className="flex items-center gap-3">
-            <button onClick={onBack} aria-label="Torna ai viaggi" className="h-11 w-11 -ml-2 flex-shrink-0 flex items-center justify-center rounded-full bg-[var(--tint)] active:scale-[0.97] transition-transform duration-150 ease-out">
-              <ArrowLeft size={20} />
-            </button>
-            <div
-              className="flex items-center gap-2 whitespace-nowrap"
-              style={{ opacity: collapse, maxWidth: collapse > 0.01 ? 280 : 0, overflow: 'hidden' }}
-            >
-              <span className="text-xl">{trip.emoji}</span>
-              <span className="font-display font-semibold text-lg">{trip.name}</span>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <button onClick={onBack} aria-label="Torna ai viaggi" className="h-11 w-11 -ml-2 flex-shrink-0 flex items-center justify-center rounded-full bg-[var(--tint)] active:scale-[0.97] transition-transform duration-150 ease-out">
+                <ArrowLeft size={20} />
+              </button>
+              <div
+                className="flex items-center gap-2 whitespace-nowrap"
+                style={{ opacity: collapse, maxWidth: collapse > 0.01 ? 280 : 0, overflow: 'hidden' }}
+              >
+                <span className="text-xl">{trip.emoji}</span>
+                <span className="font-display font-semibold text-lg">{trip.name}</span>
+              </div>
             </div>
+            <button onClick={() => setSettingsOpen(true)} aria-label="Impostazioni del viaggio" className="h-11 w-11 -mr-2 flex-shrink-0 flex items-center justify-center rounded-full bg-[var(--tint)] active:scale-[0.97] transition-transform duration-150 ease-out">
+              <SettingsIcon size={19} />
+            </button>
           </div>
           <div style={{ maxHeight: (1 - collapse) * 160, opacity: 1 - collapse, overflow: 'hidden' }}>
             <div className="flex items-baseline gap-2 mt-3">
@@ -305,16 +324,7 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
       </header>
 
       <main className="px-5 max-w-2xl mx-auto pb-36">
-        {currentTab === 'overview' && (
-          <Overview
-            trip={trip}
-            onUpdate={handleUpdate}
-            onDelete={onDelete}
-            syncActive={!!syncState}
-            onOpenActivate={() => setActivateOpen(true)}
-            onRestore={syncState && syncState.role === 'editor' ? handleRestore : null}
-          />
-        )}
+        {currentTab === 'today' && <Today trip={trip} onNavigate={setActiveTab} />}
         {currentTab === 'days' && <Days trip={trip} onUpdate={handleUpdate} activeDisplayName={cloudDisplayName} />}
         {trip.sections.map((section) => (currentTab === section.id ? <Section key={section.id} trip={trip} section={section} onUpdate={handleUpdate} activeDisplayName={cloudDisplayName} onNavigate={setActiveTab} /> : null))}
         {extraSpace > 0 && <div style={{ height: extraSpace }} aria-hidden="true" />}
@@ -358,6 +368,8 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
           )}
         </div>
       </nav>
+      </>
+      )}
 
       <ActivateSyncModal open={activateOpen} trip={trip} onClose={() => setActivateOpen(false)} onActivated={handleActivated} />
 
