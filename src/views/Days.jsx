@@ -82,7 +82,7 @@ export default function Days({ trip, onUpdate, activeDisplayName }) {
       days: t.days.map((d) => {
         if (d.id !== dayId) return d
         if (id) return { ...d, items: d.items.map((it) => (it.id === id ? stampModified({ ...withoutKindFields(it), ...fields }, activeDisplayName) : it)) }
-        return { ...d, items: [...d.items, stampModified(withoutKindFields({ id: crypto.randomUUID(), ...fields }), activeDisplayName)] }
+        return { ...d, items: [...d.items, stampModified({ id: crypto.randomUUID(), ...fields }, activeDisplayName)] }
       })
     }))
     setItemForm(null)
