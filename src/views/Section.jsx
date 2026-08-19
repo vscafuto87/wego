@@ -23,7 +23,7 @@ function updateSection(trip, sectionId, fn) {
   return { ...trip, sections: trip.sections.map((s) => (s.id === sectionId ? fn(s) : s)) }
 }
 
-export default function Section({ trip, section, onUpdate, activeDisplayName, onNavigate }) {
+export default function Section({ trip, section, onUpdate, activeDisplayName, onNavigate, syncState, onOpenActivate }) {
   const [headerForm, setHeaderForm] = useState(null)
   const [cardForm, setCardForm] = useState(null)
   const [checklistText, setChecklistText] = useState('')
@@ -183,7 +183,17 @@ export default function Section({ trip, section, onUpdate, activeDisplayName, on
 
       {section.type === 'transport' && <Transport trip={trip} section={section} onUpdate={onUpdate} activeDisplayName={activeDisplayName} />}
 
-      {section.type === 'lodging' && <Lodging trip={trip} section={section} onUpdate={onUpdate} activeDisplayName={activeDisplayName} />}
+      {section.type === 'lodging' && (
+        <Lodging
+          trip={trip}
+          section={section}
+          onUpdate={onUpdate}
+          activeDisplayName={activeDisplayName}
+          remoteId={syncState?.remoteId ?? null}
+          role={syncState?.role ?? null}
+          onOpenActivate={onOpenActivate}
+        />
+      )}
 
       {section.type === 'map' && (
         <Suspense fallback={<p className="text-base text-[var(--muted)]">Caricamento mappa…</p>}>
