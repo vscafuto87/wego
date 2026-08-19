@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { normalizeTrip, exportTrip, stampModified, dayItemFieldsForKind } from './schema.js'
+import { normalizeTrip, exportTrip, stampModified, dayItemFieldsForKind, parseCoordsFromMapsLink } from './schema.js'
 
 describe('normalizeTrip — attribuzione', () => {
   it('riempie modifiedBy/modifiedAt vuoti quando assenti', () => {
@@ -370,5 +370,40 @@ describe('normalizeTrip — coordinate su sentiero/spiaggia/pasto', () => {
     const exported = exportTrip(trip).days[0].items[0]
     expect(exported.lat).toBe(46.4)
     expect(exported.lng).toBe(12.6)
+  })
+})
+
+describe('parseCoordsFromMapsLink', () => {
+  it('link Google Maps con @lat,lng,zoom', () => {
+    const url = 'https://www.google.com/maps/place/Trattoria/@40.897123,12.958456,17z/data=!3m1!4b1'
+    expect(parseCoordsFromMapsLink(url)).toEqual({ lat: 40.897123, lng: 12.958456 })
+  })
+
+  it('link Google Maps "place" con !3d..!4d.. ha priorità su @', () => {
+    const url = 'https://www.google.com/maps/place/Trattoria/@40.0,12.0,17z/data=!4m6!3m5!1s0x0:0x0!8m2!3d40.897123!4d12.958456'
+    expect(parseCoordsFromMapsLink(url)).toEqual({ lat: 40.897123, lng: 12.958456 })
+  })
+
+  it('link con ?q=lat,lng', () => {
+    expect(parseCoordsFromMapsLink('https://maps.google.com/?q=40.897,12.958')).toEqual({ lat: 40.897, lng: 12.958 })
+  })
+
+  it('link Apple Maps con ?ll=lat,lng', () => {
+    expect(parseCoordsFromMapsLink('https://maps.apple.com/?ll=40.897,12.958&q=Trattoria')).toEqual({ lat: 40.897, lng: 12.958 })
+  })
+
+  it('coordinate negative (emisfero sud/ovest)', () => {
+    expect(parseCoordsFromMapsLink('https://www.google.com/maps/@-33.8688,151.2093,15z')).toEqual({ lat: -33.8688, lng: 151.2093 })
+  })
+
+  it('link breve maps.app.goo.gl: nessuna coordinata leggibile, ritorna null', () => {
+    expect(parseCoordsFromMapsLink('https://maps.app.goo.gl/aBcDeFg123')).toBeNull()
+  })
+
+  it('testo qualunque, stringa vuota, undefined: null, mai un errore', () => {
+    expect(parseCoordsFromMapsLink('non è un link')).toBeNull()
+    expect(parseCoordsFromMapsLink('')).toBeNull()
+    expect(() => parseCoordsFromMapsLink(undefined)).not.toThrow()
+    expect(parseCoordsFromMapsLink(undefined)).toBeNull()
   })
 })

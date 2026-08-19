@@ -250,3 +250,28 @@ export function stampModified(node, displayName) {
   if (!displayName) return node
   return { ...node, modifiedBy: displayName, modifiedAt: new Date().toISOString() }
 }
+
+const COORD = String.raw`(-?\d{1,3}\.\d+)`
+const MAPS_LINK_PATTERNS = [
+  new RegExp(`!3d${COORD}!4d${COORD}`),
+  new RegExp(`[?&]q=${COORD},${COORD}`),
+  new RegExp(`[?&]ll=${COORD},${COORD}`),
+  new RegExp(`@${COORD},${COORD}`)
+]
+
+// Legge lat/lng da un link Google/Apple Maps con pattern noti, senza alcuna
+// chiamata di rete: i link brevi (maps.app.goo.gl) non contengono coordinate
+// leggibili e restano fuori scope, ritornano null come qualunque altro
+// formato non riconosciuto — mai un errore.
+export function parseCoordsFromMapsLink(url) {
+  const text = str(url)
+  for (const pattern of MAPS_LINK_PATTERNS) {
+    const match = text.match(pattern)
+    if (match) {
+      const lat = Number(match[1])
+      const lng = Number(match[2])
+      if (Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng }
+    }
+  }
+  return null
+}
