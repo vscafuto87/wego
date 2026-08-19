@@ -12,6 +12,12 @@ import Modal from '../components/Modal.jsx'
 import Btn from '../components/Btn.jsx'
 
 const SYNC_DEBOUNCE_MS = 2000
+// Distanza di scroll su cui il titolo grande si comprime nella barra compatta.
+const COLLAPSE_DISTANCE = 100
+// Quanto si abbassa l'altezza dell'header comprimendosi (padding + blocco del
+// titolo grande): serve più di COLLAPSE_DISTANCE di spazio reale sotto perché
+// l'header stesso "mangia" altezza pagina più in fretta di quanto si scorra.
+const HEADER_SHRINK = 184
 
 export default function TripView({ trip, onBack, onUpdate, onDelete }) {
   const tabs = [
@@ -26,6 +32,7 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
   const [conflict, setConflict] = useState(null)
   const [tabOverflow, setTabOverflow] = useState({ left: false, right: false })
   const [scrollY, setScrollY] = useState(0)
+  const [extraSpace, setExtraSpace] = useState(0)
   const navScrollRef = useRef(null)
   const activeTabRef = useRef(null)
 
@@ -144,17 +151,28 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
     }
   }, [trip.sections.length])
 
+  // Se la pagina richiede già lo scroll ma di poco, garantisce comunque lo
+  // spazio necessario a comprimere del tutto il titolo grande: altrimenti
+  // la barra resterebbe bloccata a metà, né grande né compatta.
+  useLayoutEffect(() => {
+    function recompute() {
+      // Misurata a header espanso (questo effect non dipende dallo scroll):
+      // va confrontata con la soglia comprensiva di quanto l'header si ridurrà.
+      const scrollable = document.documentElement.scrollHeight - window.innerHeight - extraSpace
+      const needed = COLLAPSE_DISTANCE + HEADER_SHRINK
+      const missing = scrollable > 0 && scrollable < needed ? needed - scrollable : 0
+      setExtraSpace((current) => (current === missing ? current : missing))
+    }
+    recompute()
+    window.addEventListener('resize', recompute)
+    return () => window.removeEventListener('resize', recompute)
+  }, [activeTab, trip, extraSpace])
+
   // Il titolo grande dell'header si riduce scorrendo, come la nav bar di
-  // un'app nativa. rAF evita di aggiornare lo stato più spesso di un frame.
+  // un'app nativa.
   useEffect(() => {
-    let ticking = false
     function onScroll() {
-      if (ticking) return
-      ticking = true
-      requestAnimationFrame(() => {
-        setScrollY(window.scrollY)
-        ticking = false
-      })
+      setScrollY(window.scrollY)
     }
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
@@ -248,7 +266,7 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
   // versione, sarebbe un pulsante che la RLS rifiuta sempre.
   const canPush = !!syncState && syncState.role === 'editor'
   // Quanto è "compresso" l'header: 0 = titolo grande, 1 = barra compatta.
-  const collapse = Math.max(0, Math.min(1, scrollY / 100))
+  const collapse = Math.max(0, Math.min(1, scrollY / COLLAPSE_DISTANCE))
 
   return (
     <div style={themeStyle(trip.palette)} className="min-h-screen bg-[var(--paper)] text-[var(--ink)] font-sans">
@@ -299,6 +317,7 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
         )}
         {currentTab === 'days' && <Days trip={trip} onUpdate={handleUpdate} activeDisplayName={cloudDisplayName} />}
         {trip.sections.map((section) => (currentTab === section.id ? <Section key={section.id} trip={trip} section={section} onUpdate={handleUpdate} activeDisplayName={cloudDisplayName} /> : null))}
+        {extraSpace > 0 && <div style={{ height: extraSpace }} aria-hidden="true" />}
       </main>
 
       <nav className="fixed inset-x-0 bottom-0 z-20 px-5 pb-[calc(env(safe-area-inset-bottom)+16px)] pt-2">
