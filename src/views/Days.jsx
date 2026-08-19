@@ -6,6 +6,7 @@ import Modal from '../components/Modal.jsx'
 import Empty from '../components/Empty.jsx'
 import { stampModified, dayItemFieldsForKind } from '../data/schema.js'
 import ModifiedBy from '../components/ModifiedBy.jsx'
+import CoordsInput from '../components/CoordsInput.jsx'
 
 const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
 const DATE_FMT = new Intl.DateTimeFormat('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })
@@ -15,7 +16,7 @@ function formatDate(date) {
 }
 
 const EMPTY_DAY = { date: '', title: '', note: '' }
-const EMPTY_ITEM = { kind: '', time: '', title: '', detail: '', link: '', durata: '', dislivello: '', difficolta: '', accesso: '', servizi: '', luogo: '', prenotato: false }
+const EMPTY_ITEM = { kind: '', time: '', title: '', detail: '', link: '', durata: '', dislivello: '', difficolta: '', accesso: '', servizi: '', luogo: '', prenotato: false, lat: null, lng: null }
 
 const KIND_OPTIONS = [
   { value: '', label: 'Generica' },
@@ -32,7 +33,7 @@ function KindIcon({ kind }) {
   return <Icon size={15} className="inline mr-1.5 -mt-0.5 text-[var(--muted)]" />
 }
 
-const ALL_KIND_FIELDS = ['durata', 'dislivello', 'difficolta', 'accesso', 'servizi', 'luogo', 'prenotato']
+const ALL_KIND_FIELDS = ['durata', 'dislivello', 'difficolta', 'accesso', 'servizi', 'luogo', 'prenotato', 'lat', 'lng']
 
 function withoutKindFields(item) {
   const clean = { ...item }
@@ -81,7 +82,7 @@ export default function Days({ trip, onUpdate, activeDisplayName }) {
       days: t.days.map((d) => {
         if (d.id !== dayId) return d
         if (id) return { ...d, items: d.items.map((it) => (it.id === id ? stampModified({ ...withoutKindFields(it), ...fields }, activeDisplayName) : it)) }
-        return { ...d, items: [...d.items, stampModified(withoutKindFields({ id: crypto.randomUUID(), ...fields }), activeDisplayName)] }
+        return { ...d, items: [...d.items, stampModified({ id: crypto.randomUUID(), ...fields }, activeDisplayName)] }
       })
     }))
     setItemForm(null)
@@ -228,6 +229,10 @@ export default function Days({ trip, onUpdate, activeDisplayName }) {
                   Prenotato
                 </label>
               </>
+            )}
+
+            {['sentiero', 'spiaggia', 'pasto'].includes(itemForm.kind) && (
+              <CoordsInput value={{ lat: itemForm.lat, lng: itemForm.lng }} onChange={(coords) => setItemForm({ ...itemForm, ...coords })} />
             )}
 
             <Btn type="submit">Salva</Btn>

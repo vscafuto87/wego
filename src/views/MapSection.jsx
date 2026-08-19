@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
 import L from 'leaflet'
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
@@ -9,15 +9,48 @@ import { Plus, Pencil, Trash2, MapPin } from 'lucide-react'
 import Btn from '../components/Btn.jsx'
 import Modal from '../components/Modal.jsx'
 import Empty from '../components/Empty.jsx'
-import { stampModified } from '../data/schema.js'
+import CoordsInput from '../components/CoordsInput.jsx'
+import { stampModified, collectExternalMapPoints } from '../data/schema.js'
 import ModifiedBy from '../components/ModifiedBy.jsx'
 
 // Senza questo fix i marker di Leaflet risultano invisibili sotto Vite: il
 // bundler non riesce a risolvere i path relativi che la libreria si aspetta.
 L.Icon.Default.mergeOptions({ iconRetinaUrl: markerIcon2x, iconUrl: markerIcon, shadowUrl: markerShadow })
 
+const CATEGORY_COLORS = { schede: '#f97316', sentiero: '#16a34a', spiaggia: '#0ea5e9', pasto: '#eab308' }
+const CATEGORY_LABELS = { mappa: 'Mappa', schede: 'Schede', sentiero: 'Sentieri', spiaggia: 'Spiagge', pasto: 'Pasti' }
+const CATEGORY_ORDER = ['mappa', 'schede', 'sentiero', 'spiaggia', 'pasto']
+
+function dotIcon(color) {
+  return L.divIcon({
+    className: '',
+    html: `<span style="display:block;width:16px;height:16px;border-radius:9999px;background:${color};border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.4)"></span>`,
+    iconSize: [16, 16],
+    iconAnchor: [8, 8]
+  })
+}
+
+// Nessuna icona per 'mappa': i punti propri restano col marker Leaflet
+// standard, editabile, per distinguerli a colpo d'occhio dagli altri.
+const CATEGORY_ICONS = Object.fromEntries(Object.entries(CATEGORY_COLORS).map(([key, color]) => [key, dotIcon(color)]))
+
+const DATE_FMT = new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short' })
+function formatDate(date) {
+  return date ? DATE_FMT.format(new Date(date)) : ''
+}
+
+function originLabel(point) {
+  if (point.categoryGroup === 'mappa') return point.category || null
+  if (point.categoryGroup === 'schede') return point.origin.sectionTitle
+  return `${formatDate(point.origin.dayDate)} · ${point.origin.itemTitle}`
+}
+
+function navigateLabel(point) {
+  return point.categoryGroup === 'schede' ? `Vai a ${point.origin.sectionTitle}` : "Vai all'Itinerario"
+}
+
 const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
-const EMPTY_ITEM = { name: '', category: '', mapsLink: '', lat: '', lng: '', note: '' }
+const EMPTY_ITEM = { name: '', category: '', mapsLink: '', lat: null, lng: null, note: '' }
 
 function useOnlineStatus() {
   const [online, setOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine))
@@ -34,7 +67,7 @@ function useOnlineStatus() {
   return online
 }
 
-export default function MapSection({ trip, section, onUpdate, activeDisplayName }) {
+export default function MapSection({ trip, section, onUpdate, activeDisplayName, onNavigate }) {
   const [form, setForm] = useState(null)
   const online = useOnlineStatus()
 
@@ -44,13 +77,7 @@ export default function MapSection({ trip, section, onUpdate, activeDisplayName 
 
   function saveItem(e) {
     e.preventDefault()
-    const { id, ...raw } = form
-    const toCoord = (value) => {
-      if (value === '') return null
-      const n = Number(value)
-      return Number.isFinite(n) ? n : null
-    }
-    const fields = { ...raw, lat: toCoord(raw.lat), lng: toCoord(raw.lng) }
+    const { id, ...fields } = form
     updateItems((items) => {
       if (id) return items.map((it) => (it.id === id ? stampModified({ ...it, ...fields }, activeDisplayName) : it))
       return [...items, stampModified({ id: crypto.randomUUID(), ...fields }, activeDisplayName)]
@@ -64,27 +91,90 @@ export default function MapSection({ trip, section, onUpdate, activeDisplayName 
     }
   }
 
-  const withCoords = section.items.filter((i) => i.lat !== null && i.lng !== null)
+  const points = useMemo(() => [
+    ...section.items.map((p) => ({ ...p, categoryGroup: 'mappa', origin: null })),
+    ...collectExternalMapPoints(trip)
+  ], [trip, section.items])
+
+  const withCoords = points.filter((p) => p.lat !== null && p.lng !== null)
   const center = withCoords.length > 0
-    ? [withCoords.reduce((sum, i) => sum + i.lat, 0) / withCoords.length, withCoords.reduce((sum, i) => sum + i.lng, 0) / withCoords.length]
+    ? [withCoords.reduce((sum, p) => sum + p.lat, 0) / withCoords.length, withCoords.reduce((sum, p) => sum + p.lng, 0) / withCoords.length]
     : null
+
+  const availableCategories = CATEGORY_ORDER.filter((cat) => withCoords.some((p) => p.categoryGroup === cat))
+  const [hiddenCategories, setHiddenCategories] = useState(new Set())
+  function toggleCategory(cat) {
+    setHiddenCategories((prev) => {
+      const next = new Set(prev)
+      if (next.has(cat)) next.delete(cat)
+      else next.add(cat)
+      return next
+    })
+  }
+  const renderedPoints = withCoords.filter((p) => !hiddenCategories.has(p.categoryGroup))
 
   return (
     <div className="flex flex-col gap-4">
       {online && center && (
-        <div className="rounded-[24px] overflow-hidden h-64 border border-[var(--line)]">
-          <MapContainer center={center} zoom={12} style={{ height: '100%', width: '100%' }}>
-            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap' />
-            {withCoords.map((item) => (
-              <Marker key={item.id} position={[item.lat, item.lng]}>
-                <Popup>{item.name}</Popup>
-              </Marker>
-            ))}
-          </MapContainer>
+        <div className="flex flex-col gap-3">
+          {availableCategories.length > 1 && (
+            <div className="flex flex-wrap gap-2">
+              {availableCategories.map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => toggleCategory(cat)}
+                  aria-pressed={!hiddenCategories.has(cat)}
+                  className={`flex items-center gap-1.5 h-11 px-3 rounded-full text-sm border focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 ${
+                    hiddenCategories.has(cat) ? 'border-[var(--line)] text-[var(--muted)]' : 'border-transparent bg-[var(--tint)] text-[var(--ink)]'
+                  }`}
+                >
+                  {CATEGORY_COLORS[cat] && <span className="h-2.5 w-2.5 rounded-full" style={{ background: CATEGORY_COLORS[cat] }} />}
+                  {CATEGORY_LABELS[cat]}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="rounded-[24px] overflow-hidden h-64 border border-[var(--line)]">
+            <MapContainer center={center} zoom={12} style={{ height: '100%', width: '100%' }}>
+              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap' />
+              {renderedPoints.map((point) => (
+                <Marker
+                  key={`${point.categoryGroup}-${point.id}`}
+                  position={[point.lat, point.lng]}
+                  {...(CATEGORY_ICONS[point.categoryGroup] ? { icon: CATEGORY_ICONS[point.categoryGroup] } : {})}
+                >
+                  <Popup>
+                    <p className="font-semibold">{point.name || 'Senza nome'}</p>
+                    {originLabel(point) && <p className="text-sm text-[var(--muted)]">{originLabel(point)}</p>}
+                    {point.categoryGroup === 'mappa' && point.mapsLink && (
+                      <a href={point.mapsLink} target="_blank" rel="noreferrer" className="text-sm text-[var(--accent)] underline block mt-1">
+                        Apri in Maps
+                      </a>
+                    )}
+                    {point.categoryGroup !== 'mappa' && point.link && (
+                      <a href={point.link} target="_blank" rel="noreferrer" className="text-sm text-[var(--accent)] underline block mt-1">
+                        Apri il link
+                      </a>
+                    )}
+                    {point.origin && onNavigate && (
+                      <button
+                        type="button"
+                        onClick={() => onNavigate(point.origin.tab)}
+                        className="text-sm text-[var(--accent)] underline block mt-1"
+                      >
+                        {navigateLabel(point)}
+                      </button>
+                    )}
+                  </Popup>
+                </Marker>
+              ))}
+            </MapContainer>
+          </div>
         </div>
       )}
 
-      {section.items.length === 0 && (
+      {points.length === 0 && (
         <Empty icon={MapPin} title="Nessun punto ancora" detail="Aggiungi i posti da non perdere." action={<Btn onClick={() => setForm(EMPTY_ITEM)}>Aggiungi un punto</Btn>} />
       )}
 
@@ -97,7 +187,7 @@ export default function MapSection({ trip, section, onUpdate, activeDisplayName 
                 {item.category && <p className="text-sm text-[var(--muted)]">{item.category}</p>}
               </div>
               <div className="flex gap-1 -mr-2 -mt-1">
-                <button onClick={() => setForm({ ...item, lat: item.lat ?? '', lng: item.lng ?? '' })} aria-label="Modifica punto" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
+                <button onClick={() => setForm(item)} aria-label="Modifica punto" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
                   <Pencil size={15} />
                 </button>
                 <button onClick={() => removeItem(item)} aria-label="Elimina punto" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
@@ -128,10 +218,7 @@ export default function MapSection({ trip, section, onUpdate, activeDisplayName 
             <input required placeholder="Nome" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={inputClass} />
             <input placeholder="Categoria (spiaggia, ristorante, punto panoramico...)" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className={inputClass} />
             <input placeholder="Link Google/Apple Maps" value={form.mapsLink} onChange={(e) => setForm({ ...form, mapsLink: e.target.value })} className={inputClass} />
-            <div className="flex gap-2">
-              <input type="number" step="any" placeholder="Latitudine" value={form.lat} onChange={(e) => setForm({ ...form, lat: e.target.value })} className={`flex-1 ${inputClass}`} />
-              <input type="number" step="any" placeholder="Longitudine" value={form.lng} onChange={(e) => setForm({ ...form, lng: e.target.value })} className={`flex-1 ${inputClass}`} />
-            </div>
+            <CoordsInput value={{ lat: form.lat, lng: form.lng }} onChange={(coords) => setForm({ ...form, ...coords })} />
             <textarea placeholder="Nota" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} className={inputClass} rows={2} />
             <Btn type="submit">Salva</Btn>
           </form>

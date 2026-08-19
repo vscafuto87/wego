@@ -316,7 +316,7 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
           />
         )}
         {currentTab === 'days' && <Days trip={trip} onUpdate={handleUpdate} activeDisplayName={cloudDisplayName} />}
-        {trip.sections.map((section) => (currentTab === section.id ? <Section key={section.id} trip={trip} section={section} onUpdate={handleUpdate} activeDisplayName={cloudDisplayName} /> : null))}
+        {trip.sections.map((section) => (currentTab === section.id ? <Section key={section.id} trip={trip} section={section} onUpdate={handleUpdate} activeDisplayName={cloudDisplayName} onNavigate={setActiveTab} /> : null))}
         {extraSpace > 0 && <div style={{ height: extraSpace }} aria-hidden="true" />}
       </main>
 

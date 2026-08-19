@@ -5,9 +5,9 @@ const SECTION_TYPES = ['cards', 'checklist', 'notes', 'transport', 'lodging', 'm
 const DAY_ITEM_KINDS = ['', 'sentiero', 'spiaggia', 'pasto']
 
 const KIND_FIELDS = {
-  sentiero: ['durata', 'dislivello', 'difficolta'],
-  spiaggia: ['accesso', 'servizi'],
-  pasto: ['luogo', 'prenotato']
+  sentiero: ['durata', 'dislivello', 'difficolta', 'lat', 'lng'],
+  spiaggia: ['accesso', 'servizi', 'lat', 'lng'],
+  pasto: ['luogo', 'prenotato', 'lat', 'lng']
 }
 
 export function dayItemFieldsForKind(kind) {
@@ -26,6 +26,10 @@ function arr(value) {
   return Array.isArray(value) ? value : []
 }
 
+function toCoord(value) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
 function normalizeDayItem(raw) {
   const item = raw && typeof raw === 'object' ? raw : {}
   const kind = DAY_ITEM_KINDS.includes(item.kind) ? item.kind : ''
@@ -40,13 +44,13 @@ function normalizeDayItem(raw) {
     modifiedAt: str(item.modifiedAt)
   }
   if (kind === 'sentiero') {
-    return { ...base, durata: str(item.durata), dislivello: str(item.dislivello), difficolta: str(item.difficolta) }
+    return { ...base, durata: str(item.durata), dislivello: str(item.dislivello), difficolta: str(item.difficolta), lat: toCoord(item.lat), lng: toCoord(item.lng) }
   }
   if (kind === 'spiaggia') {
-    return { ...base, accesso: str(item.accesso), servizi: str(item.servizi) }
+    return { ...base, accesso: str(item.accesso), servizi: str(item.servizi), lat: toCoord(item.lat), lng: toCoord(item.lng) }
   }
   if (kind === 'pasto') {
-    return { ...base, luogo: str(item.luogo), prenotato: item.prenotato === true }
+    return { ...base, luogo: str(item.luogo), prenotato: item.prenotato === true, lat: toCoord(item.lat), lng: toCoord(item.lng) }
   }
   return base
 }
@@ -73,6 +77,8 @@ function normalizeCardItem(raw) {
     detail: str(item.detail),
     link: str(item.link),
     tags: arr(item.tags).map(str),
+    lat: toCoord(item.lat),
+    lng: toCoord(item.lng),
     modifiedBy: str(item.modifiedBy),
     modifiedAt: str(item.modifiedAt)
   }
@@ -122,8 +128,8 @@ function normalizeLodgingItem(raw) {
 
 function normalizeMapItem(raw) {
   const item = raw && typeof raw === 'object' ? raw : {}
-  const lat = typeof item.lat === 'number' && Number.isFinite(item.lat) ? item.lat : null
-  const lng = typeof item.lng === 'number' && Number.isFinite(item.lng) ? item.lng : null
+  const lat = toCoord(item.lat)
+  const lng = toCoord(item.lng)
   return {
     id: makeId(),
     name: str(item.name),
@@ -243,4 +249,62 @@ export function exportTrip(trip) {
 export function stampModified(node, displayName) {
   if (!displayName) return node
   return { ...node, modifiedBy: displayName, modifiedAt: new Date().toISOString() }
+}
+
+const COORD = String.raw`(-?\d{1,3}\.\d+)`
+const MAPS_LINK_PATTERNS = [
+  new RegExp(`!3d${COORD}!4d${COORD}`),
+  new RegExp(`[?&]q=${COORD},${COORD}`),
+  new RegExp(`[?&]ll=${COORD},${COORD}`),
+  new RegExp(`@${COORD},${COORD}`)
+]
+
+// Legge lat/lng da un link Google/Apple Maps con pattern noti, senza alcuna
+// chiamata di rete: i link brevi (maps.app.goo.gl) non contengono coordinate
+// leggibili e restano fuori scope, ritornano null come qualunque altro
+// formato non riconosciuto — mai un errore.
+export function parseCoordsFromMapsLink(url) {
+  const text = str(url)
+  for (const pattern of MAPS_LINK_PATTERNS) {
+    const match = text.match(pattern)
+    if (match) {
+      const lat = Number(match[1])
+      const lng = Number(match[2])
+      if (Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng }
+    }
+  }
+  return null
+}
+
+const DAY_MAP_KINDS = ['sentiero', 'spiaggia', 'pasto']
+
+// Punti con coordinate che vivono in altre sezioni/giorni del viaggio, utili
+// per la mappa aggregata. Calcolo derivato, nessuna copia salvata: chiamare
+// di nuovo dopo ogni modifica del viaggio, mai persistere il risultato.
+export function collectExternalMapPoints(trip) {
+  const fromCards = trip.sections
+    .filter((s) => s.type === 'cards')
+    .flatMap((s) => s.items
+      .filter((i) => i.lat !== null && i.lng !== null)
+      .map((i) => ({
+        id: i.id,
+        name: i.title,
+        lat: i.lat,
+        lng: i.lng,
+        link: i.link,
+        categoryGroup: 'schede',
+        origin: { tab: s.id, sectionTitle: s.title }
+      })))
+  const fromDays = trip.days.flatMap((d) => d.items
+    .filter((i) => DAY_MAP_KINDS.includes(i.kind) && i.lat !== null && i.lng !== null)
+    .map((i) => ({
+      id: i.id,
+      name: i.title,
+      lat: i.lat,
+      lng: i.lng,
+      link: i.link,
+      categoryGroup: i.kind,
+      origin: { tab: 'days', dayDate: d.date, itemTitle: i.title }
+    })))
+  return [...fromCards, ...fromDays]
 }

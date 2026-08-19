@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { normalizeTrip, exportTrip, stampModified, dayItemFieldsForKind } from './schema.js'
+import { normalizeTrip, exportTrip, stampModified, dayItemFieldsForKind, parseCoordsFromMapsLink, collectExternalMapPoints } from './schema.js'
 
 describe('normalizeTrip — attribuzione', () => {
   it('riempie modifiedBy/modifiedAt vuoti quando assenti', () => {
@@ -70,13 +70,13 @@ function tripWithItem(item) {
 
 describe('dayItemFieldsForKind', () => {
   it('sentiero', () => {
-    expect(dayItemFieldsForKind('sentiero')).toEqual(['durata', 'dislivello', 'difficolta'])
+    expect(dayItemFieldsForKind('sentiero')).toEqual(['durata', 'dislivello', 'difficolta', 'lat', 'lng'])
   })
   it('spiaggia', () => {
-    expect(dayItemFieldsForKind('spiaggia')).toEqual(['accesso', 'servizi'])
+    expect(dayItemFieldsForKind('spiaggia')).toEqual(['accesso', 'servizi', 'lat', 'lng'])
   })
   it('pasto', () => {
-    expect(dayItemFieldsForKind('pasto')).toEqual(['luogo', 'prenotato'])
+    expect(dayItemFieldsForKind('pasto')).toEqual(['luogo', 'prenotato', 'lat', 'lng'])
   })
   it('generico o sconosciuto: nessun campo proprio', () => {
     expect(dayItemFieldsForKind('')).toEqual([])
@@ -139,7 +139,7 @@ describe('normalizeTrip — kind sulle voci del giorno', () => {
     expect(item.id).toBeUndefined()
     expect(item).toEqual({
       time: '', title: 'Anello', kind: 'sentiero', detail: '', link: '',
-      modifiedBy: '', modifiedAt: '', durata: '5h14', dislivello: '', difficolta: ''
+      modifiedBy: '', modifiedAt: '', durata: '5h14', dislivello: '', difficolta: '', lat: null, lng: null
     })
   })
 })
@@ -272,5 +272,224 @@ describe('normalizeTrip — sezioni fisse garantite', () => {
     })
     const free = trip.sections.slice(4)
     expect(free.map((s) => s.title)).toEqual(['Zaino del giorno', 'Note'])
+  })
+})
+
+describe('normalizeTrip — coordinate opzionali sulle schede (cards)', () => {
+  function tripWithCardItem(item) {
+    return normalizeTrip({ name: 'X', sections: [{ title: 'Bar consigliati', type: 'cards', items: [item] }] })
+  }
+
+  it('scheda con coordinate valide', () => {
+    const item = tripWithCardItem({ title: 'Trattoria da Assunta', lat: 40.897, lng: 12.958 })
+      .sections.find((s) => s.title === 'Bar consigliati').items[0]
+    expect(item.lat).toBe(40.897)
+    expect(item.lng).toBe(12.958)
+  })
+
+  it('scheda senza coordinate: null, non errore', () => {
+    const item = tripWithCardItem({ title: 'Senza coordinate' })
+      .sections.find((s) => s.title === 'Bar consigliati').items[0]
+    expect(item.lat).toBeNull()
+    expect(item.lng).toBeNull()
+  })
+
+  it('coordinate non numeriche diventano null', () => {
+    const item = tripWithCardItem({ title: 'X', lat: 'quaranta', lng: '13' })
+      .sections.find((s) => s.title === 'Bar consigliati').items[0]
+    expect(item.lat).toBeNull()
+    expect(item.lng).toBeNull()
+  })
+
+  it('si applica anche alla sezione fissa Ristoranti, non solo alle sezioni cards custom', () => {
+    const trip = normalizeTrip({
+      name: 'X',
+      sections: [{ title: 'Ristoranti', type: 'cards', items: [{ title: 'Da Assunta', lat: 40.9, lng: 12.9 }] }]
+    })
+    const ristoranti = trip.sections.find((s) => s.type === 'cards' && s.title === 'Ristoranti')
+    expect(ristoranti.items[0].lat).toBe(40.9)
+  })
+
+  it('exportTrip conserva lat/lng sulle schede, senza id', () => {
+    const trip = tripWithCardItem({ title: 'X', lat: 40.9, lng: 12.9 })
+    const exported = exportTrip(trip).sections.find((s) => s.title === 'Bar consigliati')
+    expect(exported.items[0].lat).toBe(40.9)
+    expect(exported.items[0].lng).toBe(12.9)
+    expect(exported.items[0].id).toBeUndefined()
+  })
+})
+
+describe('dayItemFieldsForKind — include lat/lng per sentiero/spiaggia/pasto', () => {
+  it('sentiero', () => {
+    expect(dayItemFieldsForKind('sentiero')).toEqual(['durata', 'dislivello', 'difficolta', 'lat', 'lng'])
+  })
+  it('spiaggia', () => {
+    expect(dayItemFieldsForKind('spiaggia')).toEqual(['accesso', 'servizi', 'lat', 'lng'])
+  })
+  it('pasto', () => {
+    expect(dayItemFieldsForKind('pasto')).toEqual(['luogo', 'prenotato', 'lat', 'lng'])
+  })
+  it('voce generica: ancora nessun campo proprio', () => {
+    expect(dayItemFieldsForKind('')).toEqual([])
+  })
+})
+
+describe('normalizeTrip — coordinate su sentiero/spiaggia/pasto', () => {
+  it('sentiero con coordinate valide', () => {
+    const item = tripWithItem({ title: 'Anello', kind: 'sentiero', lat: 46.4, lng: 12.6 }).days[0].items[0]
+    expect(item.lat).toBe(46.4)
+    expect(item.lng).toBe(12.6)
+  })
+
+  it('spiaggia con coordinate valide', () => {
+    const item = tripWithItem({ title: 'Frontone', kind: 'spiaggia', lat: 40.9, lng: 12.9 }).days[0].items[0]
+    expect(item.lat).toBe(40.9)
+    expect(item.lng).toBe(12.9)
+  })
+
+  it('pasto con coordinate valide', () => {
+    const item = tripWithItem({ title: 'Cena', kind: 'pasto', lat: 40.9, lng: 12.9 }).days[0].items[0]
+    expect(item.lat).toBe(40.9)
+    expect(item.lng).toBe(12.9)
+  })
+
+  it('sentiero/spiaggia/pasto senza coordinate: null, non errore', () => {
+    const sentiero = tripWithItem({ title: 'Anello', kind: 'sentiero' }).days[0].items[0]
+    expect(sentiero.lat).toBeNull()
+    expect(sentiero.lng).toBeNull()
+  })
+
+  it('voce generica: nessun campo lat/lng', () => {
+    const item = tripWithItem({ title: 'Partenza', lat: 40.9, lng: 12.9 }).days[0].items[0]
+    expect(item.lat).toBeUndefined()
+    expect(item.lng).toBeUndefined()
+  })
+
+  it('exportTrip conserva lat/lng sulle voci giorno tipizzate', () => {
+    const trip = tripWithItem({ title: 'Anello', kind: 'sentiero', lat: 46.4, lng: 12.6 })
+    const exported = exportTrip(trip).days[0].items[0]
+    expect(exported.lat).toBe(46.4)
+    expect(exported.lng).toBe(12.6)
+  })
+})
+
+describe('parseCoordsFromMapsLink', () => {
+  it('link Google Maps con @lat,lng,zoom', () => {
+    const url = 'https://www.google.com/maps/place/Trattoria/@40.897123,12.958456,17z/data=!3m1!4b1'
+    expect(parseCoordsFromMapsLink(url)).toEqual({ lat: 40.897123, lng: 12.958456 })
+  })
+
+  it('link Google Maps "place" con !3d..!4d.. ha priorità su @', () => {
+    const url = 'https://www.google.com/maps/place/Trattoria/@40.0,12.0,17z/data=!4m6!3m5!1s0x0:0x0!8m2!3d40.897123!4d12.958456'
+    expect(parseCoordsFromMapsLink(url)).toEqual({ lat: 40.897123, lng: 12.958456 })
+  })
+
+  it('link con ?q=lat,lng', () => {
+    expect(parseCoordsFromMapsLink('https://maps.google.com/?q=40.897,12.958')).toEqual({ lat: 40.897, lng: 12.958 })
+  })
+
+  it('link Apple Maps con ?ll=lat,lng', () => {
+    expect(parseCoordsFromMapsLink('https://maps.apple.com/?ll=40.897,12.958&q=Trattoria')).toEqual({ lat: 40.897, lng: 12.958 })
+  })
+
+  it('coordinate negative (emisfero sud/ovest)', () => {
+    expect(parseCoordsFromMapsLink('https://www.google.com/maps/@-33.8688,151.2093,15z')).toEqual({ lat: -33.8688, lng: 151.2093 })
+  })
+
+  it('link breve maps.app.goo.gl: nessuna coordinata leggibile, ritorna null', () => {
+    expect(parseCoordsFromMapsLink('https://maps.app.goo.gl/aBcDeFg123')).toBeNull()
+  })
+
+  it('testo qualunque, stringa vuota, undefined: null, mai un errore', () => {
+    expect(parseCoordsFromMapsLink('non è un link')).toBeNull()
+    expect(parseCoordsFromMapsLink('')).toBeNull()
+    expect(() => parseCoordsFromMapsLink(undefined)).not.toThrow()
+    expect(parseCoordsFromMapsLink(undefined)).toBeNull()
+  })
+})
+
+describe('collectExternalMapPoints', () => {
+  function baseTrip(overrides) {
+    return normalizeTrip({
+      name: 'X',
+      days: [{ date: '2026-08-30', items: [
+        { title: 'Anello delle Malghe', kind: 'sentiero', lat: 46.4, lng: 12.6 },
+        { title: 'Frontone', kind: 'spiaggia', lat: 40.9, lng: 12.9 },
+        { title: 'Cena in paese', kind: 'pasto', lat: 40.91, lng: 12.91 },
+        { title: 'Partenza', lat: 40.0, lng: 12.0 }
+      ] }],
+      sections: [
+        { title: 'Ristoranti', type: 'cards', items: [{ title: 'Da Assunta', lat: 40.897, lng: 12.958 }] },
+        { title: 'Bar consigliati', type: 'cards', items: [{ title: 'Senza coordinate' }] }
+      ],
+      ...overrides
+    })
+  }
+
+  it('include le schede con coordinate, escludendo quelle senza', () => {
+    const points = collectExternalMapPoints(baseTrip())
+    const schede = points.filter((p) => p.categoryGroup === 'schede')
+    expect(schede).toHaveLength(1)
+    expect(schede[0]).toMatchObject({ name: 'Da Assunta', lat: 40.897, lng: 12.958, link: '' })
+    expect(schede[0].origin.sectionTitle).toBe('Ristoranti')
+  })
+
+  it('conserva il link generico dell\'item, se presente', () => {
+    const trip = normalizeTrip({
+      name: 'X',
+      sections: [{ title: 'Ristoranti', type: 'cards', items: [{ title: 'Da Assunta', lat: 40.897, lng: 12.958, link: 'https://example.com' }] }]
+    })
+    const [point] = collectExternalMapPoints(trip)
+    expect(point.link).toBe('https://example.com')
+  })
+
+  it('include sentiero/spiaggia/pasto con coordinate, non la voce generica', () => {
+    const points = collectExternalMapPoints(baseTrip())
+    expect(points.filter((p) => p.categoryGroup === 'sentiero')).toHaveLength(1)
+    expect(points.filter((p) => p.categoryGroup === 'spiaggia')).toHaveLength(1)
+    expect(points.filter((p) => p.categoryGroup === 'pasto')).toHaveLength(1)
+    expect(points.find((p) => p.name === 'Partenza')).toBeUndefined()
+  })
+
+  it('origin delle voci giorno porta alla tab Itinerario con data e titolo', () => {
+    const points = collectExternalMapPoints(baseTrip())
+    const sentiero = points.find((p) => p.categoryGroup === 'sentiero')
+    expect(sentiero.origin).toEqual({ tab: 'days', dayDate: '2026-08-30', itemTitle: 'Anello delle Malghe' })
+  })
+
+  it('non include mai i punti della sezione Mappa stessa', () => {
+    const trip = normalizeTrip({
+      name: 'X',
+      sections: [{ title: 'Mappa', type: 'map', items: [{ name: 'Punto manuale', lat: 40.9, lng: 12.9 }] }]
+    })
+    expect(collectExternalMapPoints(trip)).toEqual([])
+  })
+
+  it('viaggio senza punti esterni: array vuoto', () => {
+    const trip = normalizeTrip({ name: 'X' })
+    expect(collectExternalMapPoints(trip)).toEqual([])
+  })
+
+  it('origin.tab di una scheda è l\'id della sezione, non solo il titolo', () => {
+    const trip = baseTrip()
+    const points = collectExternalMapPoints(trip)
+    const scheda = points.find((p) => p.categoryGroup === 'schede')
+    const ristoranti = trip.sections.find((s) => s.type === 'cards' && s.title === 'Ristoranti')
+    expect(scheda.origin.tab).toBe(ristoranti.id)
+  })
+
+  it('esclude un item con solo una delle due coordinate', () => {
+    const trip = normalizeTrip({
+      name: 'X',
+      days: [{ date: '2026-08-30', items: [
+        { title: 'Solo lat', kind: 'sentiero', lat: 40.9 }
+      ] }],
+      sections: [
+        { title: 'Ristoranti', type: 'cards', items: [{ title: 'Solo lng', lng: 12.9 }] }
+      ]
+    })
+    const points = collectExternalMapPoints(trip)
+    expect(points.find((p) => p.name === 'Solo lat')).toBeUndefined()
+    expect(points.find((p) => p.name === 'Solo lng')).toBeUndefined()
   })
 })

@@ -109,10 +109,11 @@ possibile, quindi non introdurre un formato interno diverso.
   "days": [
     { "date": "2026-08-30", "title": "Arrivo", "note": "",
       "items": [ { "time": "14:30", "title": "Aliscafo", "detail": "", "link": "" } ] }
+      // items di kind "sentiero"/"spiaggia"/"pasto" possono avere anche "lat"/"lng" (numero o null)
   ],
   "sections": [
     { "title": "Ristoranti", "icon": "food", "type": "cards",
-      "items": [ { "title": "", "meta": "", "detail": "", "link": "", "tags": [] } ] },
+      "items": [ { "title": "", "meta": "", "detail": "", "link": "", "tags": [], "lat": null, "lng": null } ] },
     { "title": "Da prenotare", "icon": "check", "type": "checklist",
       "items": [ { "text": "", "done": false } ] },
     { "title": "Note", "icon": "note", "type": "notes", "text": "" },
@@ -137,7 +138,10 @@ gestione manuale): Trasporti (`transport`), Pernottamento (`lodging`), Ristorant
 (`cards` con titolo "Ristoranti") e Mappa (`map`). `transport` gestisce spostamenti
 (mezzo, da, a, data/ora, link biglietto); `lodging` gestisce alloggi (nome, check-in/out,
 indirizzo, link prenotazione); `map` gestisce punti d'interesse con coordinate mostrate
-su una mappa Leaflet (nome, categoria, link maps, lat/lng, nota).
+su una mappa Leaflet (nome, categoria, link maps, lat/lng, nota). Anche gli item `cards`
+e le voci giorno di kind `sentiero`/`spiaggia`/`pasto` possono avere `lat`/`lng`
+opzionali (numero o null): se presenti, confluiscono nella mappa aggregata della tab
+Mappa insieme ai punti propri della sezione.
 
 `icon` ∈ `map, check, note, ticket, food, bed, bus, star, people`.
 Gli `id` sono generati al caricamento e non vengono mai esportati.
