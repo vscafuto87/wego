@@ -20,6 +20,45 @@ export default function App() {
     loadTrips().then(setTrips)
   }, [])
 
+  // Swipe dal bordo sinistro per tornare indietro, come un'app nativa. Serve perché
+  // qui la navigazione è stato React, non history: iOS in standalone non ha una
+  // pila di navigazione a cui agganciare il proprio gesto edge-swipe.
+  useEffect(() => {
+    const back = joinCode ? cancelJoin : view === 'trip' || view === 'import' ? goHome : null
+    if (!back) return
+
+    const EDGE_WIDTH = 24
+    const SWIPE_THRESHOLD = 70
+    let startX = null
+    let startY = null
+
+    function onTouchStart(e) {
+      const t = e.touches[0]
+      if (t.clientX > EDGE_WIDTH) {
+        startX = null
+        return
+      }
+      startX = t.clientX
+      startY = t.clientY
+    }
+
+    function onTouchEnd(e) {
+      if (startX === null) return
+      const t = e.changedTouches[0]
+      const dx = t.clientX - startX
+      const dy = t.clientY - startY
+      startX = null
+      if (dx > SWIPE_THRESHOLD && Math.abs(dy) < dx / 2) back()
+    }
+
+    window.addEventListener('touchstart', onTouchStart, { passive: true })
+    window.addEventListener('touchend', onTouchEnd, { passive: true })
+    return () => {
+      window.removeEventListener('touchstart', onTouchStart)
+      window.removeEventListener('touchend', onTouchEnd)
+    }
+  }, [view, joinCode])
+
   const persist = useCallback((next) => {
     setTrips(next)
     saveTrips(next)
