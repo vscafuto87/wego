@@ -6,6 +6,7 @@ import Modal from '../components/Modal.jsx'
 import Empty from '../components/Empty.jsx'
 import { stampModified } from '../data/schema.js'
 import ModifiedBy from '../components/ModifiedBy.jsx'
+import CoordsInput from '../components/CoordsInput.jsx'
 import Transport from './Transport.jsx'
 import Lodging from './Lodging.jsx'
 
@@ -22,7 +23,7 @@ function updateSection(trip, sectionId, fn) {
   return { ...trip, sections: trip.sections.map((s) => (s.id === sectionId ? fn(s) : s)) }
 }
 
-export default function Section({ trip, section, onUpdate, activeDisplayName }) {
+export default function Section({ trip, section, onUpdate, activeDisplayName, onNavigate }) {
   const [headerForm, setHeaderForm] = useState(null)
   const [cardForm, setCardForm] = useState(null)
   const [checklistText, setChecklistText] = useState('')
@@ -99,7 +100,7 @@ export default function Section({ trip, section, onUpdate, activeDisplayName }) 
                   <p className="font-display font-semibold text-xl">{item.title || 'Senza titolo'}</p>
                   <div className="flex gap-1 -mr-2 -mt-1">
                     <button
-                      onClick={() => setCardForm({ id: item.id, title: item.title, meta: item.meta, detail: item.detail, link: item.link, tags: item.tags.join(', ') })}
+                      onClick={() => setCardForm({ id: item.id, title: item.title, meta: item.meta, detail: item.detail, link: item.link, tags: item.tags.join(', '), lat: item.lat, lng: item.lng })}
                       aria-label="Modifica scheda"
                       className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]"
                     >
@@ -130,7 +131,7 @@ export default function Section({ trip, section, onUpdate, activeDisplayName }) 
               </div>
             ))}
           </div>
-          <Btn variant="secondary" onClick={() => setCardForm({ title: '', meta: '', detail: '', link: '', tags: '' })} className="self-start">
+          <Btn variant="secondary" onClick={() => setCardForm({ title: '', meta: '', detail: '', link: '', tags: '', lat: null, lng: null })} className="self-start">
             <Plus size={17} /> Nuova scheda
           </Btn>
         </>
@@ -186,7 +187,7 @@ export default function Section({ trip, section, onUpdate, activeDisplayName }) 
 
       {section.type === 'map' && (
         <Suspense fallback={<p className="text-base text-[var(--muted)]">Caricamento mappa…</p>}>
-          <MapSection trip={trip} section={section} onUpdate={onUpdate} activeDisplayName={activeDisplayName} />
+          <MapSection trip={trip} section={section} onUpdate={onUpdate} activeDisplayName={activeDisplayName} onNavigate={onNavigate} />
         </Suspense>
       )}
 
@@ -207,6 +208,7 @@ export default function Section({ trip, section, onUpdate, activeDisplayName }) 
             <textarea placeholder="Dettaglio" value={cardForm.detail} onChange={(e) => setCardForm({ ...cardForm, detail: e.target.value })} className={inputClass} rows={2} />
             <input placeholder="Link" value={cardForm.link} onChange={(e) => setCardForm({ ...cardForm, link: e.target.value })} className={inputClass} />
             <input placeholder="Tag (separati da virgola)" value={cardForm.tags} onChange={(e) => setCardForm({ ...cardForm, tags: e.target.value })} className={inputClass} />
+            <CoordsInput value={{ lat: cardForm.lat, lng: cardForm.lng }} onChange={(coords) => setCardForm({ ...cardForm, ...coords })} />
             <Btn type="submit">Salva</Btn>
           </form>
         )}
