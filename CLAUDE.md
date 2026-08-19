@@ -169,6 +169,11 @@ create table tv_trip_members (
 );
 ```
 
+I file in `supabase/sql/` si applicano in ordine numerico sul progetto hosted (dashboard
+o `supabase db push`). `0003_trip_attachments_storage.sql` (bucket e policy per gli
+allegati PDF alle prenotazioni) va applicato al progetto live prima che il caricamento
+dei PDF funzioni: senza, l'upload fallisce con "Bucket not found".
+
 RLS attiva su entrambe. Lettura: owner o membro. Scrittura su `tv_trips`: owner o
 membro con ruolo `editor`. Ingresso in un viaggio tramite `share_code` (funzione RPC
 `join_trip(code)` che inserisce il membro come `viewer`).

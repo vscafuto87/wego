@@ -41,6 +41,11 @@ async function openAttachment(path, newWindow) {
   if (!blob) {
     const signedUrl = await getAttachmentSignedUrl(path)
     const response = await fetch(signedUrl)
+    // Un fetch che "va a buon fine" a livello di trasporto (proxy con SSL
+    // inspection, captive portal, 5xx di Storage) può comunque restituire un
+    // corpo HTML/di errore al posto del PDF: senza questo controllo finirebbe
+    // in cache e verrebbe servito per sempre come se fosse l'allegato vero.
+    if (!response.ok) throw new Error(`Il download è fallito (${response.status}).`)
     blob = await response.blob()
     await setCachedAttachment(path, blob)
   }
@@ -62,6 +67,12 @@ export default function Lodging({ trip, section, onUpdate, activeDisplayName, re
   // modale è stato nel frattempo chiuso o riaperto per un altro elemento
   // (finding 4): in quel caso l'update va scartato e l'upload ripulito.
   const formSessionRef = useRef(null)
+  // Percorsi Storage/cache "da eliminare" raccolti durante l'editing (sostituzione
+  // di un PDF o "Rimuovi PDF"): l'eliminazione vera scatta solo quando saveItem
+  // commette la modifica. Se il modale si chiude senza salvare, la lista viene
+  // scartata senza toccare nulla, così l'item conserva il suo bookingFilePath
+  // originale e l'oggetto dietro resta valido (revisione finale, finding 2).
+  const pendingDeletionsRef = useRef([])
 
   function updateItems(fn) {
     onUpdate((t) => ({ ...t, sections: t.sections.map((s) => (s.id === section.id ? { ...s, items: fn(s.items) } : s)) }))
@@ -72,16 +83,23 @@ export default function Lodging({ trip, section, onUpdate, activeDisplayName, re
   // (finding 3).
   function openForm(item) {
     formSessionRef.current = crypto.randomUUID()
+    pendingDeletionsRef.current = []
     setUploadState({ status: 'idle', error: '' })
-    setOpenError(null)
+    // openError non si azzera qui: è per-card (itemId), aprire il form di un
+    // elemento non deve cancellare un messaggio ancora valido su un altro
+    // elemento (bonus). handleOpenAttachment lo pulisce già, scoped, quando
+    // parte un nuovo tentativo per lo stesso item.
     setForm(item)
   }
 
   function closeForm() {
     formSessionRef.current = null
+    // Modale chiuso senza salvare: scartiamo le eliminazioni in sospeso senza
+    // eseguirle (revisione finale, finding 2).
+    pendingDeletionsRef.current = []
     setForm(null)
     setUploadState({ status: 'idle', error: '' })
-    setOpenError(null)
+    // Idem: non toccare openError qui, vedi openForm.
   }
 
   function saveItem(e) {
@@ -91,6 +109,14 @@ export default function Lodging({ trip, section, onUpdate, activeDisplayName, re
       if (id) return items.map((it) => (it.id === id ? stampModified({ ...it, ...fields }, activeDisplayName) : it))
       return [...items, stampModified({ id: crypto.randomUUID(), ...fields }, activeDisplayName)]
     })
+    // Il salvataggio è andato a buon fine: ora gli oggetti sostituiti o
+    // rimossi durante l'editing non servono più a nessun item, si possono
+    // eliminare davvero (revisione finale, finding 2).
+    for (const path of pendingDeletionsRef.current) {
+      removeLodgingAttachment(path).catch(() => {})
+      removeCachedAttachment(path).catch(() => {})
+    }
+    pendingDeletionsRef.current = []
     closeForm()
   }
 
@@ -135,8 +161,10 @@ export default function Lodging({ trip, section, onUpdate, activeDisplayName, re
         return
       }
       if (previousPath) {
-        removeLodgingAttachment(previousPath).catch(() => {})
-        removeCachedAttachment(previousPath).catch(() => {})
+        // Non eliminiamo subito: l'item salvato punta ancora a previousPath
+        // finché saveItem non commette il nuovo path. Se il modale si chiude
+        // senza salvare, questa eliminazione va scartata (revisione finale, finding 2).
+        pendingDeletionsRef.current.push(previousPath)
       }
       // Update funzionale con guardia: se `f` è null (modale chiuso proprio
       // tra il controllo sopra e questa riga) non lo si resuscita.
@@ -144,21 +172,25 @@ export default function Lodging({ trip, section, onUpdate, activeDisplayName, re
       setUploadState({ status: 'idle', error: '' })
     } catch (err) {
       if (formSessionRef.current !== session) return
-      setUploadState({ status: 'idle', error: 'Il caricamento non è riuscito. Controlla la rete e riprova.' })
+      setUploadState({ status: 'idle', error: `Il caricamento non è riuscito. Controlla la rete e riprova.\n\n${err.message}` })
     }
   }
 
   function removeAttachmentFromForm() {
     const path = form.bookingFilePath
     if (path) {
-      removeLodgingAttachment(path).catch(() => {})
-      removeCachedAttachment(path).catch(() => {})
+      // Come per la sostituzione: l'eliminazione vera è rimandata a saveItem
+      // (revisione finale, finding 2).
+      pendingDeletionsRef.current.push(path)
     }
     setForm((f) => (f ? { ...f, bookingFilePath: '', bookingFileName: '' } : f))
   }
 
   async function handleOpenAttachment(itemId, path) {
-    setOpenError(null)
+    // Pulisce solo l'errore di *questo* item: un tentativo per l'item A non
+    // deve far sparire un messaggio ancora valido sotto la card dell'item B
+    // (bonus).
+    setOpenError((e) => (e?.itemId === itemId ? null : e))
     // Apertura sincrona della scheda, prima di qualunque await: soddisfa il
     // requisito dei popup-blocker di Safari/iOS (finding 2). Se il browser
     // la blocca comunque, window.open('', '_blank') torna null qui, in modo
@@ -171,13 +203,13 @@ export default function Lodging({ trip, section, onUpdate, activeDisplayName, re
     }
     try {
       await openAttachment(path, newWindow)
-    } catch {
+    } catch (err) {
       newWindow.close()
       setOpenError({
         itemId,
         message: online
-          ? 'Non riesco ad aprire il PDF. Controlla la rete e riprova.'
-          : 'Questo PDF non è ancora scaricato su questo telefono: serve la connessione la prima volta.',
+          ? `Non riesco ad aprire il PDF. Controlla la rete e riprova.\n\n${err.message}`
+          : `Questo PDF non è ancora scaricato su questo telefono: serve la connessione la prima volta.\n\n${err.message}`,
       })
     }
   }
