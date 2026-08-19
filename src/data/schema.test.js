@@ -469,4 +469,27 @@ describe('collectExternalMapPoints', () => {
     const trip = normalizeTrip({ name: 'X' })
     expect(collectExternalMapPoints(trip)).toEqual([])
   })
+
+  it('origin.tab di una scheda è l\'id della sezione, non solo il titolo', () => {
+    const trip = baseTrip()
+    const points = collectExternalMapPoints(trip)
+    const scheda = points.find((p) => p.categoryGroup === 'schede')
+    const ristoranti = trip.sections.find((s) => s.type === 'cards' && s.title === 'Ristoranti')
+    expect(scheda.origin.tab).toBe(ristoranti.id)
+  })
+
+  it('esclude un item con solo una delle due coordinate', () => {
+    const trip = normalizeTrip({
+      name: 'X',
+      days: [{ date: '2026-08-30', items: [
+        { title: 'Solo lat', kind: 'sentiero', lat: 40.9 }
+      ] }],
+      sections: [
+        { title: 'Ristoranti', type: 'cards', items: [{ title: 'Solo lng', lng: 12.9 }] }
+      ]
+    })
+    const points = collectExternalMapPoints(trip)
+    expect(points.find((p) => p.name === 'Solo lat')).toBeUndefined()
+    expect(points.find((p) => p.name === 'Solo lng')).toBeUndefined()
+  })
 })

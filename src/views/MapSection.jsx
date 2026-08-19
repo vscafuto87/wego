@@ -125,7 +125,7 @@ export default function MapSection({ trip, section, onUpdate, activeDisplayName,
                   type="button"
                   onClick={() => toggleCategory(cat)}
                   aria-pressed={!hiddenCategories.has(cat)}
-                  className={`flex items-center gap-1.5 h-9 px-3 rounded-full text-sm border ${
+                  className={`flex items-center gap-1.5 h-11 px-3 rounded-full text-sm border focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 ${
                     hiddenCategories.has(cat) ? 'border-[var(--line)] text-[var(--muted)]' : 'border-transparent bg-[var(--tint)] text-[var(--ink)]'
                   }`}
                 >
@@ -174,7 +174,7 @@ export default function MapSection({ trip, section, onUpdate, activeDisplayName,
         </div>
       )}
 
-      {section.items.length === 0 && (
+      {points.length === 0 && (
         <Empty icon={MapPin} title="Nessun punto ancora" detail="Aggiungi i posti da non perdere." action={<Btn onClick={() => setForm(EMPTY_ITEM)}>Aggiungi un punto</Btn>} />
       )}
 

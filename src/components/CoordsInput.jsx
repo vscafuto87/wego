@@ -36,7 +36,7 @@ export default function CoordsInput({ value, onChange }) {
     <div className="flex flex-col gap-2">
       <input
         type="text"
-        placeholder="Link Google/Apple Maps"
+        placeholder="Incolla un link Maps per leggere le coordinate"
         value={link}
         onChange={(e) => { setLink(e.target.value); setStatus(null) }}
         onBlur={handleLinkBlur}

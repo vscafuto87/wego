@@ -28,16 +28,27 @@ const PROMPT = `Trasforma questi appunti di viaggio grezzi in un JSON con questo
   ]
 }
 
+Ogni item "cards" (es. Ristoranti) può avere anche "lat": numero o null, "lng": numero
+o null, ma solo se le coordinate sono note per certo dagli appunti (es. un link Maps
+incollato nel testo): non indovinarle mai da un nome di luogo, in quel caso lascia
+entrambi null.
+
 Ogni voce di "days[].items[]" può avere anche un campo "kind" opzionale, che determina
 quali campi in più aggiungere alla voce (solo quelli del kind scelto, nessun altro):
 
 - "kind": "" (o assente) → voce generica, nessun campo in più.
-- "kind": "sentiero" → aggiungi "durata", "dislivello", "difficolta" (string).
-  Es: { "time": "9:00", "title": "Salita al rifugio", "kind": "sentiero", "durata": "3h", "dislivello": "800m", "difficolta": "E", "detail": "", "link": "" }
-- "kind": "spiaggia" → aggiungi "accesso", "servizi" (string).
-  Es: { "time": "", "title": "Cala Fetovaia", "kind": "spiaggia", "accesso": "sentiero 15 min", "servizi": "bar, noleggio", "detail": "", "link": "" }
-- "kind": "pasto" → aggiungi "luogo" (string), "prenotato" (boolean).
-  Es: { "time": "20:00", "title": "Cena", "kind": "pasto", "luogo": "Trattoria da Mario", "prenotato": true, "detail": "", "link": "" }
+- "kind": "sentiero" → aggiungi "durata", "dislivello", "difficolta" (string), "lat" e
+  "lng" (numero o null, solo se noti per certo dagli appunti, altrimenti null).
+  Es: { "time": "9:00", "title": "Salita al rifugio", "kind": "sentiero", "durata": "3h", "dislivello": "800m", "difficolta": "E", "lat": null, "lng": null, "detail": "", "link": "" }
+- "kind": "spiaggia" → aggiungi "accesso", "servizi" (string), "lat" e "lng" (numero o
+  null, solo se noti per certo dagli appunti, altrimenti null).
+  Es: { "time": "", "title": "Cala Fetovaia", "kind": "spiaggia", "accesso": "sentiero 15 min", "servizi": "bar, noleggio", "lat": null, "lng": null, "detail": "", "link": "" }
+- "kind": "pasto" → aggiungi "luogo" (string), "prenotato" (boolean), "lat" e "lng"
+  (numero o null, solo se noti per certo dagli appunti, altrimenti null).
+  Es: { "time": "20:00", "title": "Cena", "kind": "pasto", "luogo": "Trattoria da Mario", "prenotato": true, "lat": null, "lng": null, "detail": "", "link": "" }
+
+Non inventare né calcolare "lat"/"lng" da un nome di luogo o da una ricerca: usali solo
+se gli appunti grezzi contengono un link Maps o coordinate numeriche esplicite.
 
 Oltre a cards/checklist/notes, "sections[].type" può valere anche "transport", "lodging"
 o "map": in quel caso gli "items" hanno la forma specifica del tipo (nessun campo delle
