@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { parseCoordsFromMapsLink } from '../data/schema.js'
+import { parseCoordsFromMapsLink, parseAddressFromMapsLink } from '../data/schema.js'
 
 const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
 
-export default function CoordsInput({ value, onChange }) {
+export default function CoordsInput({ value, onChange, onAddressFound }) {
   const [link, setLink] = useState('')
   const [status, setStatus] = useState(null)
   const [manualOpen, setManualOpen] = useState(value.lat !== null || value.lng !== null)
@@ -16,7 +16,9 @@ export default function CoordsInput({ value, onChange }) {
     const coords = parseCoordsFromMapsLink(link)
     if (coords) {
       onChange(coords)
-      setStatus('found')
+      const address = onAddressFound ? parseAddressFromMapsLink(link) : null
+      if (address) onAddressFound(address)
+      setStatus(address ? 'found-with-address' : 'found')
       setManualOpen(true)
     } else {
       setStatus('not-found')
@@ -43,6 +45,7 @@ export default function CoordsInput({ value, onChange }) {
         className={inputClass}
       />
       {status === 'found' && <p className="text-sm text-[var(--accent2)]">📍 coordinate trovate</p>}
+      {status === 'found-with-address' && <p className="text-sm text-[var(--accent2)]">📍 coordinate e indirizzo trovati</p>}
       {status === 'not-found' && (
         <p className="text-sm text-[var(--muted)]">
           Non riesco a leggere le coordinate da questo link. Aprilo in Maps e copia il link completo dalla barra, oppure inseriscile a mano.

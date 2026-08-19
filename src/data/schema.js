@@ -120,6 +120,8 @@ function normalizeLodgingItem(raw) {
     checkOut: str(item.checkOut),
     address: str(item.address),
     bookingLink: str(item.bookingLink),
+    lat: toCoord(item.lat),
+    lng: toCoord(item.lng),
     note: str(item.note),
     modifiedBy: str(item.modifiedBy),
     modifiedAt: str(item.modifiedAt)
@@ -276,6 +278,21 @@ export function parseCoordsFromMapsLink(url) {
   return null
 }
 
+// Legge un nome/indirizzo da un link Google/Apple Maps, quando il link lo
+// contiene esplicitamente. Best effort, senza rete: Apple Maps espone spesso
+// un parametro `address`; Google Maps porta il nome del posto nel percorso
+// `/maps/place/<nome>/`. Molti link (solo coordinate) non hanno nulla di
+// tutto questo e ritornano null, mai un errore — il campo resta modificabile
+// a mano.
+export function parseAddressFromMapsLink(url) {
+  const text = str(url)
+  const appleMatch = text.match(/[?&]address=([^&]+)/)
+  if (appleMatch) return decodeURIComponent(appleMatch[1].replace(/\+/g, ' '))
+  const googleMatch = text.match(/\/maps\/place\/([^/@]+)/)
+  if (googleMatch) return decodeURIComponent(googleMatch[1].replace(/\+/g, ' '))
+  return null
+}
+
 const DAY_MAP_KINDS = ['sentiero', 'spiaggia', 'pasto']
 
 // Punti con coordinate che vivono in altre sezioni/giorni del viaggio, utili
@@ -306,5 +323,18 @@ export function collectExternalMapPoints(trip) {
       categoryGroup: i.kind,
       origin: { tab: 'days', dayDate: d.date, itemTitle: i.title }
     })))
-  return [...fromCards, ...fromDays]
+  const fromLodging = trip.sections
+    .filter((s) => s.type === 'lodging')
+    .flatMap((s) => s.items
+      .filter((i) => i.lat !== null && i.lng !== null)
+      .map((i) => ({
+        id: i.id,
+        name: i.name,
+        lat: i.lat,
+        lng: i.lng,
+        link: i.bookingLink,
+        categoryGroup: 'lodging',
+        origin: { tab: s.id, sectionTitle: s.title }
+      })))
+  return [...fromCards, ...fromLodging, ...fromDays]
 }

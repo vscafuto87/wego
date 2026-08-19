@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { normalizeTrip, exportTrip, stampModified, dayItemFieldsForKind, parseCoordsFromMapsLink, collectExternalMapPoints } from './schema.js'
+import { normalizeTrip, exportTrip, stampModified, dayItemFieldsForKind, parseCoordsFromMapsLink, parseAddressFromMapsLink, collectExternalMapPoints } from './schema.js'
 
 describe('normalizeTrip — attribuzione', () => {
   it('riempie modifiedBy/modifiedAt vuoti quando assenti', () => {
@@ -189,6 +189,26 @@ describe('normalizeTrip — sezione lodging', () => {
   it('campi mancanti diventano stringa vuota', () => {
     const section = tripWithLodgingSection([{ name: 'Hotel' }]).sections.find((s) => s.type === 'lodging')
     expect(section.items[0]).toMatchObject({ name: 'Hotel', checkIn: '', checkOut: '', address: '', bookingLink: '', note: '' })
+  })
+
+  it('alloggio con coordinate valide', () => {
+    const section = tripWithLodgingSection([{ name: 'Hotel', lat: 40.897, lng: 12.958 }]).sections.find((s) => s.type === 'lodging')
+    expect(section.items[0].lat).toBe(40.897)
+    expect(section.items[0].lng).toBe(12.958)
+  })
+
+  it('alloggio senza coordinate: null, non errore', () => {
+    const section = tripWithLodgingSection([{ name: 'Hotel' }]).sections.find((s) => s.type === 'lodging')
+    expect(section.items[0].lat).toBeNull()
+    expect(section.items[0].lng).toBeNull()
+  })
+
+  it('exportTrip conserva lat/lng sull\'alloggio, senza id', () => {
+    const trip = tripWithLodgingSection([{ name: 'Hotel', lat: 40.897, lng: 12.958 }])
+    const exported = exportTrip(trip).sections.find((s) => s.type === 'lodging')
+    expect(exported.items[0].lat).toBe(40.897)
+    expect(exported.items[0].lng).toBe(12.958)
+    expect(exported.items[0].id).toBeUndefined()
   })
 })
 
@@ -408,6 +428,30 @@ describe('parseCoordsFromMapsLink', () => {
   })
 })
 
+describe('parseAddressFromMapsLink', () => {
+  it('link Apple Maps con ?address=', () => {
+    const url = 'https://maps.apple.com/?address=Via+Roma+12%2C+00100+Roma+RM%2C+Italia&ll=41.9,12.5&q=Hotel'
+    expect(parseAddressFromMapsLink(url)).toBe('Via Roma 12, 00100 Roma RM, Italia')
+  })
+
+  it('link Google Maps con /maps/place/<nome>/', () => {
+    const url = 'https://www.google.com/maps/place/Hotel+Roma+City+Center/@41.9,12.5,17z/data=!3m1!4b1'
+    expect(parseAddressFromMapsLink(url)).toBe('Hotel Roma City Center')
+  })
+
+  it('link senza nome/indirizzo leggibile: null, non errore', () => {
+    expect(parseAddressFromMapsLink('https://www.google.com/maps/@41.9,12.5,15z')).toBeNull()
+    expect(parseAddressFromMapsLink('https://maps.google.com/?q=40.897,12.958')).toBeNull()
+  })
+
+  it('testo qualunque, stringa vuota, undefined: null, mai un errore', () => {
+    expect(parseAddressFromMapsLink('non è un link')).toBeNull()
+    expect(parseAddressFromMapsLink('')).toBeNull()
+    expect(() => parseAddressFromMapsLink(undefined)).not.toThrow()
+    expect(parseAddressFromMapsLink(undefined)).toBeNull()
+  })
+})
+
 describe('collectExternalMapPoints', () => {
   function baseTrip(overrides) {
     return normalizeTrip({
@@ -491,5 +535,30 @@ describe('collectExternalMapPoints', () => {
     const points = collectExternalMapPoints(trip)
     expect(points.find((p) => p.name === 'Solo lat')).toBeUndefined()
     expect(points.find((p) => p.name === 'Solo lng')).toBeUndefined()
+  })
+
+  it('include gli alloggi con coordinate, escludendo quelli senza, con link dal bookingLink', () => {
+    const trip = normalizeTrip({
+      name: 'X',
+      sections: [{ title: 'Pernottamento', type: 'lodging', items: [
+        { name: 'Hotel Roma', lat: 41.9, lng: 12.5, bookingLink: 'https://booking.example' },
+        { name: 'Senza coordinate' }
+      ] }]
+    })
+    const points = collectExternalMapPoints(trip)
+    const lodging = points.filter((p) => p.categoryGroup === 'lodging')
+    expect(lodging).toHaveLength(1)
+    expect(lodging[0]).toMatchObject({ name: 'Hotel Roma', lat: 41.9, lng: 12.5, link: 'https://booking.example' })
+    expect(lodging[0].origin.sectionTitle).toBe('Pernottamento')
+  })
+
+  it('origin.tab di un alloggio è l\'id della sezione Pernottamento', () => {
+    const trip = normalizeTrip({
+      name: 'X',
+      sections: [{ title: 'Pernottamento', type: 'lodging', items: [{ name: 'Hotel', lat: 41.9, lng: 12.5 }] }]
+    })
+    const points = collectExternalMapPoints(trip)
+    const pernottamento = trip.sections.find((s) => s.type === 'lodging')
+    expect(points[0].origin.tab).toBe(pernottamento.id)
   })
 })

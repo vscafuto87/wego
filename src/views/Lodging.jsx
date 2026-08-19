@@ -5,9 +5,10 @@ import Modal from '../components/Modal.jsx'
 import Empty from '../components/Empty.jsx'
 import { stampModified } from '../data/schema.js'
 import ModifiedBy from '../components/ModifiedBy.jsx'
+import CoordsInput from '../components/CoordsInput.jsx'
 
 const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
-const EMPTY_ITEM = { name: '', checkIn: '', checkOut: '', address: '', bookingLink: '', note: '' }
+const EMPTY_ITEM = { name: '', checkIn: '', checkOut: '', address: '', bookingLink: '', lat: null, lng: null, note: '' }
 
 export default function Lodging({ trip, section, onUpdate, activeDisplayName }) {
   const [form, setForm] = useState(null)
@@ -84,6 +85,11 @@ export default function Lodging({ trip, section, onUpdate, activeDisplayName }) 
               <input type="date" placeholder="Check-out" value={form.checkOut} onChange={(e) => setForm({ ...form, checkOut: e.target.value })} className={`flex-1 ${inputClass}`} />
             </div>
             <input placeholder="Indirizzo" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} className={inputClass} />
+            <CoordsInput
+              value={{ lat: form.lat, lng: form.lng }}
+              onChange={(coords) => setForm({ ...form, ...coords })}
+              onAddressFound={(address) => setForm((f) => (f.address ? f : { ...f, address }))}
+            />
             <input placeholder="Link prenotazione" value={form.bookingLink} onChange={(e) => setForm({ ...form, bookingLink: e.target.value })} className={inputClass} />
             <textarea placeholder="Nota" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} className={inputClass} rows={2} />
             <Btn type="submit">Salva</Btn>

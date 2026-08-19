@@ -17,9 +17,9 @@ import ModifiedBy from '../components/ModifiedBy.jsx'
 // bundler non riesce a risolvere i path relativi che la libreria si aspetta.
 L.Icon.Default.mergeOptions({ iconRetinaUrl: markerIcon2x, iconUrl: markerIcon, shadowUrl: markerShadow })
 
-const CATEGORY_COLORS = { schede: '#f97316', sentiero: '#16a34a', spiaggia: '#0ea5e9', pasto: '#eab308' }
-const CATEGORY_LABELS = { mappa: 'Mappa', schede: 'Schede', sentiero: 'Sentieri', spiaggia: 'Spiagge', pasto: 'Pasti' }
-const CATEGORY_ORDER = ['mappa', 'schede', 'sentiero', 'spiaggia', 'pasto']
+const CATEGORY_COLORS = { schede: '#f97316', lodging: '#a855f7', sentiero: '#16a34a', spiaggia: '#0ea5e9', pasto: '#eab308' }
+const CATEGORY_LABELS = { mappa: 'Mappa', schede: 'Schede', lodging: 'Pernottamento', sentiero: 'Sentieri', spiaggia: 'Spiagge', pasto: 'Pasti' }
+const CATEGORY_ORDER = ['mappa', 'schede', 'lodging', 'sentiero', 'spiaggia', 'pasto']
 
 function dotIcon(color) {
   return L.divIcon({
@@ -41,12 +41,12 @@ function formatDate(date) {
 
 function originLabel(point) {
   if (point.categoryGroup === 'mappa') return point.category || null
-  if (point.categoryGroup === 'schede') return point.origin.sectionTitle
+  if (point.categoryGroup === 'schede' || point.categoryGroup === 'lodging') return point.origin.sectionTitle
   return `${formatDate(point.origin.dayDate)} · ${point.origin.itemTitle}`
 }
 
 function navigateLabel(point) {
-  return point.categoryGroup === 'schede' ? `Vai a ${point.origin.sectionTitle}` : "Vai all'Itinerario"
+  return point.categoryGroup === 'schede' || point.categoryGroup === 'lodging' ? `Vai a ${point.origin.sectionTitle}` : "Vai all'Itinerario"
 }
 
 const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
