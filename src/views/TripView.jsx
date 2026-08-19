@@ -162,7 +162,10 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
       // va confrontata con la soglia comprensiva di quanto l'header si ridurrà.
       const scrollable = document.documentElement.scrollHeight - window.innerHeight - extraSpace
       const needed = COLLAPSE_DISTANCE + HEADER_SHRINK
-      const missing = scrollable > 0 && scrollable < needed ? needed - scrollable : 0
+      // Anche a pagina più corta del viewport (scrollable negativo, es. tab Oggi
+      // con poche voci) serve comunque riempire fino a needed, non solo quando
+      // c'è già un minimo di scroll naturale.
+      const missing = scrollable < needed ? needed - scrollable : 0
       setExtraSpace((current) => (current === missing ? current : missing))
     }
     recompute()
@@ -289,7 +292,7 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
         <div className="absolute inset-0" style={{ opacity: 1 - collapse }}>
           <Terrain seed={trip.id} palette={trip.palette} height={140} className="h-full w-full" />
         </div>
-        <div className="relative px-5 max-w-2xl mx-auto" style={{ paddingTop: 32 - collapse * 8, paddingBottom: 24 - collapse * 16 }}>
+        <div className="relative px-5 max-w-2xl mx-auto" style={{ paddingTop: `calc(env(safe-area-inset-top) + ${32 - collapse * 8}px)`, paddingBottom: 24 - collapse * 16 }}>
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <button onClick={onBack} aria-label="Torna ai viaggi" className="h-11 w-11 -ml-2 flex-shrink-0 flex items-center justify-center rounded-full bg-[var(--tint)] active:scale-[0.97] transition-transform duration-150 ease-out">
