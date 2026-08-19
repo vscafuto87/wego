@@ -4,11 +4,51 @@ vi.mock('idb-keyval', () => ({ get: vi.fn(), set: vi.fn() }))
 vi.mock('./seed.js', () => ({ loadSeedTrips: vi.fn() }))
 
 import { get, set } from 'idb-keyval'
-import { getSyncState, setSyncState, markDirty, getDisplayNamePreference, setDisplayNamePreference } from './storage.js'
+import { getSyncState, setSyncState, markDirty, getDisplayNamePreference, setDisplayNamePreference, loadTrips } from './storage.js'
 
 beforeEach(() => {
   get.mockReset()
   set.mockReset()
+})
+
+describe('loadTrips — ripara i viaggi già salvati alla forma corrente', () => {
+  function mockStored(trips) {
+    get.mockImplementation((key) => {
+      if (key === 'wego:trips') return Promise.resolve(trips)
+      return Promise.resolve(undefined)
+    })
+  }
+
+  it('un viaggio salvato in forma vecchia guadagna le 4 sezioni fisse, mantenendo il suo id', async () => {
+    mockStored([{ id: 'local-1', name: 'Vecchio viaggio', days: [], sections: [] }])
+    const trips = await loadTrips()
+    expect(trips).toHaveLength(1)
+    expect(trips[0].id).toBe('local-1')
+    expect(trips[0].sections.map((s) => s.type)).toEqual(['transport', 'lodging', 'cards', 'map'])
+  })
+
+  it('salva il risultato riparato, cosí le modifiche successive partono già dalla forma aggiornata', async () => {
+    mockStored([{ id: 'local-1', name: 'Vecchio viaggio', days: [], sections: [] }])
+    const trips = await loadTrips()
+    expect(set).toHaveBeenCalledWith('wego:trips', trips)
+  })
+
+  it('un viaggio già nella forma corrente resta equivalente dopo il giro di normalizzazione', async () => {
+    mockStored([{
+      id: 'local-2',
+      name: 'Ponza',
+      days: [],
+      sections: [
+        { title: 'Trasporti', icon: 'bus', type: 'transport', items: [] },
+        { title: 'Pernottamento', icon: 'bed', type: 'lodging', items: [] },
+        { title: 'Ristoranti', icon: 'food', type: 'cards', items: [] },
+        { title: 'Mappa', icon: 'map', type: 'map', items: [] }
+      ]
+    }])
+    const trips = await loadTrips()
+    expect(trips[0].id).toBe('local-2')
+    expect(trips[0].sections).toHaveLength(4)
+  })
 })
 
 describe('getSyncState / setSyncState', () => {

@@ -1,5 +1,6 @@
 import { get, set } from 'idb-keyval'
 import { loadSeedTrips } from './seed.js'
+import { normalizeTrip } from './schema.js'
 
 const TRIPS_KEY = 'wego:trips'
 const SEEDED_KEY = 'wego:seeded'
@@ -12,7 +13,14 @@ export async function loadTrips() {
   const stored = await get(TRIPS_KEY)
 
   if (stored) {
-    return stored
+    // Un viaggio salvato prima di un aggiornamento dello schema resta congelato
+    // alla forma vecchia finché non passa di nuovo da normalizeTrip: lo si ripara
+    // ad ogni apertura, come già succede dopo un pull di sync. Solo l'id del
+    // viaggio resta stabile: gli id annidati si rigenerano già oggi ad ogni pull,
+    // e le viste gestiscono già quel caso (vedi TripView.jsx).
+    const upgraded = stored.map((trip) => ({ ...normalizeTrip(trip), id: trip.id }))
+    await set(TRIPS_KEY, upgraded)
+    return upgraded
   }
 
   if (alreadySeeded) {
