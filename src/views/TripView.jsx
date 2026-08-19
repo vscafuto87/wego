@@ -329,7 +329,18 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
       <main className="px-5 max-w-2xl mx-auto pb-36">
         {currentTab === 'today' && <Today trip={trip} onNavigate={setActiveTab} />}
         {currentTab === 'days' && <Days trip={trip} onUpdate={handleUpdate} activeDisplayName={cloudDisplayName} />}
-        {trip.sections.map((section) => (currentTab === section.id ? <Section key={section.id} trip={trip} section={section} onUpdate={handleUpdate} activeDisplayName={cloudDisplayName} onNavigate={setActiveTab} /> : null))}
+        {trip.sections.map((section) => (currentTab === section.id ? (
+          <Section
+            key={section.id}
+            trip={trip}
+            section={section}
+            onUpdate={handleUpdate}
+            activeDisplayName={cloudDisplayName}
+            onNavigate={setActiveTab}
+            syncState={syncState}
+            onOpenActivate={() => setActivateOpen(true)}
+          />
+        ) : null))}
         {extraSpace > 0 && <div style={{ height: extraSpace }} aria-hidden="true" />}
       </main>
 
