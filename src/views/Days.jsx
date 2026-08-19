@@ -26,6 +26,12 @@ const KIND_OPTIONS = [
 
 const KIND_ICONS = { sentiero: Mountain, spiaggia: Waves, pasto: Utensils }
 
+function KindIcon({ kind }) {
+  const Icon = KIND_ICONS[kind]
+  if (!Icon) return null
+  return <Icon size={15} className="inline mr-1.5 -mt-0.5 text-[var(--muted)]" />
+}
+
 const ALL_KIND_FIELDS = ['durata', 'dislivello', 'difficolta', 'accesso', 'servizi', 'luogo', 'prenotato']
 
 function withoutKindFields(item) {
@@ -125,10 +131,7 @@ export default function Days({ trip, onUpdate, activeDisplayName }) {
                 <li key={item.id} className="flex items-start gap-1">
                   <div className="flex-1">
                     {item.time && <span className="font-mono text-sm text-[var(--muted)] mr-2">{item.time}</span>}
-                    {KIND_ICONS[item.kind] && (() => {
-                      const Icon = KIND_ICONS[item.kind]
-                      return <Icon size={15} className="inline mr-1.5 -mt-0.5 text-[var(--muted)]" />
-                    })()}
+                    <KindIcon kind={item.kind} />
                     <span className="text-base">{item.title}</span>
                     {item.detail && <p className="text-sm text-[var(--muted)] mt-0.5">{item.detail}</p>}
                     {item.kind === 'sentiero' && (item.durata || item.dislivello || item.difficolta) && (

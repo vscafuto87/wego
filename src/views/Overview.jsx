@@ -27,6 +27,7 @@ function tripStatus(trip) {
 export default function Overview({ trip, onUpdate, onDelete, syncActive, onOpenActivate, onRestore }) {
   const [editForm, setEditForm] = useState(null)
   const [sectionForm, setSectionForm] = useState(null)
+  const [sectionError, setSectionError] = useState('')
   const [exportOpen, setExportOpen] = useState(false)
 
   function openEdit() {
@@ -50,6 +51,10 @@ export default function Overview({ trip, onUpdate, onDelete, syncActive, onOpenA
 
   function addSection(e) {
     e.preventDefault()
+    if (sectionForm.type === 'cards' && sectionForm.title.trim() === 'Ristoranti') {
+      setSectionError('"Ristoranti" è già una sezione fissa: scegli un altro titolo.')
+      return
+    }
     const section = {
       id: crypto.randomUUID(),
       title: sectionForm.title,
@@ -118,7 +123,7 @@ export default function Overview({ trip, onUpdate, onDelete, syncActive, onOpenA
       <div>
         <div className="flex items-center justify-between">
           <Label>Sezioni</Label>
-          <button onClick={() => setSectionForm({ title: '', icon: 'star', type: 'cards' })} className="min-h-12 flex items-center gap-1 text-base text-[var(--accent)]">
+          <button onClick={() => { setSectionError(''); setSectionForm({ title: '', icon: 'star', type: 'cards' }) }} className="min-h-12 flex items-center gap-1 text-base text-[var(--accent)]">
             <Plus size={17} /> Aggiungi
           </button>
         </div>
@@ -161,10 +166,11 @@ export default function Overview({ trip, onUpdate, onDelete, syncActive, onOpenA
         )}
       </Modal>
 
-      <Modal open={!!sectionForm} title="Nuova sezione" onClose={() => setSectionForm(null)}>
+      <Modal open={!!sectionForm} title="Nuova sezione" onClose={() => { setSectionError(''); setSectionForm(null) }}>
         {sectionForm && (
           <form onSubmit={addSection} className="flex flex-col gap-3">
-            <input required placeholder="Titolo" value={sectionForm.title} onChange={(e) => setSectionForm({ ...sectionForm, title: e.target.value })} className={inputClass} />
+            <input required placeholder="Titolo" value={sectionForm.title} onChange={(e) => { setSectionError(''); setSectionForm({ ...sectionForm, title: e.target.value }) }} className={inputClass} />
+            {sectionError && <p className="text-base text-[var(--accent)]">{sectionError}</p>}
             <select value={sectionForm.icon} onChange={(e) => setSectionForm({ ...sectionForm, icon: e.target.value })} className={inputClass}>
               {Object.keys(ICONS).map((key) => (
                 <option key={key} value={key}>

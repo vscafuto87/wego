@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import { themeStyle, ACCENT_GRADIENT } from '../theme/themes.js'
 import Terrain from '../theme/Terrain.jsx'
@@ -24,6 +24,8 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
   const [cloudDisplayName, setCloudDisplayName] = useState('')
   const [activateOpen, setActivateOpen] = useState(false)
   const [conflict, setConflict] = useState(null)
+  const [tabOverflow, setTabOverflow] = useState({ left: false, right: false })
+  const navScrollRef = useRef(null)
 
   // Riferimenti sempre aggiornati: un tentativo di sync partito da un timer o da
   // un evento deve lavorare sul viaggio e sullo stato correnti, non su quelli
@@ -104,6 +106,26 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
   useEffect(() => () => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
   }, [])
+
+  // Sfuma i bordi della tab bar solo quando c'è altro da scorrere, così su
+  // schermi stretti si capisce che le tab fuori vista esistono davvero.
+  useLayoutEffect(() => {
+    const el = navScrollRef.current
+    if (!el) return
+    function updateOverflow() {
+      setTabOverflow({
+        left: el.scrollLeft > 1,
+        right: el.scrollLeft + el.clientWidth < el.scrollWidth - 1
+      })
+    }
+    updateOverflow()
+    el.addEventListener('scroll', updateOverflow)
+    window.addEventListener('resize', updateOverflow)
+    return () => {
+      el.removeEventListener('scroll', updateOverflow)
+      window.removeEventListener('resize', updateOverflow)
+    }
+  }, [trip.sections.length])
 
   function handleUpdate(updater) {
     onUpdate(updater)
@@ -220,24 +242,35 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
       </main>
 
       <nav className="fixed inset-x-0 bottom-0 z-20 px-5 pb-[calc(env(safe-area-inset-bottom)+16px)] pt-2">
-        <div className="max-w-2xl mx-auto flex items-center gap-1 overflow-x-auto no-scrollbar bg-[rgb(var(--card-rgb)/0.9)] backdrop-blur-lg rounded-full p-1.5 shadow-[0_2px_4px_rgb(var(--ink-rgb)/0.08),0_20px_40px_-18px_rgb(var(--ink-rgb)/0.3)]">
-          {tabs.map((tab) => {
-            const active = currentTab === tab.key
-            return (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                style={active ? { background: ACCENT_GRADIENT } : undefined}
-                className={`flex-shrink-0 h-12 rounded-full px-5 font-sans text-base font-medium whitespace-nowrap transition-transform duration-150 ease-out active:scale-[0.97] ${
-                  active
-                    ? 'text-[var(--paper)] shadow-[0_10px_20px_-10px_rgb(var(--accent-rgb)/0.55)]'
-                    : 'text-[var(--muted)]'
-                }`}
-              >
-                {tab.label}
-              </button>
-            )
-          })}
+        <div className="max-w-2xl mx-auto relative">
+          <div
+            ref={navScrollRef}
+            className="flex items-center gap-1 overflow-x-auto no-scrollbar bg-[rgb(var(--card-rgb)/0.9)] backdrop-blur-lg rounded-full p-1.5 shadow-[0_2px_4px_rgb(var(--ink-rgb)/0.08),0_20px_40px_-18px_rgb(var(--ink-rgb)/0.3)]"
+          >
+            {tabs.map((tab) => {
+              const active = currentTab === tab.key
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  style={active ? { background: ACCENT_GRADIENT } : undefined}
+                  className={`flex-shrink-0 h-12 rounded-full px-5 font-sans text-base font-medium whitespace-nowrap transition-transform duration-150 ease-out active:scale-[0.97] ${
+                    active
+                      ? 'text-[var(--paper)] shadow-[0_10px_20px_-10px_rgb(var(--accent-rgb)/0.55)]'
+                      : 'text-[var(--muted)]'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              )
+            })}
+          </div>
+          {tabOverflow.left && (
+            <div className="pointer-events-none absolute inset-y-0 left-0 w-8 rounded-l-full bg-gradient-to-r from-[rgb(var(--card-rgb)/0.9)] to-transparent" />
+          )}
+          {tabOverflow.right && (
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-8 rounded-r-full bg-gradient-to-l from-[rgb(var(--card-rgb)/0.9)] to-transparent" />
+          )}
         </div>
       </nav>
 
