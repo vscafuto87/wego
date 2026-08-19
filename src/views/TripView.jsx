@@ -25,6 +25,7 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
   const [activateOpen, setActivateOpen] = useState(false)
   const [conflict, setConflict] = useState(null)
   const [tabOverflow, setTabOverflow] = useState({ left: false, right: false })
+  const [scrollY, setScrollY] = useState(0)
   const navScrollRef = useRef(null)
   const activeTabRef = useRef(null)
 
@@ -128,6 +129,22 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
     }
   }, [trip.sections.length])
 
+  // Il titolo grande dell'header si riduce scorrendo, come la nav bar di
+  // un'app nativa. rAF evita di aggiornare lo stato più spesso di un frame.
+  useEffect(() => {
+    let ticking = false
+    function onScroll() {
+      if (ticking) return
+      ticking = true
+      requestAnimationFrame(() => {
+        setScrollY(window.scrollY)
+        ticking = false
+      })
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
   // La tab attiva si espande: se era vicina al bordo va riportata in vista,
   // altrimenti l'etichetta resta tagliata fuori dallo schermo.
   useEffect(() => {
@@ -215,26 +232,42 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
   // Un viewer non può scrivere sul server: non gli si offre di forzare la propria
   // versione, sarebbe un pulsante che la RLS rifiuta sempre.
   const canPush = !!syncState && syncState.role === 'editor'
+  // Quanto è "compresso" l'header: 0 = titolo grande, 1 = barra compatta.
+  const collapse = Math.max(0, Math.min(1, scrollY / 100))
 
   return (
     <div style={themeStyle(trip.palette)} className="min-h-screen bg-[var(--paper)] text-[var(--ink)] font-sans">
-      <header className="relative overflow-hidden">
-        <Terrain seed={trip.id} palette={trip.palette} height={140} className="absolute inset-0 h-full w-full" />
-        <div className="relative px-5 pt-8 pb-6 max-w-2xl mx-auto">
-          <button onClick={onBack} aria-label="Torna ai viaggi" className="h-12 w-12 -ml-2 flex items-center justify-center rounded-full bg-[var(--tint)] active:scale-[0.97] transition-transform duration-150 ease-out">
-            <ArrowLeft size={21} />
-          </button>
-          <div className="flex items-baseline gap-2 mt-3">
-            <span className="text-4xl">{trip.emoji}</span>
-            <h1 className="font-display font-semibold text-4xl">{trip.name}</h1>
-          </div>
-          {trip.place && <p className="text-base text-[var(--muted)] mt-1">{trip.place}</p>}
-          {status && (
-            <div className="flex items-center gap-1.5 mt-1">
-              <span className={`h-2 w-2 rounded-full ${status.dot}`} />
-              <span className="text-xs text-[var(--muted)]">{status.label}</span>
+      <header className="sticky top-0 z-30 overflow-hidden" style={{ boxShadow: `0 1px 0 rgb(var(--ink-rgb) / ${collapse * 0.08})` }}>
+        <div className="absolute inset-0" style={{ background: 'var(--card)', opacity: collapse }} />
+        <div className="absolute inset-0" style={{ opacity: 1 - collapse }}>
+          <Terrain seed={trip.id} palette={trip.palette} height={140} className="h-full w-full" />
+        </div>
+        <div className="relative px-5 max-w-2xl mx-auto" style={{ paddingTop: 32 - collapse * 8, paddingBottom: 24 - collapse * 16 }}>
+          <div className="flex items-center gap-3">
+            <button onClick={onBack} aria-label="Torna ai viaggi" className="h-11 w-11 -ml-2 flex-shrink-0 flex items-center justify-center rounded-full bg-[var(--tint)] active:scale-[0.97] transition-transform duration-150 ease-out">
+              <ArrowLeft size={20} />
+            </button>
+            <div
+              className="flex items-center gap-2 whitespace-nowrap"
+              style={{ opacity: collapse, maxWidth: collapse > 0.01 ? 280 : 0, overflow: 'hidden' }}
+            >
+              <span className="text-xl">{trip.emoji}</span>
+              <span className="font-display font-semibold text-lg">{trip.name}</span>
             </div>
-          )}
+          </div>
+          <div style={{ maxHeight: (1 - collapse) * 160, opacity: 1 - collapse, overflow: 'hidden' }}>
+            <div className="flex items-baseline gap-2 mt-3">
+              <span className="text-4xl">{trip.emoji}</span>
+              <h1 className="font-display font-semibold text-4xl">{trip.name}</h1>
+            </div>
+            {trip.place && <p className="text-base text-[var(--muted)] mt-1">{trip.place}</p>}
+            {status && (
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className={`h-2 w-2 rounded-full ${status.dot}`} />
+                <span className="text-xs text-[var(--muted)]">{status.label}</span>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
