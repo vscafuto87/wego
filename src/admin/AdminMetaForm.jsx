@@ -22,12 +22,17 @@ export default function AdminMetaForm({ trip, onUpdate }) {
     setForm(fieldsFromTrip(trip))
   }, [trip.id])
 
+  useEffect(() => {
+    if (!saved) return
+    const timer = setTimeout(() => setSaved(false), 2000)
+    return () => clearTimeout(timer)
+  }, [saved])
+
   function save(e) {
     e.preventDefault()
     const people = form.people.split(',').map((p) => p.trim()).filter(Boolean)
     onUpdate((t) => ({ ...t, ...form, people }))
     setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
   }
 
   return (
