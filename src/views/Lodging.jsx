@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Plus, Pencil, Trash2, Bed, FileText } from 'lucide-react'
 import Btn from '../components/Btn.jsx'
 import Modal from '../components/Modal.jsx'
@@ -32,7 +32,11 @@ function useOnlineStatus() {
   return online
 }
 
-async function openAttachment(path) {
+// `newWindow` deve già esistere (aperto in modo sincrono nel gestore del
+// click, prima di qualunque await) altrimenti Safari/iOS blocca la nuova
+// scheda: window.open() chiamato dopo un await non è più nella finestra di
+// esecuzione sincrona dell'evento utente.
+async function openAttachment(path, newWindow) {
   let blob = await getCachedAttachment(path)
   if (!blob) {
     const signedUrl = await getAttachmentSignedUrl(path)
@@ -41,18 +45,43 @@ async function openAttachment(path) {
     await setCachedAttachment(path, blob)
   }
   const objectUrl = URL.createObjectURL(blob)
-  window.open(objectUrl, '_blank')
+  newWindow.location.href = objectUrl
   setTimeout(() => URL.revokeObjectURL(objectUrl), 60000)
 }
 
 export default function Lodging({ trip, section, onUpdate, activeDisplayName, remoteId, role, onOpenActivate }) {
   const [form, setForm] = useState(null)
   const [uploadState, setUploadState] = useState({ status: 'idle', error: '' })
-  const [openError, setOpenError] = useState('')
+  // { itemId, message } | null — itemId lega il messaggio alla card che ha
+  // avviato l'apertura, così è visibile lì (finding 1) invece che solo dentro
+  // il modale di modifica.
+  const [openError, setOpenError] = useState(null)
   const online = useOnlineStatus()
+  // Identifica la "sessione" di modifica corrente (un token per ogni apertura
+  // del form). Serve a riconoscere, quando un upload asincrono risolve, se il
+  // modale è stato nel frattempo chiuso o riaperto per un altro elemento
+  // (finding 4): in quel caso l'update va scartato e l'upload ripulito.
+  const formSessionRef = useRef(null)
 
   function updateItems(fn) {
     onUpdate((t) => ({ ...t, sections: t.sections.map((s) => (s.id === section.id ? { ...s, items: fn(s.items) } : s)) }))
+  }
+
+  // Apre il form per un nuovo elemento o per la modifica di uno esistente,
+  // azzerando sempre lo stato di upload/apertura della sessione precedente
+  // (finding 3).
+  function openForm(item) {
+    formSessionRef.current = crypto.randomUUID()
+    setUploadState({ status: 'idle', error: '' })
+    setOpenError(null)
+    setForm(item)
+  }
+
+  function closeForm() {
+    formSessionRef.current = null
+    setForm(null)
+    setUploadState({ status: 'idle', error: '' })
+    setOpenError(null)
   }
 
   function saveItem(e) {
@@ -62,7 +91,7 @@ export default function Lodging({ trip, section, onUpdate, activeDisplayName, re
       if (id) return items.map((it) => (it.id === id ? stampModified({ ...it, ...fields }, activeDisplayName) : it))
       return [...items, stampModified({ id: crypto.randomUUID(), ...fields }, activeDisplayName)]
     })
-    setForm(null)
+    closeForm()
   }
 
   function removeItem(item) {
@@ -88,16 +117,33 @@ export default function Lodging({ trip, section, onUpdate, activeDisplayName, re
 
     setUploadState({ status: 'uploading', error: '' })
     const previousPath = form.bookingFilePath
+    // Tocca formSessionRef, non form: se il modale viene chiuso o riaperto
+    // per un altro elemento mentre l'upload è in volo, il token cambia e lo
+    // riconosciamo al resolve (finding 4).
+    const session = formSessionRef.current
     try {
       const path = await uploadLodgingAttachment(remoteId, file)
       await setCachedAttachment(path, file)
+      if (formSessionRef.current !== session) {
+        // Sessione del form terminata nel frattempo: il form è null (o è
+        // un altro elemento) e non c'è più nessuno a cui agganciare questo
+        // allegato. Non tocchiamo `form` (eviterebbe di farlo "riapparire"
+        // con dati incompleti) e ripuliamo l'upload appena fatto per non
+        // lasciarlo orfano su Storage/cache.
+        removeLodgingAttachment(path).catch(() => {})
+        removeCachedAttachment(path).catch(() => {})
+        return
+      }
       if (previousPath) {
         removeLodgingAttachment(previousPath).catch(() => {})
         removeCachedAttachment(previousPath).catch(() => {})
       }
-      setForm((f) => ({ ...f, bookingFilePath: path, bookingFileName: file.name }))
+      // Update funzionale con guardia: se `f` è null (modale chiuso proprio
+      // tra il controllo sopra e questa riga) non lo si resuscita.
+      setForm((f) => (f ? { ...f, bookingFilePath: path, bookingFileName: file.name } : f))
       setUploadState({ status: 'idle', error: '' })
     } catch (err) {
+      if (formSessionRef.current !== session) return
       setUploadState({ status: 'idle', error: 'Il caricamento non è riuscito. Controlla la rete e riprova.' })
     }
   }
@@ -108,17 +154,31 @@ export default function Lodging({ trip, section, onUpdate, activeDisplayName, re
       removeLodgingAttachment(path).catch(() => {})
       removeCachedAttachment(path).catch(() => {})
     }
-    setForm((f) => ({ ...f, bookingFilePath: '', bookingFileName: '' }))
+    setForm((f) => (f ? { ...f, bookingFilePath: '', bookingFileName: '' } : f))
   }
 
-  async function handleOpenAttachment(path) {
-    setOpenError('')
+  async function handleOpenAttachment(itemId, path) {
+    setOpenError(null)
+    // Apertura sincrona della scheda, prima di qualunque await: soddisfa il
+    // requisito dei popup-blocker di Safari/iOS (finding 2). Se il browser
+    // la blocca comunque, window.open('', '_blank') torna null qui, in modo
+    // sincrono e rilevabile — a differenza di window.open(objectUrl, ...)
+    // dopo un await, che tornerebbe null senza mai lanciare un errore.
+    const newWindow = window.open('', '_blank')
+    if (!newWindow) {
+      setOpenError({ itemId, message: 'Non riesco ad aprire il PDF: il browser ha bloccato la nuova scheda.' })
+      return
+    }
     try {
-      await openAttachment(path)
+      await openAttachment(path, newWindow)
     } catch {
-      setOpenError(online
-        ? 'Non riesco ad aprire il PDF. Controlla la rete e riprova.'
-        : 'Questo PDF non è ancora scaricato su questo telefono: serve la connessione la prima volta.')
+      newWindow.close()
+      setOpenError({
+        itemId,
+        message: online
+          ? 'Non riesco ad aprire il PDF. Controlla la rete e riprova.'
+          : 'Questo PDF non è ancora scaricato su questo telefono: serve la connessione la prima volta.',
+      })
     }
   }
 
@@ -127,7 +187,7 @@ export default function Lodging({ trip, section, onUpdate, activeDisplayName, re
   return (
     <div className="flex flex-col gap-4">
       {sorted.length === 0 && (
-        <Empty icon={Bed} title="Nessun alloggio ancora" detail="Aggiungi hotel o appartamenti prenotati." action={<Btn onClick={() => setForm(EMPTY_ITEM)}>Aggiungi un alloggio</Btn>} />
+        <Empty icon={Bed} title="Nessun alloggio ancora" detail="Aggiungi hotel o appartamenti prenotati." action={<Btn onClick={() => openForm(EMPTY_ITEM)}>Aggiungi un alloggio</Btn>} />
       )}
 
       <div className="flex flex-col gap-3">
@@ -136,7 +196,7 @@ export default function Lodging({ trip, section, onUpdate, activeDisplayName, re
             <div className="flex items-start justify-between gap-2">
               <p className="font-display font-semibold text-xl">{item.name || 'Senza nome'}</p>
               <div className="flex gap-1 -mr-2 -mt-1">
-                <button onClick={() => setForm({ ...item })} aria-label="Modifica alloggio" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
+                <button onClick={() => openForm({ ...item })} aria-label="Modifica alloggio" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
                   <Pencil size={15} />
                 </button>
                 <button onClick={() => removeItem(item)} aria-label="Elimina alloggio" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
@@ -155,13 +215,18 @@ export default function Lodging({ trip, section, onUpdate, activeDisplayName, re
               </a>
             )}
             {item.bookingFilePath && (
-              <button
-                type="button"
-                onClick={() => handleOpenAttachment(item.bookingFilePath)}
-                className="flex items-center gap-1.5 text-base text-[var(--accent)] underline mt-2"
-              >
-                <FileText size={15} /> Apri il PDF della prenotazione
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => handleOpenAttachment(item.id, item.bookingFilePath)}
+                  className="flex items-center gap-1.5 text-base text-[var(--accent)] underline mt-2"
+                >
+                  <FileText size={15} /> Apri il PDF della prenotazione
+                </button>
+                {openError?.itemId === item.id && (
+                  <p className="text-sm text-[var(--accent)] mt-1">{openError.message}</p>
+                )}
+              </>
             )}
             <ModifiedBy modifiedBy={item.modifiedBy} modifiedAt={item.modifiedAt} />
           </div>
@@ -169,12 +234,12 @@ export default function Lodging({ trip, section, onUpdate, activeDisplayName, re
       </div>
 
       {sorted.length > 0 && (
-        <Btn variant="secondary" onClick={() => setForm(EMPTY_ITEM)} className="self-start">
+        <Btn variant="secondary" onClick={() => openForm(EMPTY_ITEM)} className="self-start">
           <Plus size={17} /> Nuovo alloggio
         </Btn>
       )}
 
-      <Modal open={!!form} title={form?.id ? 'Modifica alloggio' : 'Nuovo alloggio'} onClose={() => setForm(null)}>
+      <Modal open={!!form} title={form?.id ? 'Modifica alloggio' : 'Nuovo alloggio'} onClose={closeForm}>
         {form && (
           <form onSubmit={saveItem} className="flex flex-col gap-3">
             <input required placeholder="Nome" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={inputClass} />
@@ -221,8 +286,6 @@ export default function Lodging({ trip, section, onUpdate, activeDisplayName, re
                 )}
               </div>
             )}
-
-            {openError && <p className="text-sm text-[var(--accent)]">{openError}</p>}
 
             <textarea placeholder="Nota" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} className={inputClass} rows={2} />
             <Btn type="submit">Salva</Btn>
