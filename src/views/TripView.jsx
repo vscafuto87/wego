@@ -1,8 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Compass, CalendarDays } from 'lucide-react'
 import { themeStyle, ACCENT_GRADIENT } from '../theme/themes.js'
 import Terrain from '../theme/Terrain.jsx'
-import Overview from './Overview.jsx'
+import Overview, { ICONS } from './Overview.jsx'
 import Days from './Days.jsx'
 import Section from './Section.jsx'
 import { getSyncState, setSyncState as persistSyncState, markDirty, getDisplayNamePreference } from '../data/storage.js'
@@ -15,9 +15,9 @@ const SYNC_DEBOUNCE_MS = 2000
 
 export default function TripView({ trip, onBack, onUpdate, onDelete }) {
   const tabs = [
-    { key: 'overview', label: 'Panoramica' },
-    { key: 'days', label: 'Itinerario' },
-    ...trip.sections.map((s) => ({ key: s.id, label: s.title || 'Sezione' }))
+    { key: 'overview', label: 'Panoramica', icon: Compass },
+    { key: 'days', label: 'Itinerario', icon: CalendarDays },
+    ...trip.sections.map((s) => ({ key: s.id, label: s.title || 'Sezione', icon: ICONS[s.icon] }))
   ]
   const [activeTab, setActiveTab] = useState('overview')
   const [syncState, setSyncStateValue] = useState(null)
@@ -26,6 +26,7 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
   const [conflict, setConflict] = useState(null)
   const [tabOverflow, setTabOverflow] = useState({ left: false, right: false })
   const navScrollRef = useRef(null)
+  const activeTabRef = useRef(null)
 
   // Riferimenti sempre aggiornati: un tentativo di sync partito da un timer o da
   // un evento deve lavorare sul viaggio e sullo stato correnti, non su quelli
@@ -126,6 +127,17 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
       window.removeEventListener('resize', updateOverflow)
     }
   }, [trip.sections.length])
+
+  // La tab attiva si espande: se era vicina al bordo va riportata in vista,
+  // altrimenti l'etichetta resta tagliata fuori dallo schermo.
+  useEffect(() => {
+    // Aspetta che l'animazione di espansione finisca: se calcolata subito, la tab
+    // è ancora larga 44px e "nearest" la considera già visibile.
+    const timer = setTimeout(() => {
+      activeTabRef.current?.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' })
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [activeTab])
 
   function handleUpdate(updater) {
     onUpdate(updater)
@@ -249,18 +261,24 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
           >
             {tabs.map((tab) => {
               const active = currentTab === tab.key
+              const Icon = tab.icon
               return (
                 <button
                   key={tab.key}
+                  ref={active ? activeTabRef : undefined}
                   onClick={() => setActiveTab(tab.key)}
-                  style={active ? { background: ACCENT_GRADIENT } : undefined}
-                  className={`flex-shrink-0 h-12 rounded-full px-5 font-sans text-base font-medium whitespace-nowrap transition-transform duration-150 ease-out active:scale-[0.97] ${
-                    active
-                      ? 'text-[var(--paper)] shadow-[0_10px_20px_-10px_rgb(var(--accent-rgb)/0.55)]'
-                      : 'text-[var(--muted)]'
+                  aria-label={active ? undefined : tab.label}
+                  style={active ? { background: ACCENT_GRADIENT, maxWidth: 200 } : { maxWidth: 44 }}
+                  className={`flex-shrink-0 h-11 rounded-full flex items-center overflow-hidden whitespace-nowrap transition-[max-width,box-shadow] duration-300 ease-out active:scale-[0.97] ${
+                    active ? 'shadow-[0_10px_20px_-10px_rgb(var(--accent-rgb)/0.55)]' : ''
                   }`}
                 >
-                  {tab.label}
+                  <span className="h-11 w-11 flex items-center justify-center flex-shrink-0" style={{ color: active ? 'var(--paper)' : 'var(--muted)' }}>
+                    <Icon size={18} />
+                  </span>
+                  <span className="pr-5 font-sans text-[15px] font-medium" style={{ color: active ? 'var(--paper)' : 'var(--muted)' }}>
+                    {tab.label}
+                  </span>
                 </button>
               )
             })}

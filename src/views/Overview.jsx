@@ -7,7 +7,7 @@ import Modal from '../components/Modal.jsx'
 import ExportPanel from './ExportPanel.jsx'
 import { isCloudConfigured } from '../data/supabase.js'
 
-const ICONS = { map: Map, check: CheckSquare, note: StickyNote, ticket: Ticket, food: Utensils, bed: Bed, bus: Bus, star: Star, people: Users }
+export const ICONS = { map: Map, check: CheckSquare, note: StickyNote, ticket: Ticket, food: Utensils, bed: Bed, bus: Bus, star: Star, people: Users }
 const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
 
 function tripStatus(trip) {
