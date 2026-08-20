@@ -25,8 +25,7 @@ Ponza 30/08–05/09/2026).
 | PWA | `vite-plugin-pwa` (Workbox), `registerType: 'autoUpdate'` | precache dell'app shell, aggiornamento trasparente |
 | Persistenza locale | IndexedDB via `idb-keyval` | i viaggi devono sopravvivere offline e a Safari |
 | Backend (fase 1) | Supabase (progetto esistente `txfgxxaabhltazckabud`), tabelle con prefisso `tv_` | già configurato |
-| Auth | Supabase magic link via email, login obbligatorio una tantum quando Supabase è configurato | nessuna password da spiegare agli amici |
-| Auth admin | Supabase email+password, solo per `/admin` | chi prepara i viaggi gestisce già una password; la dashboard non è pensata per gli amici |
+| Auth | Supabase email+password per tutti (login obbligatorio all'apertura) | l'admin crea l'account e comunica la password fuori dall'app; nessun amico deve inventarsi o gestire un magic link |
 | Hosting | Vercel, deploy da GitHub | zero config, HTTPS necessario per la PWA |
 | Icona/nome | "WeGo", icona con le curve di livello | vedi Design system |
 
@@ -198,7 +197,7 @@ riusa il layer dati esistente (`schema.js`, `storage.js`, `sync.js`), non introd
 un formato diverso. Non compare in nessun link dell'app normale: si raggiunge solo
 digitando l'URL.
 
-**Accesso**: email+password (`AdminLoginForm.jsx`), stessa sessione Supabase Auth
+**Accesso**: email+password (`LoginForm.jsx`), stessa sessione Supabase Auth
 del magic link degli amici — solo un secondo modo di ottenerla, non un sistema
 separato. Per essere ammessi alla dashboard non basta accedere: l'account deve
 avere `app_metadata.is_admin = true`, un campo che **solo la dashboard Supabase
@@ -268,7 +267,7 @@ itinerario, sezioni, import, export), IndexedDB, seed dei due viaggi, manifest e
 worker, deploy su Vercel. Fatto quando: gli amici aprono il link, aggiungono l'app alla
 Home, attivano la modalità aereo e vedono ancora tutto.
 
-**Fase 1 — Cloud.** Auth magic link obbligatorio quando Supabase è configurato (gate
+**Fase 1 — Cloud.** Auth email+password obbligatorio quando Supabase è configurato (gate
 di login prima di tutto il resto, sessione e nome persistiti offline), `tv_trips`, sync
 di default per ogni viaggio fin dalla creazione, `share_code` per invitare, indicatore
 di stato (sincronizzato / in coda / offline).

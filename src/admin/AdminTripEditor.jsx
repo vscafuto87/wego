@@ -4,7 +4,6 @@ import { Map, CheckSquare, StickyNote, Ticket, Utensils, Bed, Bus, Star, Users, 
 import { getSession, subscribeAuth } from '../data/supabase.js'
 import { getSyncState, setSyncState as persistSyncState, markDirty, getDisplayNamePreference } from '../data/storage.js'
 import { fetchTripOwnerId, syncTrip, pushTrip, pullTrip } from '../data/sync.js'
-import MagicLinkForm from '../components/MagicLinkForm.jsx'
 import { themeStyle } from '../theme/themes.js'
 import AdminMetaForm from './AdminMetaForm.jsx'
 import AdminDaysEditor from './AdminDaysEditor.jsx'
@@ -214,13 +213,6 @@ export default function AdminTripEditor({ trip, onBack, onUpdate, onDelete }) {
       <h1 className="font-display font-semibold text-4xl mb-6">{trip.emoji} {trip.name}</h1>
 
       {loadingOwnership && <p className="text-base text-[var(--muted)]">Verifico chi può modificare questo viaggio…</p>}
-
-      {!loadingOwnership && syncState && !session && (
-        <div className="max-w-sm flex flex-col gap-3">
-          <p className="text-base">Questo viaggio è sincronizzato: per modificarlo da qui devi prima accedere.</p>
-          <MagicLinkForm />
-        </div>
-      )}
 
       {!loadingOwnership && (!syncState || session) && !canEdit && (
         <div className="max-w-md flex flex-col gap-3">

@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import Btn from '../components/Btn.jsx'
+import Btn from './Btn.jsx'
 import { signInWithPassword } from '../data/supabase.js'
 
 const inputClass = 'border border-[var(--line)] bg-[var(--paper)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
 
-export default function AdminLoginForm() {
+export default function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')

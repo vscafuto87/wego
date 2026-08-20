@@ -3,7 +3,7 @@ import { loadTrips, saveTrips } from '../data/storage.js'
 import { normalizeTrip } from '../data/schema.js'
 import { getSession, subscribeAuth, signOut } from '../data/supabase.js'
 import { themeStyle } from '../theme/themes.js'
-import AdminLoginForm from './AdminLoginForm.jsx'
+import LoginForm from '../components/LoginForm.jsx'
 import AdminTripList from './AdminTripList.jsx'
 import AdminTripEditor from './AdminTripEditor.jsx'
 
@@ -56,7 +56,7 @@ export default function AdminApp() {
       <div style={themeStyle('mountain')} className="min-h-screen bg-[var(--paper)] text-[var(--ink)] font-sans flex items-center justify-center px-6">
         <div className="max-w-sm w-full flex flex-col gap-4">
           <h1 className="font-display font-semibold text-4xl">Dashboard admin</h1>
-          <AdminLoginForm />
+          <LoginForm />
         </div>
       </div>
     )

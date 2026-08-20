@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import MagicLinkForm from '../components/MagicLinkForm.jsx'
+import LoginForm from '../components/LoginForm.jsx'
 import DisplayNameForm from '../components/DisplayNameForm.jsx'
 import { getSession, subscribeAuth } from '../data/supabase.js'
 import { getDisplayNamePreference, setDisplayNamePreference } from '../data/storage.js'
@@ -28,7 +28,7 @@ export default function LoginGate({ onReady }) {
         return
       }
       setNamePreference(name)
-      setStep(session ? 'name' : 'email')
+      setStep(session ? 'name' : 'login')
     }
 
     getSession().then(checkReady)
@@ -46,10 +46,10 @@ export default function LoginGate({ onReady }) {
       <div className="max-w-sm w-full flex flex-col gap-4">
         <h1 className="font-display text-2xl">Accedi a WeGo</h1>
         {step === 'loading' && <p className="text-sm text-[var(--muted)]">Un attimo…</p>}
-        {step === 'email' && (
+        {step === 'login' && (
           <>
             <p className="text-sm text-[var(--muted)]">Serve un account per vedere e sincronizzare i tuoi viaggi.</p>
-            <MagicLinkForm />
+            <LoginForm />
           </>
         )}
         {step === 'name' && <DisplayNameForm initialValue={namePreference} onSubmit={handleName} />}
