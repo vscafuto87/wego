@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { loadTrips, saveTrips } from './data/storage.js'
+import { loadTrips, saveTrips, getSyncState, setSyncState, getDisplayNamePreference } from './data/storage.js'
+import { activateTripSync, listMyTrips, reconcileTripList } from './data/sync.js'
 import { normalizeTrip } from './data/schema.js'
 import { isCloudConfigured } from './data/supabase.js'
 import Home from './views/Home.jsx'
@@ -23,8 +24,53 @@ export default function App() {
   const [isAdmin] = useState(() => window.location.pathname === '/admin')
 
   useEffect(() => {
-    loadTrips().then(setTrips)
-  }, [])
+    if (!authReady) return
+    let cancelled = false
+
+    async function bootstrap() {
+      const local = await loadTrips()
+      if (cancelled) return
+
+      if (!isCloudConfigured) {
+        setTrips(local)
+        return
+      }
+
+      const displayName = await getDisplayNamePreference()
+      const syncStates = []
+      for (const trip of local) {
+        let state = await getSyncState(trip.id)
+        if (!state) {
+          try {
+            state = await activateTripSync(trip, displayName)
+            await setSyncState(trip.id, state)
+          } catch {
+            state = null
+          }
+        }
+        syncStates.push({ localId: trip.id, syncState: state })
+      }
+      if (cancelled) return
+
+      let finalTrips = local
+      if (navigator.onLine) {
+        try {
+          const remoteTrips = await listMyTrips()
+          const { trips: reconciled, additions } = reconcileTripList({ localTrips: local, syncStates, remoteTrips })
+          for (const { trip, syncState } of additions) await setSyncState(trip.id, syncState)
+          finalTrips = reconciled
+        } catch {
+          // offline durante il pull, o errore di rete: resta la lista locale
+        }
+      }
+
+      await saveTrips(finalTrips)
+      if (!cancelled) setTrips(finalTrips)
+    }
+
+    bootstrap()
+    return () => { cancelled = true }
+  }, [authReady])
 
   // Swipe dal bordo sinistro per tornare indietro, come un'app nativa. Serve perché
   // qui la navigazione è stato React, non history: iOS in standalone non ha una
