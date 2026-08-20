@@ -40,8 +40,8 @@ export default function AdminTripList({ trips, onSelect, onCreate }) {
           <input placeholder="Emoji" value={form.emoji} onChange={(e) => setForm({ ...form, emoji: e.target.value })} className={inputClass} />
           <input placeholder="Luogo" value={form.place} onChange={(e) => setForm({ ...form, place: e.target.value })} className={inputClass} />
           <div className="flex gap-2">
-            <input type="date" value={form.start} onChange={(e) => setForm({ ...form, start: e.target.value })} className={`flex-1 ${inputClass}`} />
-            <input type="date" value={form.end} onChange={(e) => setForm({ ...form, end: e.target.value })} className={`flex-1 ${inputClass}`} />
+            <input type="date" value={form.start} onChange={(e) => setForm({ ...form, start: e.target.value })} className={`flex-1 min-w-0 ${inputClass}`} />
+            <input type="date" value={form.end} onChange={(e) => setForm({ ...form, end: e.target.value })} className={`flex-1 min-w-0 ${inputClass}`} />
           </div>
           <select value={form.palette} onChange={(e) => setForm({ ...form, palette: e.target.value })} className={inputClass}>
             <option value="mountain">Montagna</option>
