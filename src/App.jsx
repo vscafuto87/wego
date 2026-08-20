@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useState } from 'react'
 import { loadTrips, saveTrips } from './data/storage.js'
 import { normalizeTrip } from './data/schema.js'
+import { isCloudConfigured } from './data/supabase.js'
 import Home from './views/Home.jsx'
 import TripView from './views/TripView.jsx'
 import ImportView from './views/ImportView.jsx'
 import JoinView from './views/JoinView.jsx'
 import AdminApp from './admin/AdminApp.jsx'
+import LoginGate from './views/LoginGate.jsx'
 
 export default function App() {
+  const [authReady, setAuthReady] = useState(!isCloudConfigured)
   const [trips, setTrips] = useState(null)
   const [view, setView] = useState('home')
   const [activeTripId, setActiveTripId] = useState(null)
@@ -112,6 +115,10 @@ export default function App() {
 
   if (isAdmin) {
     return <AdminApp />
+  }
+
+  if (!authReady) {
+    return <LoginGate onReady={() => setAuthReady(true)} />
   }
 
   if (trips === null) {
