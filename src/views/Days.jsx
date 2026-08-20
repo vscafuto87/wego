@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Plus, Pencil, Trash2, Mountain, Waves, Utensils, ExternalLink, Check, Ruler, Clock, TrendingUp, MapPin } from 'lucide-react'
 import Btn from '../components/Btn.jsx'
-import Label from '../components/Label.jsx'
+import DayLabel from '../components/DayLabel.jsx'
 import Modal from '../components/Modal.jsx'
 import Empty from '../components/Empty.jsx'
 import { stampModified, dayItemFieldsForKind } from '../data/schema.js'
@@ -70,6 +70,16 @@ export function DayItemCard({ item, onEdit, onRemove }) {
             {item.kind === 'spiaggia' && (item.accesso || item.servizi) && (
               <p className="text-sm text-[var(--muted)] mt-1">{[item.accesso, item.servizi].filter(Boolean).join(' · ')}</p>
             )}
+            {stats.length > 0 && (
+              <div className="flex flex-wrap gap-4 mt-1.5">
+                {stats.map((s, i) => (
+                  <div key={i} className="flex items-center gap-1.5 text-[var(--muted)]">
+                    <s.icon size={14} />
+                    <span className="font-mono text-sm font-medium text-[var(--ink)] whitespace-nowrap">{s.value}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
         {(onEdit || onRemove) && (
@@ -87,17 +97,6 @@ export function DayItemCard({ item, onEdit, onRemove }) {
           </div>
         )}
       </div>
-
-      {stats.length > 0 && (
-        <div className="flex flex-wrap gap-4 mt-2.5 pl-[68px]">
-          {stats.map((s, i) => (
-            <div key={i} className="flex items-center gap-1.5 text-[var(--muted)]">
-              <s.icon size={14} />
-              <span className="font-mono text-sm font-medium text-[var(--ink)] whitespace-nowrap">{s.value}</span>
-            </div>
-          ))}
-        </div>
-      )}
 
       {item.kind === 'pasto' && item.prenotato && (
         <span className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-[var(--accent2)] text-[var(--paper)] text-xs font-medium mt-3">
@@ -187,8 +186,8 @@ export default function Days({ trip, onUpdate, activeDisplayName }) {
         <div key={day.id} className="flex flex-col gap-3">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <Label>{formatDate(day.date)}</Label>
-              <p className="font-display font-semibold text-2xl leading-tight mt-0.5">{day.title || 'Senza titolo'}</p>
+              <DayLabel>{formatDate(day.date)}</DayLabel>
+              <p className="font-display font-semibold text-2xl leading-tight mt-2">{day.title || 'Senza titolo'}</p>
               {day.note && <p className="text-base text-[var(--muted)] mt-1">{day.note}</p>}
               <ModifiedBy modifiedBy={day.modifiedBy} modifiedAt={day.modifiedAt} />
             </div>

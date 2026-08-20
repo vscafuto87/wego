@@ -1,6 +1,6 @@
 import { ArrowRight } from 'lucide-react'
 import Btn from '../components/Btn.jsx'
-import Label from '../components/Label.jsx'
+import DayLabel from '../components/DayLabel.jsx'
 import Empty from '../components/Empty.jsx'
 import ModifiedBy from '../components/ModifiedBy.jsx'
 import { DayItemCard } from './Days.jsx'
@@ -54,8 +54,8 @@ export default function Today({ trip, onNavigate }) {
   return (
     <div className="flex flex-col gap-3 pt-5">
       <div>
-        <Label>{relativeDayLabel(diff)} · {DATE_FMT.format(new Date(`${day.date}T00:00:00`))}</Label>
-        <p className="font-display font-semibold text-2xl">{day.title || 'Senza titolo'}</p>
+        <DayLabel>{relativeDayLabel(diff)} · {DATE_FMT.format(new Date(`${day.date}T00:00:00`))}</DayLabel>
+        <p className="font-display font-semibold text-2xl mt-2">{day.title || 'Senza titolo'}</p>
         {day.note && <p className="text-base text-[var(--muted)] mt-1">{day.note}</p>}
         <ModifiedBy modifiedBy={day.modifiedBy} modifiedAt={day.modifiedAt} />
       </div>
