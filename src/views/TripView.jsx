@@ -8,7 +8,6 @@ import Days from './Days.jsx'
 import Section from './Section.jsx'
 import { getSyncState, setSyncState as persistSyncState, markDirty, getDisplayNamePreference } from '../data/storage.js'
 import { syncTrip, pushTrip, pullTrip, restoreLastVersion } from '../data/sync.js'
-import ActivateSyncModal from './ActivateSyncModal.jsx'
 import Modal from '../components/Modal.jsx'
 import Btn from '../components/Btn.jsx'
 
@@ -30,7 +29,6 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [syncState, setSyncStateValue] = useState(null)
   const [cloudDisplayName, setCloudDisplayName] = useState('')
-  const [activateOpen, setActivateOpen] = useState(false)
   const [conflict, setConflict] = useState(null)
   const [tabOverflow, setTabOverflow] = useState({ left: false, right: false })
   const [scrollY, setScrollY] = useState(0)
@@ -208,13 +206,6 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
     }
   }
 
-  async function handleActivated(state) {
-    await persistSyncState(trip.id, state)
-    setSyncStateValue(state)
-    const name = await getDisplayNamePreference()
-    setCloudDisplayName(name)
-  }
-
   async function handleRestore() {
     try {
       const restored = await restoreLastVersion(syncState.remoteId)
@@ -280,8 +271,7 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
           trip={trip}
           onUpdate={handleUpdate}
           onDelete={onDelete}
-          syncActive={!!syncState}
-          onOpenActivate={() => setActivateOpen(true)}
+          shareCode={syncState?.shareCode ?? null}
           onRestore={syncState && syncState.role === 'editor' ? handleRestore : null}
           onClose={() => setSettingsOpen(false)}
         />
@@ -338,7 +328,6 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
             activeDisplayName={cloudDisplayName}
             onNavigate={setActiveTab}
             syncState={syncState}
-            onOpenActivate={() => setActivateOpen(true)}
           />
         ) : null))}
         {extraSpace > 0 && <div style={{ height: extraSpace }} aria-hidden="true" />}
@@ -384,8 +373,6 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
       </nav>
       </>
       )}
-
-      <ActivateSyncModal open={activateOpen} trip={trip} onClose={() => setActivateOpen(false)} onActivated={handleActivated} />
 
       <Modal open={!!conflict} title="Due versioni diverse" onClose={() => {}}>
         {conflict && (

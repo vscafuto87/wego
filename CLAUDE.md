@@ -25,14 +25,16 @@ Ponza 30/08–05/09/2026).
 | PWA | `vite-plugin-pwa` (Workbox), `registerType: 'autoUpdate'` | precache dell'app shell, aggiornamento trasparente |
 | Persistenza locale | IndexedDB via `idb-keyval` | i viaggi devono sopravvivere offline e a Safari |
 | Backend (fase 1) | Supabase (progetto esistente `txfgxxaabhltazckabud`), tabelle con prefisso `tv_` | già configurato |
-| Auth | Supabase magic link via email per gli amici | nessuna password da spiegare agli amici |
+| Auth | Supabase magic link via email, login obbligatorio una tantum quando Supabase è configurato | nessuna password da spiegare agli amici |
 | Auth admin | Supabase email+password, solo per `/admin` | chi prepara i viaggi gestisce già una password; la dashboard non è pensata per gli amici |
 | Hosting | Vercel, deploy da GitHub | zero config, HTTPS necessario per la PWA |
 | Icona/nome | "WeGo", icona con le curve di livello | vedi Design system |
 
 **Local-first**: l'app funziona per intero senza account e senza rete. Supabase è
 sincronizzazione, non prerequisito. Se Supabase è irraggiungibile, l'app deve
-funzionare lo stesso sui dati in IndexedDB. Nessuna schermata di login bloccante.
+funzionare lo stesso sui dati in IndexedDB. Il login (Fase 1) è obbligatorio una tantum
+quando Supabase è configurato, ma non ricompare più una volta fatto: resta valido
+offline finché il device ha una sessione o un nome salvato.
 
 ---
 
@@ -266,8 +268,10 @@ itinerario, sezioni, import, export), IndexedDB, seed dei due viaggi, manifest e
 worker, deploy su Vercel. Fatto quando: gli amici aprono il link, aggiungono l'app alla
 Home, attivano la modalità aereo e vedono ancora tutto.
 
-**Fase 1 — Cloud.** Auth magic link, `tv_trips`, sync bidirezionale, `share_code` per
-invitare, indicatore di stato (sincronizzato / in coda / offline).
+**Fase 1 — Cloud.** Auth magic link obbligatorio quando Supabase è configurato (gate
+di login prima di tutto il resto, sessione e nome persistiti offline), `tv_trips`, sync
+di default per ogni viaggio fin dalla creazione, `share_code` per invitare, indicatore
+di stato (sincronizzato / in coda / offline).
 
 **Fase 2 — Insieme.** Ruolo `editor`, spese divise (recuperabili da TrailMates), foto per
 giorno, mappa dei luoghi, esportazione dell'itinerario in calendario.

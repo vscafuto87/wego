@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { decideSyncAction, generateShareCode } from './sync.js'
+import { decideSyncAction, generateShareCode, reconcileTripList } from './sync.js'
 
 describe('decideSyncAction', () => {
   it('noop se non dirty e il remoto non è più recente', () => {
@@ -251,5 +251,145 @@ describe('fetchTripOwnerId', () => {
     })
     const { fetchTripOwnerId } = await import('./sync.js')
     await expect(fetchTripOwnerId('trip-remote-1')).rejects.toThrow('non trovato')
+  })
+})
+
+describe('listMyTrips', () => {
+  it('elenca i viaggi visibili con il proprio ruolo', async () => {
+    mockGetSession.mockResolvedValue({ user: { id: 'user-1' } })
+    const eqFn = vi.fn().mockResolvedValue({
+      data: [
+        { trip_id: 'trip-remote-1', role: 'editor', tv_trips: { data: { name: 'Ponza' }, updated_at: '2026-08-18T10:00:00Z', share_code: 'ABC123' } },
+        { trip_id: 'trip-remote-2', role: 'viewer', tv_trips: { data: { name: 'Dolomiti' }, updated_at: '2026-08-18T11:00:00Z', share_code: 'DEF456' } }
+      ],
+      error: null
+    })
+    mockFrom.mockReturnValue({ select: () => ({ eq: eqFn }) })
+
+    const { listMyTrips } = await import('./sync.js')
+    const result = await listMyTrips()
+
+    expect(mockFrom).toHaveBeenCalledWith('tv_trip_members')
+    expect(eqFn).toHaveBeenCalledWith('user_id', 'user-1')
+    expect(result).toEqual([
+      { remoteId: 'trip-remote-1', role: 'editor', trip: expect.objectContaining({ name: 'Ponza' }), updatedAt: '2026-08-18T10:00:00Z', shareCode: 'ABC123' },
+      { remoteId: 'trip-remote-2', role: 'viewer', trip: expect.objectContaining({ name: 'Dolomiti' }), updatedAt: '2026-08-18T11:00:00Z', shareCode: 'DEF456' }
+    ])
+  })
+
+  it('rifiuta se non c\'è una sessione', async () => {
+    mockGetSession.mockResolvedValue(null)
+    const { listMyTrips } = await import('./sync.js')
+    await expect(listMyTrips()).rejects.toThrow()
+  })
+})
+
+describe('deleteTripAsOwner', () => {
+  it('cancella la riga tv_trips per id', async () => {
+    const selectFn = vi.fn().mockResolvedValue({ data: [{ id: 'trip-remote-1' }], error: null })
+    const eqFn = vi.fn().mockReturnValue({ select: selectFn })
+    mockFrom.mockReturnValue({ delete: () => ({ eq: eqFn }) })
+
+    const { deleteTripAsOwner } = await import('./sync.js')
+    await deleteTripAsOwner('trip-remote-1')
+
+    expect(mockFrom).toHaveBeenCalledWith('tv_trips')
+    expect(eqFn).toHaveBeenCalledWith('id', 'trip-remote-1')
+  })
+
+  it('propaga l\'errore di Supabase', async () => {
+    const selectFn = vi.fn().mockResolvedValue({ data: null, error: { message: 'negato' } })
+    mockFrom.mockReturnValue({ delete: () => ({ eq: () => ({ select: selectFn }) }) })
+    const { deleteTripAsOwner } = await import('./sync.js')
+    await expect(deleteTripAsOwner('trip-remote-1')).rejects.toThrow('negato')
+  })
+
+  it('segnala se la riga non esiste o RLS blocca la cancellazione', async () => {
+    const selectFn = vi.fn().mockResolvedValue({ data: [], error: null })
+    mockFrom.mockReturnValue({ delete: () => ({ eq: () => ({ select: selectFn }) }) })
+    const { deleteTripAsOwner } = await import('./sync.js')
+    await expect(deleteTripAsOwner('trip-remote-1')).rejects.toThrow()
+  })
+})
+
+describe('leaveTripAsMember', () => {
+  it('cancella solo la propria riga di iscrizione', async () => {
+    mockGetSession.mockResolvedValue({ user: { id: 'user-2' } })
+    const selectFn = vi.fn().mockResolvedValue({ data: [{ trip_id: 'trip-remote-1' }], error: null })
+    const eq2 = vi.fn().mockReturnValue({ select: selectFn })
+    const eq1 = vi.fn().mockReturnValue({ eq: eq2 })
+    mockFrom.mockReturnValue({ delete: () => ({ eq: eq1 }) })
+
+    const { leaveTripAsMember } = await import('./sync.js')
+    await leaveTripAsMember('trip-remote-1')
+
+    expect(mockFrom).toHaveBeenCalledWith('tv_trip_members')
+    expect(eq1).toHaveBeenCalledWith('trip_id', 'trip-remote-1')
+    expect(eq2).toHaveBeenCalledWith('user_id', 'user-2')
+  })
+
+  it('rifiuta se non c\'è una sessione', async () => {
+    mockGetSession.mockResolvedValue(null)
+    const { leaveTripAsMember } = await import('./sync.js')
+    await expect(leaveTripAsMember('trip-remote-1')).rejects.toThrow()
+  })
+
+  it('segnala se la riga di iscrizione non esiste più', async () => {
+    mockGetSession.mockResolvedValue({ user: { id: 'user-2' } })
+    const selectFn = vi.fn().mockResolvedValue({ data: [], error: null })
+    mockFrom.mockReturnValue({ delete: () => ({ eq: () => ({ eq: () => ({ select: selectFn }) }) }) })
+    const { leaveTripAsMember } = await import('./sync.js')
+    await expect(leaveTripAsMember('trip-remote-1')).rejects.toThrow()
+  })
+})
+
+describe('reconcileTripList', () => {
+  const tripA = normalizeTrip({ name: 'A' })
+  const tripB = normalizeTrip({ name: 'B' })
+  const stateA = { remoteId: 'remote-A', role: 'editor', lastSyncedAt: null, dirty: false }
+
+  it('rimuove un viaggio locale il cui remoteId non è più visibile', () => {
+    const result = reconcileTripList({
+      localTrips: [tripA],
+      syncStates: [{ localId: tripA.id, syncState: stateA }],
+      remoteTrips: []
+    })
+    expect(result.trips).toEqual([])
+    expect(result.additions).toEqual([])
+  })
+
+  it('tiene un viaggio locale ancora visibile remotamente, senza duplicarlo', () => {
+    const result = reconcileTripList({
+      localTrips: [tripA],
+      syncStates: [{ localId: tripA.id, syncState: stateA }],
+      remoteTrips: [{ remoteId: 'remote-A', role: 'editor', trip: tripA, updatedAt: '2026-08-18T10:00:00Z' }]
+    })
+    expect(result.trips).toEqual([tripA])
+    expect(result.additions).toEqual([])
+  })
+
+  it('tiene un viaggio locale senza syncState (adozione non ancora riuscita)', () => {
+    const result = reconcileTripList({
+      localTrips: [tripA],
+      syncStates: [{ localId: tripA.id, syncState: null }],
+      remoteTrips: []
+    })
+    expect(result.trips).toEqual([tripA])
+  })
+
+  it('aggiunge un viaggio remoto non ancora presente sul device', () => {
+    const result = reconcileTripList({
+      localTrips: [tripA],
+      syncStates: [{ localId: tripA.id, syncState: stateA }],
+      remoteTrips: [
+        { remoteId: 'remote-A', role: 'editor', trip: tripA, updatedAt: '2026-08-18T10:00:00Z' },
+        { remoteId: 'remote-B', role: 'viewer', trip: tripB, updatedAt: '2026-08-18T11:00:00Z', shareCode: 'XYZ789' }
+      ]
+    })
+    expect(result.trips).toHaveLength(2)
+    expect(result.additions).toHaveLength(1)
+    expect(result.additions[0].syncState).toEqual({ remoteId: 'remote-B', role: 'viewer', lastSyncedAt: '2026-08-18T11:00:00Z', dirty: false, shareCode: 'XYZ789' })
+    expect(result.additions[0].trip.name).toBe('B')
+    expect(result.additions[0].trip.id).not.toBe(tripB.id)
   })
 })

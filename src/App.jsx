@@ -1,13 +1,17 @@
 import { useCallback, useEffect, useState } from 'react'
-import { loadTrips, saveTrips } from './data/storage.js'
+import { loadTrips, saveTrips, getSyncState, setSyncState, getDisplayNamePreference, markSeeded } from './data/storage.js'
+import { activateTripSync, listMyTrips, reconcileTripList, deleteTripAsOwner, leaveTripAsMember } from './data/sync.js'
 import { normalizeTrip } from './data/schema.js'
+import { isCloudConfigured } from './data/supabase.js'
 import Home from './views/Home.jsx'
 import TripView from './views/TripView.jsx'
 import ImportView from './views/ImportView.jsx'
 import JoinView from './views/JoinView.jsx'
 import AdminApp from './admin/AdminApp.jsx'
+import LoginGate from './views/LoginGate.jsx'
 
 export default function App() {
+  const [authReady, setAuthReady] = useState(!isCloudConfigured)
   const [trips, setTrips] = useState(null)
   const [view, setView] = useState('home')
   const [activeTripId, setActiveTripId] = useState(null)
@@ -20,8 +24,80 @@ export default function App() {
   const [isAdmin] = useState(() => window.location.pathname === '/admin')
 
   useEffect(() => {
-    loadTrips().then(setTrips)
-  }, [])
+    if (!authReady) return
+    let cancelled = false
+
+    async function bootstrap() {
+      if (!isCloudConfigured) {
+        const local = await loadTrips()
+        if (cancelled) return
+        setTrips(local)
+        return
+      }
+
+      // Recuperiamo i viaggi dell'account PRIMA di caricare lo storage locale:
+      // se l'account ha già viaggi sul server, questo device non deve iniettare
+      // i seed come se fosse la primissima apertura, altrimenti si duplicano ad
+      // ogni nuovo device collegato allo stesso account. `remoteTrips` resta
+      // `null` se non riusciamo proprio a chiedere al server (offline o errore
+      // di rete): in quel caso non tocchiamo la lista locale più avanti.
+      let remoteTrips = null
+      if (navigator.onLine) {
+        try {
+          remoteTrips = await listMyTrips()
+        } catch {
+          remoteTrips = null
+        }
+      }
+      if (cancelled) return
+
+      if (remoteTrips && remoteTrips.length > 0) {
+        await markSeeded()
+      }
+
+      const local = await loadTrips()
+      if (cancelled) return
+
+      const displayName = await getDisplayNamePreference()
+      const syncStates = []
+      for (const trip of local) {
+        let state = await getSyncState(trip.id)
+        if (!state) {
+          try {
+            state = await activateTripSync(trip, displayName)
+            await setSyncState(trip.id, state)
+          } catch {
+            state = null
+          }
+        }
+        syncStates.push({ localId: trip.id, syncState: state })
+      }
+      if (cancelled) return
+
+      let finalTrips = local
+      if (navigator.onLine) {
+        try {
+          // Si richiede di nuovo la lista remota (invece di riusare quella sopra):
+          // i viaggi appena adottati nel loop qui sopra non esistevano ancora sul
+          // server quando abbiamo chiesto `remoteTrips` la prima volta, quindi
+          // riconciliare con quella lista li farebbe risultare erroneamente
+          // "non più visibili" e li rimuoverebbe.
+          const freshRemoteTrips = await listMyTrips()
+          const { trips: reconciled, additions } = reconcileTripList({ localTrips: local, syncStates, remoteTrips: freshRemoteTrips })
+          for (const { trip, syncState } of additions) await setSyncState(trip.id, syncState)
+          finalTrips = reconciled
+        } catch {
+          // offline durante il pull, o errore di rete: resta la lista locale
+        }
+      }
+
+      await saveTrips(finalTrips)
+      if (!cancelled) setTrips(finalTrips)
+    }
+
+    bootstrap()
+    return () => { cancelled = true }
+  }, [authReady])
 
   // Swipe dal bordo sinistro per tornare indietro, come un'app nativa. Serve perché
   // qui la navigazione è stato React, non history: iOS in standalone non ha una
@@ -77,17 +153,45 @@ export default function App() {
     setActiveTripId(null)
   }
 
-  function createTrip(raw) {
+  async function createTrip(raw) {
     const trip = normalizeTrip(raw)
+    if (isCloudConfigured) {
+      try {
+        const displayName = await getDisplayNamePreference()
+        const state = await activateTripSync(trip, displayName)
+        await setSyncState(trip.id, state)
+      } catch (e) {
+        window.alert(`Non è stato possibile creare il viaggio. Controlla la rete e riprova.\n\n${e.message}`)
+        return false
+      }
+    }
     persist([...trips, trip])
     openTrip(trip.id)
+    return true
   }
 
-  function importTrips(raw) {
+  async function importTrips(raw) {
     const list = Array.isArray(raw) ? raw : [raw]
     const newTrips = list.map(normalizeTrip)
+    if (isCloudConfigured) {
+      const displayName = await getDisplayNamePreference()
+      try {
+        const states = []
+        for (const trip of newTrips) {
+          const state = await activateTripSync(trip, displayName)
+          states.push({ tripId: trip.id, state })
+        }
+        for (const { tripId, state } of states) {
+          await setSyncState(tripId, state)
+        }
+      } catch (e) {
+        window.alert(`Non è stato possibile caricare il viaggio. Controlla la rete e riprova.\n\n${e.message}`)
+        return false
+      }
+    }
     persist([...trips, ...newTrips])
     openTrip(newTrips[0].id)
+    return true
   }
 
   function finishJoin(trip) {
@@ -105,13 +209,30 @@ export default function App() {
     persist(trips.map((t) => (t.id === id ? updater(t) : t)))
   }
 
-  function deleteTrip(id) {
+  async function deleteTrip(id) {
+    const syncState = await getSyncState(id)
+    if (syncState) {
+      try {
+        if (syncState.role === 'editor') {
+          await deleteTripAsOwner(syncState.remoteId)
+        } else {
+          await leaveTripAsMember(syncState.remoteId)
+        }
+      } catch (e) {
+        window.alert(`Non è stato possibile eliminare il viaggio. Controlla la rete e riprova.\n\n${e.message}`)
+        return
+      }
+    }
     persist(trips.filter((t) => t.id !== id))
     goHome()
   }
 
   if (isAdmin) {
     return <AdminApp />
+  }
+
+  if (!authReady) {
+    return <LoginGate onReady={() => setAuthReady(true)} />
   }
 
   if (trips === null) {

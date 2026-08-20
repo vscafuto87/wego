@@ -189,3 +189,72 @@ export async function fetchTripOwnerId(remoteId) {
   if (error) throw new Error(error.message)
   return data.owner_id
 }
+
+export async function listMyTrips() {
+  const session = await getSession()
+  if (!session) throw new Error('Devi accedere prima di vedere i tuoi viaggi.')
+
+  const { data, error } = await supabase
+    .from('tv_trip_members')
+    .select('trip_id, role, tv_trips(data, updated_at, share_code)')
+    .eq('user_id', session.user.id)
+  if (error) throw new Error(error.message)
+
+  return data.map((row) => ({
+    remoteId: row.trip_id,
+    role: row.role,
+    trip: normalizeTrip(row.tv_trips.data),
+    updatedAt: row.tv_trips.updated_at,
+    shareCode: row.tv_trips.share_code
+  }))
+}
+
+export async function deleteTripAsOwner(remoteId) {
+  const { data, error } = await supabase.from('tv_trips').delete().eq('id', remoteId).select('id')
+  if (error) throw new Error(error.message)
+  if (!data || data.length === 0) {
+    throw new Error('Non hai i permessi per eliminare questo viaggio, o è già stato eliminato.')
+  }
+}
+
+export async function leaveTripAsMember(remoteId) {
+  const session = await getSession()
+  if (!session) throw new Error('Devi accedere prima di uscire dal viaggio.')
+
+  const { data, error } = await supabase
+    .from('tv_trip_members')
+    .delete()
+    .eq('trip_id', remoteId)
+    .eq('user_id', session.user.id)
+    .select('trip_id')
+  if (error) throw new Error(error.message)
+  if (!data || data.length === 0) {
+    throw new Error('Non risulti più iscritto a questo viaggio.')
+  }
+}
+
+export function reconcileTripList({ localTrips, syncStates, remoteTrips }) {
+  const syncStateByLocalId = new Map(syncStates.map((s) => [s.localId, s.syncState]))
+  const remoteById = new Map(remoteTrips.map((r) => [r.remoteId, r]))
+
+  const survivors = localTrips.filter((trip) => {
+    const state = syncStateByLocalId.get(trip.id)
+    return !state || remoteById.has(state.remoteId)
+  })
+
+  const knownRemoteIds = new Set(
+    localTrips
+      .map((trip) => syncStateByLocalId.get(trip.id))
+      .filter(Boolean)
+      .map((state) => state.remoteId)
+  )
+
+  const additions = remoteTrips
+    .filter((remote) => !knownRemoteIds.has(remote.remoteId))
+    .map((remote) => ({
+      trip: { ...remote.trip, id: crypto.randomUUID() },
+      syncState: { remoteId: remote.remoteId, role: remote.role, lastSyncedAt: remote.updatedAt, dirty: false, shareCode: remote.shareCode }
+    }))
+
+  return { trips: [...survivors, ...additions.map((a) => a.trip)], additions }
+}
