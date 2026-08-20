@@ -31,8 +31,11 @@ di avvisare.
 
 ## Design Principles
 
-- **Local-first**: l'app funziona per intero senza account e senza rete; il cloud è
-  sincronizzazione, non prerequisito. Nessuna schermata di login bloccante.
+- **Local-first**: una volta fatto l'accesso, l'app funziona per intero senza rete; il
+  cloud è sincronizzazione, non prerequisito del funzionamento offline. Il login
+  (email+password) è un gate obbligatorio una tantum quando Supabase è configurato, ma
+  non ricompare più: resta valido offline finché il device ha una sessione o un nome
+  salvato.
 - **Il terreno racconta l'ambiente**: creste per montagna e natura, linee batimetriche
   per il mare — è la palette (`theme/themes.js`) e non solo il colore a distinguere un
   viaggio dall'altro.

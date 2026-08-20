@@ -25,7 +25,7 @@ Ponza 30/08–05/09/2026).
 | PWA | `vite-plugin-pwa` (Workbox), `registerType: 'autoUpdate'` | precache dell'app shell, aggiornamento trasparente |
 | Persistenza locale | IndexedDB via `idb-keyval` | i viaggi devono sopravvivere offline e a Safari |
 | Backend (fase 1) | Supabase (progetto esistente `txfgxxaabhltazckabud`), tabelle con prefisso `tv_` | già configurato |
-| Auth | Supabase email+password per tutti (login obbligatorio all'apertura) | l'admin crea l'account e comunica la password fuori dall'app; nessun amico deve inventarsi o gestire un magic link |
+| Auth | Supabase email+password per tutti (login obbligatorio all'apertura) | l'admin crea l'account e comunica la password fuori dall'app; è il flusso più semplice da spiegare ad amici non tecnici |
 | Hosting | Vercel, deploy da GitHub | zero config, HTTPS necessario per la PWA |
 | Icona/nome | "WeGo", icona con le curve di livello | vedi Design system |
 
