@@ -253,3 +253,33 @@ describe('fetchTripOwnerId', () => {
     await expect(fetchTripOwnerId('trip-remote-1')).rejects.toThrow('non trovato')
   })
 })
+
+describe('listMyTrips', () => {
+  it('elenca i viaggi visibili con il proprio ruolo', async () => {
+    mockGetSession.mockResolvedValue({ user: { id: 'user-1' } })
+    const eqFn = vi.fn().mockResolvedValue({
+      data: [
+        { trip_id: 'trip-remote-1', role: 'editor', tv_trips: { data: { name: 'Ponza' }, updated_at: '2026-08-18T10:00:00Z' } },
+        { trip_id: 'trip-remote-2', role: 'viewer', tv_trips: { data: { name: 'Dolomiti' }, updated_at: '2026-08-18T11:00:00Z' } }
+      ],
+      error: null
+    })
+    mockFrom.mockReturnValue({ select: () => ({ eq: eqFn }) })
+
+    const { listMyTrips } = await import('./sync.js')
+    const result = await listMyTrips()
+
+    expect(mockFrom).toHaveBeenCalledWith('tv_trip_members')
+    expect(eqFn).toHaveBeenCalledWith('user_id', 'user-1')
+    expect(result).toEqual([
+      { remoteId: 'trip-remote-1', role: 'editor', trip: expect.objectContaining({ name: 'Ponza' }), updatedAt: '2026-08-18T10:00:00Z' },
+      { remoteId: 'trip-remote-2', role: 'viewer', trip: expect.objectContaining({ name: 'Dolomiti' }), updatedAt: '2026-08-18T11:00:00Z' }
+    ])
+  })
+
+  it('rifiuta se non c\'è una sessione', async () => {
+    mockGetSession.mockResolvedValue(null)
+    const { listMyTrips } = await import('./sync.js')
+    await expect(listMyTrips()).rejects.toThrow()
+  })
+})
