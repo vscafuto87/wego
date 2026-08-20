@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Plus, Pencil, Trash2, Mountain, Waves, Utensils, ExternalLink, Check, Ruler, Clock, TrendingUp, MapPin, Bus } from 'lucide-react'
+import { Plus, Pencil, Trash2, Mountain, Waves, Utensils, ExternalLink, Check, Ruler, Clock, TrendingUp, MapPin, Bus, ArrowRight } from 'lucide-react'
 import Btn from '../components/Btn.jsx'
 import DayLabel from '../components/DayLabel.jsx'
 import Modal from '../components/Modal.jsx'
@@ -131,8 +131,8 @@ function TransportDayCard({ item, onNavigate }) {
         </a>
       )}
       {onNavigate && (
-        <button type="button" onClick={() => onNavigate(item.origin.tab)} className="block text-sm text-[var(--accent)] underline mt-3">
-          Vai a Trasporti
+        <button type="button" onClick={() => onNavigate(item.origin.tab)} className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-[var(--tint)] text-[var(--accent)] text-sm font-medium mt-3">
+          <ArrowRight size={14} /> Vai a Trasporti
         </button>
       )}
       <ModifiedBy modifiedBy={item.modifiedBy} modifiedAt={item.modifiedAt} />
