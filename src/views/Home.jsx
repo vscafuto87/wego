@@ -116,7 +116,7 @@ export default function Home({ trips, onOpen, onCreate, onImport, onDelete }) {
       <Modal open={!!form} title="Nuovo viaggio" onClose={() => setForm(null)}>
         {form && (
           <form onSubmit={submit} className="flex flex-col gap-3">
-            <input required placeholder="Nome del viaggio" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={inputClass} />
+            <input required pattern=".*\S.*" title="Il nome non può essere vuoto" placeholder="Nome del viaggio" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={inputClass} />
             <input placeholder="Emoji" value={form.emoji} onChange={(e) => setForm({ ...form, emoji: e.target.value })} className={inputClass} />
             <input placeholder="Luogo" value={form.place} onChange={(e) => setForm({ ...form, place: e.target.value })} className={inputClass} />
             <div className="flex gap-2">
