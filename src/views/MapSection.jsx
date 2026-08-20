@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
 import markerIcon from 'leaflet/dist/images/marker-icon.png'
 import markerShadow from 'leaflet/dist/images/marker-shadow.png'
 import 'leaflet/dist/leaflet.css'
-import { Plus, Pencil, Trash2, MapPin, LocateFixed } from 'lucide-react'
+import { Pencil, Trash2, MapPin, LocateFixed } from 'lucide-react'
 import Btn from '../components/Btn.jsx'
 import Modal from '../components/Modal.jsx'
 import Empty from '../components/Empty.jsx'
@@ -85,8 +85,10 @@ function useOnlineStatus() {
   return online
 }
 
-export default function MapSection({ trip, section, onUpdate, activeDisplayName, onNavigate }) {
+const MapSection = forwardRef(function MapSection({ trip, section, onUpdate, activeDisplayName, onNavigate }, ref) {
   const [form, setForm] = useState(null)
+
+  useImperativeHandle(ref, () => ({ openAdd: () => setForm(EMPTY_ITEM) }))
   const online = useOnlineStatus()
   const [myPosition, setMyPosition] = useState(null)
   const [locating, setLocating] = useState(false)
@@ -265,12 +267,6 @@ export default function MapSection({ trip, section, onUpdate, activeDisplayName,
         ))}
       </div>
 
-      {section.items.length > 0 && (
-        <Btn variant="secondary" onClick={() => setForm(EMPTY_ITEM)} className="self-start">
-          <Plus size={17} /> Nuovo punto
-        </Btn>
-      )}
-
       <Modal open={!!form} title={form?.id ? 'Modifica punto' : 'Nuovo punto'} onClose={() => setForm(null)}>
         {form && (
           <form onSubmit={saveItem} className="flex flex-col gap-3">
@@ -285,4 +281,6 @@ export default function MapSection({ trip, section, onUpdate, activeDisplayName,
       </Modal>
     </div>
   )
-}
+})
+
+export default MapSection

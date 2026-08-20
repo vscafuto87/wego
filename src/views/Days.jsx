@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { forwardRef, useImperativeHandle, useMemo, useState } from 'react'
 import { Plus, Pencil, Trash2, Mountain, Waves, Utensils, ExternalLink, Check, Ruler, Clock, TrendingUp, MapPin, Bus, ArrowRight } from 'lucide-react'
 import Btn from '../components/Btn.jsx'
 import DayLabel from '../components/DayLabel.jsx'
@@ -195,9 +195,11 @@ function fieldsForForm(itemForm) {
   return common
 }
 
-export default function Days({ trip, onUpdate, activeDisplayName, onNavigate }) {
+const Days = forwardRef(function Days({ trip, onUpdate, activeDisplayName, onNavigate }, ref) {
   const [dayForm, setDayForm] = useState(null)
   const [itemForm, setItemForm] = useState(null)
+
+  useImperativeHandle(ref, () => ({ openAdd: () => setDayForm(EMPTY_DAY) }))
 
   const transportByDate = useMemo(() => {
     const map = new Map()
@@ -294,12 +296,6 @@ export default function Days({ trip, onUpdate, activeDisplayName, onNavigate }) 
         </div>
       ))}
 
-      {trip.days.length > 0 && (
-        <Btn variant="secondary" onClick={() => setDayForm(EMPTY_DAY)} className="self-start">
-          <Plus size={17} /> Nuovo giorno
-        </Btn>
-      )}
-
       <Modal open={!!dayForm} title={dayForm?.id ? 'Modifica giorno' : 'Nuovo giorno'} onClose={() => setDayForm(null)}>
         {dayForm && (
           <form onSubmit={saveDay} className="flex flex-col gap-3">
@@ -358,4 +354,6 @@ export default function Days({ trip, onUpdate, activeDisplayName, onNavigate }) 
       </Modal>
     </div>
   )
-}
+})
+
+export default Days

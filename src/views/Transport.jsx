@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Plus, Pencil, Trash2, Train, Plane, Ship, Car, Bus } from 'lucide-react'
+import { forwardRef, useImperativeHandle, useState } from 'react'
+import { Pencil, Trash2, Train, Plane, Ship, Car, Bus } from 'lucide-react'
 import Btn from '../components/Btn.jsx'
 import Modal from '../components/Modal.jsx'
 import Empty from '../components/Empty.jsx'
@@ -26,8 +26,10 @@ function sortKey(item) {
   return `${item.date}T${item.time || '00:00'}`
 }
 
-export default function Transport({ trip, section, onUpdate, activeDisplayName }) {
+const Transport = forwardRef(function Transport({ trip, section, onUpdate, activeDisplayName }, ref) {
   const [form, setForm] = useState(null)
+
+  useImperativeHandle(ref, () => ({ openAdd: () => setForm(EMPTY_ITEM) }))
 
   function updateItems(fn) {
     onUpdate((t) => ({ ...t, sections: t.sections.map((s) => (s.id === section.id ? { ...s, items: fn(s.items) } : s)) }))
@@ -88,12 +90,6 @@ export default function Transport({ trip, section, onUpdate, activeDisplayName }
         ))}
       </div>
 
-      {sorted.length > 0 && (
-        <Btn variant="secondary" onClick={() => setForm(EMPTY_ITEM)} className="self-start">
-          <Plus size={17} /> Nuovo trasporto
-        </Btn>
-      )}
-
       <Modal open={!!form} title={form?.id ? 'Modifica trasporto' : 'Nuovo trasporto'} onClose={() => setForm(null)}>
         {form && (
           <form onSubmit={saveItem} className="flex flex-col gap-3">
@@ -119,4 +115,6 @@ export default function Transport({ trip, section, onUpdate, activeDisplayName }
       </Modal>
     </div>
   )
-}
+})
+
+export default Transport

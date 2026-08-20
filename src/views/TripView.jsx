@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { ArrowLeft, Settings as SettingsIcon, Sun, CalendarDays } from 'lucide-react'
+import { ArrowLeft, Plus, Settings as SettingsIcon, Sun, CalendarDays } from 'lucide-react'
 import { themeStyle, getTheme, ACCENT_GRADIENT } from '../theme/themes.js'
 import Terrain from '../theme/Terrain.jsx'
 import Today from './Today.jsx'
@@ -18,6 +18,16 @@ const COLLAPSE_DISTANCE = 100
 // titolo grande): serve più di COLLAPSE_DISTANCE di spazio reale sotto perché
 // l'header stesso "mangia" altezza pagina più in fretta di quanto si scorra.
 const HEADER_SHRINK = 184
+// Etichetta del + in header per tipo di sezione: le Note non hanno un
+// concetto di "nuovo elemento" (è un unico blocco di testo), quindi non
+// compaiono in questa mappa e non ricevono il +.
+const ADD_LABELS = {
+  cards: 'Aggiungi una scheda',
+  checklist: 'Aggiungi una voce',
+  transport: 'Aggiungi un trasporto',
+  lodging: 'Aggiungi un alloggio',
+  map: 'Aggiungi un punto'
+}
 
 export default function TripView({ trip, onBack, onUpdate, onDelete }) {
   const tabs = [
@@ -35,6 +45,10 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
   const [extraSpace, setExtraSpace] = useState(0)
   const navScrollRef = useRef(null)
   const activeTabRef = useRef(null)
+  // La tab attiva (Itinerario o una sezione) espone openAdd() tramite questo
+  // ref: il + in header richiama l'azione "nuovo elemento" già esistente lì,
+  // non ne duplica una propria.
+  const activeViewRef = useRef(null)
 
   // Riferimenti sempre aggiornati: un tentativo di sync partito da un timer o da
   // un evento deve lavorare sul viaggio e sullo stato correnti, non su quelli
@@ -258,6 +272,8 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
   // Un pull rigenera gli id delle sezioni: se la tab aperta non esiste più si
   // torna a "Oggi" invece di mostrare una pagina vuota.
   const currentTab = tabs.some((t) => t.key === activeTab) ? activeTab : 'today'
+  const activeSection = trip.sections.find((s) => s.id === currentTab)
+  const addLabel = currentTab === 'days' ? 'Aggiungi un giorno' : (activeSection ? ADD_LABELS[activeSection.type] : undefined)
   // Un viewer non può scrivere sul server: non gli si offre di forzare la propria
   // versione, sarebbe un pulsante che la RLS rifiuta sempre.
   const canPush = !!syncState && syncState.role === 'editor'
@@ -296,9 +312,16 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
                 <span className="font-display font-semibold text-lg">{trip.name}</span>
               </div>
             </div>
-            <button onClick={() => setSettingsOpen(true)} aria-label="Impostazioni del viaggio" className="h-11 w-11 -mr-2 flex-shrink-0 flex items-center justify-center rounded-full bg-[var(--tint)] active:scale-[0.97] transition-transform duration-150 ease-out">
-              <SettingsIcon size={19} />
-            </button>
+            {currentTab === 'today' && (
+              <button onClick={() => setSettingsOpen(true)} aria-label="Impostazioni del viaggio" className="h-11 w-11 -mr-2 flex-shrink-0 flex items-center justify-center rounded-full bg-[var(--tint)] active:scale-[0.97] transition-transform duration-150 ease-out">
+                <SettingsIcon size={19} />
+              </button>
+            )}
+            {currentTab !== 'today' && addLabel && (
+              <button onClick={() => activeViewRef.current?.openAdd()} aria-label={addLabel} className="h-11 w-11 -mr-2 flex-shrink-0 flex items-center justify-center rounded-full bg-[var(--tint)] active:scale-[0.97] transition-transform duration-150 ease-out">
+                <Plus size={19} />
+              </button>
+            )}
           </div>
           <div style={{ maxHeight: (1 - collapse) * 160, opacity: 1 - collapse, overflow: 'hidden' }}>
             <div className="flex items-baseline gap-2 mt-3">
@@ -318,10 +341,11 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
 
       <main className="px-5 max-w-2xl mx-auto pb-36">
         {currentTab === 'today' && <Today trip={trip} onNavigate={setActiveTab} />}
-        {currentTab === 'days' && <Days trip={trip} onUpdate={handleUpdate} activeDisplayName={cloudDisplayName} onNavigate={setActiveTab} />}
+        {currentTab === 'days' && <Days ref={activeViewRef} trip={trip} onUpdate={handleUpdate} activeDisplayName={cloudDisplayName} onNavigate={setActiveTab} />}
         {trip.sections.map((section) => (currentTab === section.id ? (
           <Section
             key={section.id}
+            ref={activeViewRef}
             trip={trip}
             section={section}
             onUpdate={handleUpdate}

@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import { Plus, Pencil, Trash2, Bed, FileText } from 'lucide-react'
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
+import { Pencil, Trash2, Bed, FileText } from 'lucide-react'
 import Btn from '../components/Btn.jsx'
 import Modal from '../components/Modal.jsx'
 import Empty from '../components/Empty.jsx'
@@ -54,7 +54,7 @@ async function openAttachment(path, newWindow) {
   setTimeout(() => URL.revokeObjectURL(objectUrl), 60000)
 }
 
-export default function Lodging({ trip, section, onUpdate, activeDisplayName, remoteId, role }) {
+const Lodging = forwardRef(function Lodging({ trip, section, onUpdate, activeDisplayName, remoteId, role }, ref) {
   const [form, setForm] = useState(null)
   const [uploadState, setUploadState] = useState({ status: 'idle', error: '' })
   // { itemId, message } | null — itemId lega il messaggio alla card che ha
@@ -73,6 +73,8 @@ export default function Lodging({ trip, section, onUpdate, activeDisplayName, re
   // scartata senza toccare nulla, così l'item conserva il suo bookingFilePath
   // originale e l'oggetto dietro resta valido (revisione finale, finding 2).
   const pendingDeletionsRef = useRef([])
+
+  useImperativeHandle(ref, () => ({ openAdd: () => openForm(EMPTY_ITEM) }))
 
   function updateItems(fn) {
     onUpdate((t) => ({ ...t, sections: t.sections.map((s) => (s.id === section.id ? { ...s, items: fn(s.items) } : s)) }))
@@ -265,12 +267,6 @@ export default function Lodging({ trip, section, onUpdate, activeDisplayName, re
         ))}
       </div>
 
-      {sorted.length > 0 && (
-        <Btn variant="secondary" onClick={() => openForm(EMPTY_ITEM)} className="self-start">
-          <Plus size={17} /> Nuovo alloggio
-        </Btn>
-      )}
-
       <Modal open={!!form} title={form?.id ? 'Modifica alloggio' : 'Nuovo alloggio'} onClose={closeForm}>
         {form && (
           <form onSubmit={saveItem} className="flex flex-col gap-3">
@@ -323,4 +319,6 @@ export default function Lodging({ trip, section, onUpdate, activeDisplayName, re
       </Modal>
     </div>
   )
-}
+})
+
+export default Lodging

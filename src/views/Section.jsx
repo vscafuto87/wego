@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from 'react'
+import { forwardRef, lazy, Suspense, useImperativeHandle, useRef, useState } from 'react'
 import { Plus, Pencil, Trash2, Check } from 'lucide-react'
 import Btn from '../components/Btn.jsx'
 import Label from '../components/Label.jsx'
@@ -23,11 +23,23 @@ function updateSection(trip, sectionId, fn) {
   return { ...trip, sections: trip.sections.map((s) => (s.id === sectionId ? fn(s) : s)) }
 }
 
-export default function Section({ trip, section, onUpdate, activeDisplayName, onNavigate, syncState }) {
+const Section = forwardRef(function Section({ trip, section, onUpdate, activeDisplayName, onNavigate, syncState }, ref) {
   const [headerForm, setHeaderForm] = useState(null)
   const [cardForm, setCardForm] = useState(null)
   const [checklistText, setChecklistText] = useState('')
   const [notesDraft, setNotesDraft] = useState(section.text ?? '')
+  const checklistInputRef = useRef(null)
+  // Trasporti/Pernottamento/Mappa gestiscono il proprio form "nuovo elemento"
+  // internamente: la sezione si limita a inoltrare l'apertura al figlio attivo.
+  const childRef = useRef(null)
+
+  useImperativeHandle(ref, () => ({
+    openAdd: () => {
+      if (section.type === 'cards') setCardForm({ title: '', meta: '', detail: '', link: '', tags: '', lat: null, lng: null })
+      else if (section.type === 'checklist') checklistInputRef.current?.focus()
+      else childRef.current?.openAdd()
+    }
+  }))
 
   function saveHeader(e) {
     e.preventDefault()
@@ -92,7 +104,13 @@ export default function Section({ trip, section, onUpdate, activeDisplayName, on
 
       {section.type === 'cards' && (
         <>
-          {section.items.length === 0 && <Empty title="Nessuna scheda ancora" detail="Aggiungine una per iniziare." />}
+          {section.items.length === 0 && (
+            <Empty
+              title="Nessuna scheda ancora"
+              detail="Aggiungine una per iniziare."
+              action={<Btn onClick={() => setCardForm({ title: '', meta: '', detail: '', link: '', tags: '', lat: null, lng: null })}>Aggiungi una scheda</Btn>}
+            />
+          )}
           <div className="flex flex-col gap-3">
             {section.items.map((item) => (
               <div key={item.id} className="rounded-[24px] p-5 bg-[var(--card)] shadow-[0_1px_2px_rgb(var(--ink-rgb)/0.05),0_10px_24px_-14px_rgb(var(--ink-rgb)/0.25)]">
@@ -131,9 +149,6 @@ export default function Section({ trip, section, onUpdate, activeDisplayName, on
               </div>
             ))}
           </div>
-          <Btn variant="secondary" onClick={() => setCardForm({ title: '', meta: '', detail: '', link: '', tags: '', lat: null, lng: null })} className="self-start">
-            <Plus size={17} /> Nuova scheda
-          </Btn>
         </>
       )}
 
@@ -159,7 +174,7 @@ export default function Section({ trip, section, onUpdate, activeDisplayName, on
             ))}
           </ul>
           <form onSubmit={addChecklistItem} className="flex gap-2">
-            <input placeholder="Nuova voce" value={checklistText} onChange={(e) => setChecklistText(e.target.value)} className={`flex-1 ${inputClass}`} />
+            <input ref={checklistInputRef} placeholder="Nuova voce" value={checklistText} onChange={(e) => setChecklistText(e.target.value)} className={`flex-1 ${inputClass}`} />
             <Btn type="submit" variant="secondary">
               <Plus size={17} />
             </Btn>
@@ -181,10 +196,11 @@ export default function Section({ trip, section, onUpdate, activeDisplayName, on
         </>
       )}
 
-      {section.type === 'transport' && <Transport trip={trip} section={section} onUpdate={onUpdate} activeDisplayName={activeDisplayName} />}
+      {section.type === 'transport' && <Transport ref={childRef} trip={trip} section={section} onUpdate={onUpdate} activeDisplayName={activeDisplayName} />}
 
       {section.type === 'lodging' && (
         <Lodging
+          ref={childRef}
           trip={trip}
           section={section}
           onUpdate={onUpdate}
@@ -196,7 +212,7 @@ export default function Section({ trip, section, onUpdate, activeDisplayName, on
 
       {section.type === 'map' && (
         <Suspense fallback={<p className="text-base text-[var(--muted)]">Caricamento mappa…</p>}>
-          <MapSection trip={trip} section={section} onUpdate={onUpdate} activeDisplayName={activeDisplayName} onNavigate={onNavigate} />
+          <MapSection ref={childRef} trip={trip} section={section} onUpdate={onUpdate} activeDisplayName={activeDisplayName} onNavigate={onNavigate} />
         </Suspense>
       )}
 
@@ -224,4 +240,6 @@ export default function Section({ trip, section, onUpdate, activeDisplayName, on
       </Modal>
     </div>
   )
-}
+})
+
+export default Section
