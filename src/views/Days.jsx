@@ -1,7 +1,6 @@
 import { useState } from 'react'
-import { Plus, Pencil, Trash2, Mountain, Waves, Utensils, ExternalLink, Check } from 'lucide-react'
+import { Plus, Pencil, Trash2, Mountain, Waves, Utensils, ExternalLink, Check, Ruler, Clock, TrendingUp } from 'lucide-react'
 import Btn from '../components/Btn.jsx'
-import Label from '../components/Label.jsx'
 import Modal from '../components/Modal.jsx'
 import Empty from '../components/Empty.jsx'
 import { stampModified, dayItemFieldsForKind } from '../data/schema.js'
@@ -31,6 +30,10 @@ const ALL_KIND_FIELDS = ['distanza', 'durata', 'dislivello', 'difficolta', 'acce
 
 const TYPED_KINDS = ['sentiero', 'spiaggia', 'pasto']
 
+function positiveDislivello(value) {
+  return value ? value.split('·')[0].trim() : value
+}
+
 function LinkChip({ link }) {
   if (!link) return null
   return (
@@ -47,10 +50,9 @@ export function DayItemCard({ item, onEdit, onRemove }) {
   const Icon = KIND_ICONS[item.kind]
   const stats = item.kind === 'sentiero'
     ? [
-        { label: 'Distanza', value: item.distanza },
-        { label: 'Durata', value: item.durata },
-        { label: 'Dislivello', value: item.dislivello },
-        { label: 'Difficoltà', value: item.difficolta }
+        { icon: Ruler, value: item.distanza },
+        { icon: Clock, value: item.durata },
+        { icon: TrendingUp, value: positiveDislivello(item.dislivello) }
       ].filter((s) => s.value)
     : []
 
@@ -64,7 +66,7 @@ export function DayItemCard({ item, onEdit, onRemove }) {
           <div className="flex-1 min-w-0">
             {item.time && <span className="font-mono text-sm text-[var(--muted)]">{item.time}</span>}
             <p className="font-display font-semibold text-lg leading-snug">{item.title}</p>
-            {item.detail && <p className="text-sm text-[var(--muted)] mt-1">{item.detail}</p>}
+            {item.kind !== 'sentiero' && item.detail && <p className="text-sm text-[var(--muted)] mt-1">{item.detail}</p>}
             {item.kind === 'pasto' && item.luogo && <p className="text-sm text-[var(--muted)] mt-1">{item.luogo}</p>}
             {item.kind === 'spiaggia' && (item.accesso || item.servizi) && (
               <p className="text-sm text-[var(--muted)] mt-1">{[item.accesso, item.servizi].filter(Boolean).join(' · ')}</p>
@@ -88,11 +90,11 @@ export function DayItemCard({ item, onEdit, onRemove }) {
       </div>
 
       {stats.length > 0 && (
-        <div className="flex gap-5 mt-4 pl-[68px]">
-          {stats.map((s) => (
-            <div key={s.label}>
-              <Label>{s.label}</Label>
-              <div className="font-mono text-lg font-semibold mt-0.5 whitespace-nowrap">{s.value}</div>
+        <div className="flex flex-wrap gap-4 mt-2.5 pl-[68px]">
+          {stats.map((s, i) => (
+            <div key={i} className="flex items-center gap-1.5 text-[var(--muted)]">
+              <s.icon size={14} />
+              <span className="font-mono text-sm font-medium text-[var(--ink)] whitespace-nowrap">{s.value}</span>
             </div>
           ))}
         </div>
