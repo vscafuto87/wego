@@ -6,6 +6,7 @@ import { themeStyle } from '../theme/themes.js'
 import LoginForm from '../components/LoginForm.jsx'
 import AdminTripList from './AdminTripList.jsx'
 import AdminTripEditor from './AdminTripEditor.jsx'
+import AdminUserList from './AdminUserList.jsx'
 
 function isAdminSession(session) {
   return Boolean(session?.user?.app_metadata?.is_admin)
@@ -15,6 +16,7 @@ export default function AdminApp() {
   const [trips, setTrips] = useState(null)
   const [activeTripId, setActiveTripId] = useState(null)
   const [session, setSession] = useState(undefined)
+  const [tab, setTab] = useState('trips')
 
   useEffect(() => {
     loadTrips().then(setTrips)
@@ -93,5 +95,23 @@ export default function AdminApp() {
     )
   }
 
-  return <AdminTripList trips={trips} onSelect={setActiveTripId} onCreate={createTrip} onLogout={signOut} />
+  return (
+    <div style={themeStyle('mountain')} className="min-h-screen bg-[var(--paper)] text-[var(--ink)] font-sans">
+      <div className="max-w-5xl mx-auto px-6 pt-10 flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="font-display font-semibold text-4xl mb-3">Dashboard admin</h1>
+          <div className="inline-flex items-center gap-1 bg-[var(--card)] border border-[var(--line)] rounded-full p-1">
+            <button onClick={() => setTab('trips')} className={`px-4 py-2 rounded-full text-base ${tab === 'trips' ? 'bg-[var(--tint)] font-medium' : ''}`}>Viaggi</button>
+            <button onClick={() => setTab('users')} className={`px-4 py-2 rounded-full text-base ${tab === 'users' ? 'bg-[var(--tint)] font-medium' : ''}`}>Utenti</button>
+          </div>
+        </div>
+        <button onClick={signOut} className="text-base text-[var(--muted)] underline">Esci</button>
+      </div>
+      <div className="max-w-5xl mx-auto px-6 py-6">
+        {tab === 'trips'
+          ? <AdminTripList trips={trips} onSelect={setActiveTripId} onCreate={createTrip} />
+          : <AdminUserList />}
+      </div>
+    </div>
+  )
 }
