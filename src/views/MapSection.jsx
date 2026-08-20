@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
 import markerIcon from 'leaflet/dist/images/marker-icon.png'
 import markerShadow from 'leaflet/dist/images/marker-shadow.png'
 import 'leaflet/dist/leaflet.css'
-import { Plus, Pencil, Trash2, MapPin } from 'lucide-react'
+import { Plus, Pencil, Trash2, MapPin, LocateFixed } from 'lucide-react'
 import Btn from '../components/Btn.jsx'
 import Modal from '../components/Modal.jsx'
 import Empty from '../components/Empty.jsx'
@@ -33,6 +33,24 @@ function dotIcon(color) {
 // Nessuna icona per 'mappa': i punti propri restano col marker Leaflet
 // standard, editabile, per distinguerli a colpo d'occhio dagli altri.
 const CATEGORY_ICONS = Object.fromEntries(Object.entries(CATEGORY_COLORS).map(([key, color]) => [key, dotIcon(color)]))
+
+const MY_LOCATION_ICON = L.divIcon({
+  className: '',
+  html: `<span style="position:relative;display:block;width:16px;height:16px;">
+    <span style="position:absolute;inset:-6px;border-radius:9999px;background:#2563eb;opacity:0.25"></span>
+    <span style="position:absolute;inset:0;border-radius:9999px;background:#2563eb;border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.4)"></span>
+  </span>`,
+  iconSize: [16, 16],
+  iconAnchor: [8, 8]
+})
+
+function FlyToPosition({ position }) {
+  const map = useMap()
+  useEffect(() => {
+    if (position) map.flyTo([position.lat, position.lng], Math.max(map.getZoom(), 14))
+  }, [position, map])
+  return null
+}
 
 const DATE_FMT = new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short' })
 function formatDate(date) {
@@ -70,6 +88,29 @@ function useOnlineStatus() {
 export default function MapSection({ trip, section, onUpdate, activeDisplayName, onNavigate }) {
   const [form, setForm] = useState(null)
   const online = useOnlineStatus()
+  const [myPosition, setMyPosition] = useState(null)
+  const [locating, setLocating] = useState(false)
+  const [locateError, setLocateError] = useState(null)
+  const geolocationAvailable = typeof navigator !== 'undefined' && !!navigator.geolocation
+
+  function locateMe() {
+    if (!geolocationAvailable) return
+    setLocating(true)
+    setLocateError(null)
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setMyPosition({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+        setLocating(false)
+      },
+      (err) => {
+        setLocating(false)
+        if (err.code === err.PERMISSION_DENIED) setLocateError('Permesso negato. Attivalo nelle impostazioni del browser per vederti sulla mappa.')
+        else if (err.code === err.TIMEOUT) setLocateError('La richiesta è scaduta. Riprova.')
+        else setLocateError('Non riusciamo a trovare la tua posizione. Riprova tra un momento.')
+      },
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+    )
+  }
 
   function updateItems(fn) {
     onUpdate((t) => ({ ...t, sections: t.sections.map((s) => (s.id === section.id ? { ...s, items: fn(s.items) } : s)) }))
@@ -135,9 +176,26 @@ export default function MapSection({ trip, section, onUpdate, activeDisplayName,
               ))}
             </div>
           )}
-          <div className="rounded-[24px] overflow-hidden h-64 border border-[var(--line)]">
+          <div className="relative rounded-[24px] overflow-hidden h-64 border border-[var(--line)]">
+            {geolocationAvailable && (
+              <button
+                type="button"
+                onClick={locateMe}
+                disabled={locating}
+                aria-label="Mostra dove sono"
+                className="absolute top-3 right-3 z-[1000] h-11 w-11 flex items-center justify-center rounded-full bg-[var(--card)] text-[var(--ink)] shadow-[0_1px_2px_rgb(var(--ink-rgb)/0.05),0_10px_24px_-14px_rgb(var(--ink-rgb)/0.25)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 disabled:opacity-50"
+              >
+                <LocateFixed size={18} className={locating ? 'animate-pulse' : ''} />
+              </button>
+            )}
             <MapContainer center={center} zoom={12} style={{ height: '100%', width: '100%' }}>
               <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap' />
+              <FlyToPosition position={myPosition} />
+              {myPosition && (
+                <Marker position={[myPosition.lat, myPosition.lng]} icon={MY_LOCATION_ICON}>
+                  <Popup>Sei qui</Popup>
+                </Marker>
+              )}
               {renderedPoints.map((point) => (
                 <Marker
                   key={`${point.categoryGroup}-${point.id}`}
@@ -171,6 +229,7 @@ export default function MapSection({ trip, section, onUpdate, activeDisplayName,
               ))}
             </MapContainer>
           </div>
+          {locateError && <p className="text-sm text-[var(--muted)]">{locateError}</p>}
         </div>
       )}
 
