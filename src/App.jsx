@@ -126,17 +126,41 @@ export default function App() {
     setActiveTripId(null)
   }
 
-  function createTrip(raw) {
+  async function createTrip(raw) {
     const trip = normalizeTrip(raw)
+    if (isCloudConfigured) {
+      try {
+        const displayName = await getDisplayNamePreference()
+        const state = await activateTripSync(trip, displayName)
+        await setSyncState(trip.id, state)
+      } catch (e) {
+        window.alert(`Non è stato possibile creare il viaggio. Controlla la rete e riprova.\n\n${e.message}`)
+        return false
+      }
+    }
     persist([...trips, trip])
     openTrip(trip.id)
+    return true
   }
 
-  function importTrips(raw) {
+  async function importTrips(raw) {
     const list = Array.isArray(raw) ? raw : [raw]
     const newTrips = list.map(normalizeTrip)
+    if (isCloudConfigured) {
+      const displayName = await getDisplayNamePreference()
+      try {
+        for (const trip of newTrips) {
+          const state = await activateTripSync(trip, displayName)
+          await setSyncState(trip.id, state)
+        }
+      } catch (e) {
+        window.alert(`Non è stato possibile caricare il viaggio. Controlla la rete e riprova.\n\n${e.message}`)
+        return false
+      }
+    }
     persist([...trips, ...newTrips])
     openTrip(newTrips[0].id)
+    return true
   }
 
   function finishJoin(trip) {

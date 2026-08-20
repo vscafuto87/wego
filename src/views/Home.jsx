@@ -37,10 +37,10 @@ const EMPTY_FORM = { name: '', emoji: '', place: '', start: '', end: '', palette
 export default function Home({ trips, onOpen, onCreate, onImport, onDelete }) {
   const [form, setForm] = useState(null)
 
-  function submit(e) {
+  async function submit(e) {
     e.preventDefault()
-    onCreate({ ...form, people: form.people.split(',').map((p) => p.trim()).filter(Boolean) })
-    setForm(null)
+    const ok = await onCreate({ ...form, people: form.people.split(',').map((p) => p.trim()).filter(Boolean) })
+    if (ok) setForm(null)
   }
 
   function remove(trip) {

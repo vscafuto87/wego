@@ -72,7 +72,7 @@ export default function ImportView({ onImport, onCancel }) {
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
 
-  function submit(e) {
+  async function submit(e) {
     e.preventDefault()
     setError('')
     let parsed
@@ -83,7 +83,7 @@ export default function ImportView({ onImport, onCancel }) {
       return
     }
     try {
-      onImport(parsed)
+      await onImport(parsed)
     } catch (err) {
       setError(err.message)
     }
