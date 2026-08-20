@@ -25,7 +25,8 @@ Ponza 30/08–05/09/2026).
 | PWA | `vite-plugin-pwa` (Workbox), `registerType: 'autoUpdate'` | precache dell'app shell, aggiornamento trasparente |
 | Persistenza locale | IndexedDB via `idb-keyval` | i viaggi devono sopravvivere offline e a Safari |
 | Backend (fase 1) | Supabase (progetto esistente `txfgxxaabhltazckabud`), tabelle con prefisso `tv_` | già configurato |
-| Auth | Supabase magic link via email | nessuna password da spiegare agli amici |
+| Auth | Supabase magic link via email per gli amici | nessuna password da spiegare agli amici |
+| Auth admin | Supabase email+password, solo per `/admin` | chi prepara i viaggi gestisce già una password; la dashboard non è pensata per gli amici |
 | Hosting | Vercel, deploy da GitHub | zero config, HTTPS necessario per la PWA |
 | Icona/nome | "WeGo", icona con le curve di livello | vedi Design system |
 
@@ -183,6 +184,34 @@ remoto è più recente di quello locale non ancora sincronizzato, **non sovrascr
 silenzio**: mostrare all'utente quale versione tenere. Le spunte delle checklist sono
 condivise (stanno dentro `data`); se in futuro dovranno essere personali, servirà una
 tabella separata — non farlo ora.
+
+---
+
+## Dashboard admin (`/admin`)
+
+Sezione separata dell'app, pensata per la preparazione dei viaggi a tavolino
+(desktop, non mobile-first come il resto): lista viaggi, creazione, ed editor
+completo di metadati, giorni/itinerario e tutte le sezioni. Vive in `src/admin/`,
+riusa il layer dati esistente (`schema.js`, `storage.js`, `sync.js`), non introduce
+un formato diverso. Non compare in nessun link dell'app normale: si raggiunge solo
+digitando l'URL.
+
+**Accesso**: email+password (`AdminLoginForm.jsx`), stessa sessione Supabase Auth
+del magic link degli amici — solo un secondo modo di ottenerla, non un sistema
+separato. Per essere ammessi alla dashboard non basta accedere: l'account deve
+avere `app_metadata.is_admin = true`, un campo che **solo la dashboard Supabase
+può impostare** (Authentication → Utenti → modifica utente → `raw_app_meta_data`),
+non modificabile dal client. Per aggiungere un admin: crea l'utente (email+password)
+da lì e imposta quel campo a mano — nessuna UI di invito, operazione manuale una
+tantum per persona.
+
+Essere admin apre solo la porta della dashboard: dentro, l'editor di un singolo
+viaggio sincronizzato resta comunque riservato al suo `owner_id` (stesso controllo
+di proprietà di oggi), non a "chiunque sia admin".
+
+Questo accesso è indipendente dal login obbligatorio via magic link previsto per
+gli amici sull'app normale (`docs/superpowers/specs/2026-08-20-login-obbligatorio-sync-default-design.md`):
+sono due gate separati su due superfici diverse, non toccarli insieme per errore.
 
 ---
 
