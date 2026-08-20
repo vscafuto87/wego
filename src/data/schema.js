@@ -295,6 +295,28 @@ export function parseAddressFromMapsLink(url) {
   return null
 }
 
+// Voci Trasporti con una data, mostrate anche nel giorno corrispondente
+// dell'Itinerario. Calcolo derivato come collectExternalMapPoints: nessuna
+// copia salvata, la voce resta editabile solo dalla sezione Trasporti.
+export function collectExternalDayItems(trip) {
+  const transportSection = trip.sections.find((s) => s.type === 'transport')
+  if (!transportSection) return []
+  return transportSection.items
+    .filter((i) => i.date)
+    .map((i) => ({
+      id: i.id,
+      date: i.date,
+      time: i.time,
+      mode: i.mode,
+      title: [i.from, i.to].filter(Boolean).join(' → '),
+      note: i.note,
+      link: i.ticketLink,
+      modifiedBy: i.modifiedBy,
+      modifiedAt: i.modifiedAt,
+      origin: { tab: transportSection.id }
+    }))
+}
+
 const DAY_MAP_KINDS = ['sentiero', 'spiaggia', 'pasto']
 
 // Punti con coordinate che vivono in altre sezioni/giorni del viaggio, utili

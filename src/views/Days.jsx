@@ -1,10 +1,10 @@
-import { useState } from 'react'
-import { Plus, Pencil, Trash2, Mountain, Waves, Utensils, ExternalLink, Check, Ruler, Clock, TrendingUp, MapPin } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Plus, Pencil, Trash2, Mountain, Waves, Utensils, ExternalLink, Check, Ruler, Clock, TrendingUp, MapPin, Bus } from 'lucide-react'
 import Btn from '../components/Btn.jsx'
 import DayLabel from '../components/DayLabel.jsx'
 import Modal from '../components/Modal.jsx'
 import Empty from '../components/Empty.jsx'
-import { stampModified, dayItemFieldsForKind } from '../data/schema.js'
+import { stampModified, dayItemFieldsForKind, collectExternalDayItems } from '../data/schema.js'
 import ModifiedBy from '../components/ModifiedBy.jsx'
 import CoordsInput from '../components/CoordsInput.jsx'
 
@@ -110,6 +110,36 @@ export function DayItemCard({ item, onEdit, onRemove }) {
   )
 }
 
+// Voce Trasporti aggregata nel giorno: sola lettura qui, si modifica solo
+// dalla sezione Trasporti (da cui viene calcolata, vedi collectExternalDayItems).
+function TransportDayCard({ item, onNavigate }) {
+  return (
+    <div className="rounded-[24px] p-4 bg-[var(--card)] shadow-[0_1px_2px_rgb(var(--ink-rgb)/0.05),0_10px_24px_-14px_rgb(var(--ink-rgb)/0.25)]">
+      <div className="flex items-start gap-3">
+        <div className="h-10 w-10 rounded-full bg-[var(--tint)] flex items-center justify-center flex-shrink-0">
+          <Bus size={18} className="text-[var(--accent)]" />
+        </div>
+        <div className="flex-1 min-w-0">
+          {item.time && <span className="font-mono text-sm text-[var(--muted)]">{item.time}</span>}
+          <p className="font-display font-semibold text-lg leading-snug">{item.title}</p>
+          {item.note && <p className="text-sm text-[var(--muted)] mt-1">{item.note}</p>}
+        </div>
+      </div>
+      {item.link && (
+        <a href={item.link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-[var(--tint)] text-[var(--accent)] text-sm font-medium mt-3">
+          <ExternalLink size={14} /> Apri il biglietto
+        </a>
+      )}
+      {onNavigate && (
+        <button type="button" onClick={() => onNavigate(item.origin.tab)} className="block text-sm text-[var(--accent)] underline mt-3">
+          Vai a Trasporti
+        </button>
+      )}
+      <ModifiedBy modifiedBy={item.modifiedBy} modifiedAt={item.modifiedAt} />
+    </div>
+  )
+}
+
 function withoutKindFields(item) {
   const clean = { ...item }
   for (const field of ALL_KIND_FIELDS) {
@@ -126,9 +156,19 @@ function fieldsForForm(itemForm) {
   return common
 }
 
-export default function Days({ trip, onUpdate, activeDisplayName }) {
+export default function Days({ trip, onUpdate, activeDisplayName, onNavigate }) {
   const [dayForm, setDayForm] = useState(null)
   const [itemForm, setItemForm] = useState(null)
+
+  const transportByDate = useMemo(() => {
+    const map = new Map()
+    for (const item of collectExternalDayItems(trip)) {
+      const list = map.get(item.date) ?? []
+      list.push(item)
+      map.set(item.date, list)
+    }
+    return map
+  }, [trip])
 
   function saveDay(e) {
     e.preventDefault()
@@ -201,19 +241,26 @@ export default function Days({ trip, onUpdate, activeDisplayName }) {
             </div>
           </div>
 
-          {day.items.length > 0 && (
-            <ul className="flex flex-col gap-3">
-              {day.items.map((item) => (
-                <li key={item.id}>
-                  <DayItemCard
-                    item={item}
-                    onEdit={() => setItemForm({ dayId: day.id, id: item.id, ...EMPTY_ITEM, ...item })}
-                    onRemove={() => removeItem(day.id, item)}
-                  />
-                </li>
-              ))}
-            </ul>
-          )}
+          {(() => {
+            const entries = [
+              ...day.items.map((item) => ({ key: `item-${item.id}`, time: item.time, node: (
+                <DayItemCard
+                  item={item}
+                  onEdit={() => setItemForm({ dayId: day.id, id: item.id, ...EMPTY_ITEM, ...item })}
+                  onRemove={() => removeItem(day.id, item)}
+                />
+              ) })),
+              ...(transportByDate.get(day.date) ?? []).map((item) => ({ key: `transport-${item.id}`, time: item.time, node: (
+                <TransportDayCard item={item} onNavigate={onNavigate} />
+              ) }))
+            ].sort((a, b) => (a.time || '').localeCompare(b.time || ''))
+
+            return entries.length > 0 && (
+              <ul className="flex flex-col gap-3">
+                {entries.map((entry) => <li key={entry.key}>{entry.node}</li>)}
+              </ul>
+            )
+          })()}
 
           <button onClick={() => setItemForm({ dayId: day.id, ...EMPTY_ITEM })} className="self-start flex items-center gap-1 text-base text-[var(--accent)] min-h-12">
             <Plus size={17} /> Aggiungi voce

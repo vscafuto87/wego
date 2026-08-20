@@ -318,7 +318,7 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
 
       <main className="px-5 max-w-2xl mx-auto pb-36">
         {currentTab === 'today' && <Today trip={trip} onNavigate={setActiveTab} />}
-        {currentTab === 'days' && <Days trip={trip} onUpdate={handleUpdate} activeDisplayName={cloudDisplayName} />}
+        {currentTab === 'days' && <Days trip={trip} onUpdate={handleUpdate} activeDisplayName={cloudDisplayName} onNavigate={setActiveTab} />}
         {trip.sections.map((section) => (currentTab === section.id ? (
           <Section
             key={section.id}
