@@ -24,14 +24,20 @@ export default function LoginForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3 bg-[var(--card)] border border-[var(--line)] rounded-2xl p-6">
-      <h2 className="font-display font-semibold text-2xl mb-1">Accedi</h2>
-      {error && <p className="text-base text-[var(--accent)]">{error}</p>}
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3.5">
+      <div>
+        <h2 className="font-display font-semibold text-2xl">Accedi</h2>
+        <p className="text-sm text-[var(--muted)] mt-2 leading-relaxed">Serve un account per vedere e sincronizzare i tuoi viaggi.</p>
+      </div>
+      {error && <p className="text-sm text-[var(--accent)]">{error}</p>}
       <input required type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} />
       <input required type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} />
-      <Btn type="submit" disabled={loading} className="self-start">
+      <Btn type="submit" disabled={loading} className="w-full mt-1.5">
         {loading ? 'Accesso in corso…' : 'Accedi'}
       </Btn>
+      <p className="text-xs text-[var(--muted)] text-center leading-relaxed">
+        Non hai le credenziali?<br />Te le dà chi ha organizzato il viaggio.
+      </p>
     </form>
   )
 }
