@@ -158,7 +158,7 @@ export default function Settings({ trip, onUpdate, onDelete, syncActive, onOpenA
         <Modal open={!!editForm} title="Modifica viaggio" onClose={() => setEditForm(null)}>
           {editForm && (
             <form onSubmit={saveEdit} className="flex flex-col gap-3">
-              <input required placeholder="Nome del viaggio" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className={inputClass} />
+              <input required pattern=".*\S.*" title="Il nome non può essere vuoto" placeholder="Nome del viaggio" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className={inputClass} />
               <input placeholder="Emoji" value={editForm.emoji} onChange={(e) => setEditForm({ ...editForm, emoji: e.target.value })} className={inputClass} />
               <input placeholder="Luogo" value={editForm.place} onChange={(e) => setEditForm({ ...editForm, place: e.target.value })} className={inputClass} />
               <div className="flex gap-2">
