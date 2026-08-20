@@ -36,9 +36,11 @@ function positiveDislivello(value) {
 function LinkChip({ link }) {
   if (!link) return null
   return (
-    <a href={link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-[var(--tint)] text-[var(--accent)] text-sm font-medium mt-3">
-      <ExternalLink size={14} /> Apri il link
-    </a>
+    <div className="flex justify-end mt-3">
+      <a href={link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-[var(--tint)] text-[var(--accent)] text-sm font-medium">
+        <ExternalLink size={14} /> Apri il link
+      </a>
+    </div>
   )
 }
 
@@ -126,14 +128,18 @@ function TransportDayCard({ item, onNavigate }) {
         </div>
       </div>
       {item.link && (
-        <a href={item.link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-[var(--tint)] text-[var(--accent)] text-sm font-medium mt-3">
-          <ExternalLink size={14} /> Apri il biglietto
-        </a>
+        <div className="flex justify-end mt-3">
+          <a href={item.link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-[var(--tint)] text-[var(--accent)] text-sm font-medium">
+            <ExternalLink size={14} /> Apri il biglietto
+          </a>
+        </div>
       )}
       {onNavigate && (
-        <button type="button" onClick={() => onNavigate(item.origin.tab)} className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-[var(--tint)] text-[var(--accent)] text-sm font-medium mt-3">
-          <ArrowRight size={14} /> Vai a Trasporti
-        </button>
+        <div className="flex justify-end mt-3">
+          <button type="button" onClick={() => onNavigate(item.origin.tab)} className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-[var(--tint)] text-[var(--accent)] text-sm font-medium">
+            <ArrowRight size={14} /> Vai a Trasporti
+          </button>
+        </div>
       )}
       <ModifiedBy modifiedBy={item.modifiedBy} modifiedAt={item.modifiedAt} />
     </div>

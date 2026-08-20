@@ -17,13 +17,8 @@ export function formatRelativeTime(isoString, now = new Date()) {
   return RTF.format(-Math.round(diffSeconds / divisor), unit)
 }
 
-export default function ModifiedBy({ modifiedBy, modifiedAt }) {
-  if (!modifiedBy || !modifiedAt) return null
-  const relative = formatRelativeTime(modifiedAt)
-  if (!relative) return null
-  return (
-    <p className="font-mono text-[11px] text-[var(--muted)] mt-0.5">
-      modificato da {modifiedBy} · {relative}
-    </p>
-  )
+// Non mostriamo più chi/quando ha modificato: il timestamp resta salvato nei
+// dati (stampModified) per il last-write-wins della sync, solo non è in UI.
+export default function ModifiedBy() {
+  return null
 }
