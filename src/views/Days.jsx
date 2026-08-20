@@ -1,5 +1,5 @@
 import { forwardRef, useImperativeHandle, useMemo, useState } from 'react'
-import { Plus, Pencil, Trash2, Mountain, Waves, Utensils, ExternalLink, Check, Ruler, Clock, TrendingUp, MapPin, Bus, ArrowRight } from 'lucide-react'
+import { Plus, Pencil, Trash2, Mountain, Waves, Utensils, ExternalLink, Check, Ruler, Clock, TrendingUp, MapPin, Bus, ArrowRight, GripVertical } from 'lucide-react'
 import Btn from '../components/Btn.jsx'
 import DayLabel from '../components/DayLabel.jsx'
 import Modal from '../components/Modal.jsx'
@@ -7,6 +7,9 @@ import Empty from '../components/Empty.jsx'
 import { stampModified, dayItemFieldsForKind, collectExternalDayItems } from '../data/schema.js'
 import ModifiedBy from '../components/ModifiedBy.jsx'
 import CoordsInput from '../components/CoordsInput.jsx'
+import { DndContext, DragOverlay, PointerSensor, KeyboardSensor, useSensor, useSensors, useDroppable, closestCorners } from '@dnd-kit/core'
+import { SortableContext, verticalListSortingStrategy, sortableKeyboardCoordinates, arrayMove, useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
 const DATE_FMT = new Intl.DateTimeFormat('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })
@@ -47,7 +50,7 @@ function LinkChip({ link }) {
 // Voce sentiero/spiaggia/pasto: una scheda con badge del tipo, invece della
 // riga di testo generica, per rendere le informazioni del percorso o del
 // posto immediatamente riconoscibili.
-export function DayItemCard({ item, onEdit, onRemove }) {
+export function DayItemCard({ item, onEdit, onRemove, dragHandle }) {
   const Icon = KIND_ICONS[item.kind]
   const stats = item.kind === 'sentiero'
     ? [
@@ -74,8 +77,20 @@ export function DayItemCard({ item, onEdit, onRemove }) {
             )}
           </div>
         </div>
-        {(onEdit || onRemove) && (
+        {(dragHandle || onEdit || onRemove) && (
           <div className="flex gap-1 -mr-2 -mt-1 flex-shrink-0">
+            {dragHandle && (
+              <button
+                type="button"
+                ref={dragHandle.setActivatorNodeRef}
+                {...dragHandle.attributes}
+                {...dragHandle.listeners}
+                aria-label="Trascina per riordinare"
+                className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)] cursor-grab touch-none"
+              >
+                <GripVertical size={15} />
+              </button>
+            )}
             {onEdit && (
               <button onClick={onEdit} aria-label="Modifica voce" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
                 <Pencil size={15} />
@@ -169,6 +184,49 @@ function DayItemsBlock({ items, onEditItem, onRemoveItem }) {
   )
 }
 
+// Voce dell'Itinerario trascinabile: la maniglia avvia il drag, il resto della
+// scheda si comporta come oggi (tap su matita/cestino invariato).
+function SortableDayItem({ item, onEdit, onRemove }) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: item.id })
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1
+  }
+  return (
+    <li ref={setNodeRef} style={style}>
+      <DayItemCard
+        item={item}
+        onEdit={onEdit}
+        onRemove={onRemove}
+        dragHandle={{ setActivatorNodeRef, attributes, listeners }}
+      />
+    </li>
+  )
+}
+
+// Contenitore droppable per le voci di un giorno: sia le voci esistenti (via
+// SortableContext) sia lo spazio vuoto del giorno (via useDroppable, per poter
+// trascinare una voce anche su un giorno senza voci) sono bersagli di drop
+// validi.
+function DraggableDayItems({ day, onEditItem, onRemoveItem }) {
+  const { setNodeRef } = useDroppable({ id: day.id })
+  return (
+    <SortableContext items={day.items.map((it) => it.id)} strategy={verticalListSortingStrategy}>
+      <ul ref={setNodeRef} className="flex flex-col gap-3 min-h-12">
+        {day.items.map((item) => (
+          <SortableDayItem
+            key={item.id}
+            item={item}
+            onEdit={() => onEditItem(item)}
+            onRemove={() => onRemoveItem(item)}
+          />
+        ))}
+      </ul>
+    </SortableContext>
+  )
+}
+
 // Trasporti del giorno, aggregati dalla sezione Trasporti: sempre di sola
 // lettura qui, ordinati per orario. Usata sia da Oggi sia dall'Itinerario.
 function TransportBlock({ transportItems, onNavigate }) {
@@ -216,6 +274,81 @@ function fieldsForForm(itemForm) {
 const Days = forwardRef(function Days({ trip, onUpdate, activeDisplayName, onNavigate }, ref) {
   const [dayForm, setDayForm] = useState(null)
   const [itemForm, setItemForm] = useState(null)
+  const [workingDays, setWorkingDays] = useState(null)
+  const [activeItem, setActiveItem] = useState(null)
+  const displayDays = workingDays ?? trip.days
+
+  const daySensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
+
+  function findContainerId(days, id) {
+    if (days.some((d) => d.id === id)) return id
+    const owner = days.find((d) => d.items.some((it) => it.id === id))
+    return owner?.id ?? null
+  }
+
+  function findItemById(days, id) {
+    for (const day of days) {
+      const item = day.items.find((it) => it.id === id)
+      if (item) return item
+    }
+    return null
+  }
+
+  function handleDragStart(event) {
+    setWorkingDays(trip.days)
+    setActiveItem(findItemById(trip.days, event.active.id))
+  }
+
+  function handleDragOver(event) {
+    const { active, over } = event
+    if (!over) return
+    setWorkingDays((days) => {
+      const fromDayId = findContainerId(days, active.id)
+      const toDayId = findContainerId(days, over.id)
+      if (!fromDayId || !toDayId || fromDayId === toDayId) return days
+      const fromDay = days.find((d) => d.id === fromDayId)
+      const toDay = days.find((d) => d.id === toDayId)
+      const activeIndex = fromDay.items.findIndex((it) => it.id === active.id)
+      if (activeIndex === -1) return days
+      const movedItem = fromDay.items[activeIndex]
+      const overIndex = toDay.items.findIndex((it) => it.id === over.id)
+      const insertAt = overIndex === -1 ? toDay.items.length : overIndex
+      return days.map((d) => {
+        if (d.id === fromDayId) return { ...d, items: d.items.filter((it) => it.id !== active.id) }
+        if (d.id === toDayId) {
+          const items = [...d.items]
+          items.splice(insertAt, 0, movedItem)
+          return { ...d, items }
+        }
+        return d
+      })
+    })
+  }
+
+  function handleDragEnd(event) {
+    const { active, over } = event
+    setActiveItem(null)
+    const days = workingDays
+    setWorkingDays(null)
+    if (!days) return
+    let finalDays = days
+    if (over) {
+      const fromDayId = findContainerId(days, active.id)
+      const toDayId = findContainerId(days, over.id)
+      if (fromDayId && toDayId && fromDayId === toDayId && active.id !== over.id) {
+        finalDays = days.map((d) => {
+          if (d.id !== fromDayId) return d
+          const oldIndex = d.items.findIndex((it) => it.id === active.id)
+          const newIndex = d.items.findIndex((it) => it.id === over.id)
+          return oldIndex === -1 || newIndex === -1 ? d : { ...d, items: arrayMove(d.items, oldIndex, newIndex) }
+        })
+      }
+    }
+    onUpdate((t) => ({ ...t, days: finalDays }))
+  }
 
   useImperativeHandle(ref, () => ({ openAdd: () => setDayForm(EMPTY_DAY) }))
 
@@ -280,38 +413,46 @@ const Days = forwardRef(function Days({ trip, onUpdate, activeDisplayName, onNav
         />
       )}
 
-      {trip.days.map((day) => (
-        <div key={day.id} className="flex flex-col gap-3">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <DayLabel>{formatDate(day.date)}</DayLabel>
-              <p className="font-display font-semibold text-2xl leading-tight mt-2">{day.title || 'Senza titolo'}</p>
-              {day.note && <p className="text-base text-[var(--muted)] mt-1">{day.note}</p>}
-              <ModifiedBy modifiedBy={day.modifiedBy} modifiedAt={day.modifiedAt} />
+      <DndContext sensors={daySensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
+        {displayDays.map((day) => (
+          <div key={day.id} className="flex flex-col gap-3">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <DayLabel>{formatDate(day.date)}</DayLabel>
+                <p className="font-display font-semibold text-2xl leading-tight mt-2">{day.title || 'Senza titolo'}</p>
+                {day.note && <p className="text-base text-[var(--muted)] mt-1">{day.note}</p>}
+                <ModifiedBy modifiedBy={day.modifiedBy} modifiedAt={day.modifiedAt} />
+              </div>
+              <div className="flex gap-1 -mr-2 flex-shrink-0">
+                <button onClick={() => setDayForm({ id: day.id, date: day.date, title: day.title, note: day.note })} aria-label="Modifica giorno" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
+                  <Pencil size={17} />
+                </button>
+                <button onClick={() => removeDay(day)} aria-label="Elimina giorno" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
+                  <Trash2 size={17} />
+                </button>
+              </div>
             </div>
-            <div className="flex gap-1 -mr-2 flex-shrink-0">
-              <button onClick={() => setDayForm({ id: day.id, date: day.date, title: day.title, note: day.note })} aria-label="Modifica giorno" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
-                <Pencil size={17} />
-              </button>
-              <button onClick={() => removeDay(day)} aria-label="Elimina giorno" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
-                <Trash2 size={17} />
-              </button>
-            </div>
+
+            <DraggableDayItems
+              day={day}
+              onEditItem={(item) => setItemForm({ dayId: day.id, id: item.id, ...EMPTY_ITEM, ...item })}
+              onRemoveItem={(item) => removeItem(day.id, item)}
+            />
+            <TransportBlock transportItems={transportByDate.get(day.date) ?? []} onNavigate={onNavigate} />
+
+            <button onClick={() => setItemForm({ dayId: day.id, ...EMPTY_ITEM })} className="self-start flex items-center gap-1 text-base text-[var(--accent)] min-h-12">
+              <Plus size={17} /> Aggiungi voce
+            </button>
           </div>
-
-          <DayItemsList
-            day={day}
-            transportItems={transportByDate.get(day.date) ?? []}
-            onEditItem={(item) => setItemForm({ dayId: day.id, id: item.id, ...EMPTY_ITEM, ...item })}
-            onRemoveItem={(item) => removeItem(day.id, item)}
-            onNavigate={onNavigate}
-          />
-
-          <button onClick={() => setItemForm({ dayId: day.id, ...EMPTY_ITEM })} className="self-start flex items-center gap-1 text-base text-[var(--accent)] min-h-12">
-            <Plus size={17} /> Aggiungi voce
-          </button>
-        </div>
-      ))}
+        ))}
+        <DragOverlay>
+          {activeItem ? (
+            <div className="rounded-[24px] shadow-[0_12px_32px_-10px_rgb(var(--ink-rgb)/0.4)]">
+              <DayItemCard item={activeItem} />
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
 
       <Modal open={!!dayForm} title={dayForm?.id ? 'Modifica giorno' : 'Nuovo giorno'} onClose={() => setDayForm(null)}>
         {dayForm && (
