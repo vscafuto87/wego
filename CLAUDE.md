@@ -25,13 +25,15 @@ Ponza 30/08–05/09/2026).
 | PWA | `vite-plugin-pwa` (Workbox), `registerType: 'autoUpdate'` | precache dell'app shell, aggiornamento trasparente |
 | Persistenza locale | IndexedDB via `idb-keyval` | i viaggi devono sopravvivere offline e a Safari |
 | Backend (fase 1) | Supabase (progetto esistente `txfgxxaabhltazckabud`), tabelle con prefisso `tv_` | già configurato |
-| Auth | Supabase magic link via email | nessuna password da spiegare agli amici |
+| Auth | Supabase magic link via email, login obbligatorio una tantum quando Supabase è configurato | nessuna password da spiegare agli amici |
 | Hosting | Vercel, deploy da GitHub | zero config, HTTPS necessario per la PWA |
 | Icona/nome | "WeGo", icona con le curve di livello | vedi Design system |
 
 **Local-first**: l'app funziona per intero senza account e senza rete. Supabase è
 sincronizzazione, non prerequisito. Se Supabase è irraggiungibile, l'app deve
-funzionare lo stesso sui dati in IndexedDB. Nessuna schermata di login bloccante.
+funzionare lo stesso sui dati in IndexedDB. Il login (Fase 1) è obbligatorio una tantum
+quando Supabase è configurato, ma non ricompare più una volta fatto: resta valido
+offline finché il device ha una sessione o un nome salvato.
 
 ---
 

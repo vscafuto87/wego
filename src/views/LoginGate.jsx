@@ -18,6 +18,15 @@ export default function LoginGate({ onReady }) {
         onReady()
         return
       }
+      if (!navigator.onLine && name) {
+        // Offline e già entrato una volta su questo device (c'è un nome
+        // salvato): la sessione può risultare vuota solo perché il token è
+        // scaduto e non c'è rete per rinnovarlo, non perché non si è mai
+        // fatto login. L'offline è il requisito principale di questa app:
+        // non si blocca l'accesso ai dati già sul device per questo.
+        onReady()
+        return
+      }
       setNamePreference(name)
       setStep(session ? 'name' : 'email')
     }

@@ -42,6 +42,13 @@ export async function loadTrips() {
   return trips
 }
 
+// Il bootstrap di login (App.jsx) lo richiama quando l'account ha già dei
+// viaggi sul server: evita che loadTrips() inietti di nuovo i viaggi seed su
+// un device nuovo collegato a un account che ha già una sua storia.
+export async function markSeeded() {
+  await set(SEEDED_KEY, true)
+}
+
 export async function saveTrips(trips) {
   await set(TRIPS_KEY, trips)
 }
