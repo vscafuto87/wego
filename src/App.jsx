@@ -5,6 +5,7 @@ import Home from './views/Home.jsx'
 import TripView from './views/TripView.jsx'
 import ImportView from './views/ImportView.jsx'
 import JoinView from './views/JoinView.jsx'
+import AdminApp from './admin/AdminApp.jsx'
 
 export default function App() {
   const [trips, setTrips] = useState(null)
@@ -15,6 +16,8 @@ export default function App() {
     const match = window.location.pathname.match(/^\/j\/([A-Za-z0-9]{6})$/)
     return match ? match[1] : null
   })
+
+  const [isAdmin] = useState(() => window.location.pathname === '/admin')
 
   useEffect(() => {
     loadTrips().then(setTrips)
@@ -105,6 +108,10 @@ export default function App() {
   function deleteTrip(id) {
     persist(trips.filter((t) => t.id !== id))
     goHome()
+  }
+
+  if (isAdmin) {
+    return <AdminApp />
   }
 
   if (trips === null) {
