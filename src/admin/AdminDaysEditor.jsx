@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Pencil, Trash2, Mountain, Waves, Utensils } from 'lucide-react'
+import { Plus, Pencil, Trash2, Mountain, Waves, Utensils, GripVertical } from 'lucide-react'
 import { stampModified, dayItemFieldsForKind } from '../data/schema.js'
 
 const inputClass = 'border border-[var(--line)] bg-[var(--paper)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
@@ -44,6 +44,25 @@ function fieldsForForm(itemForm) {
 export default function AdminDaysEditor({ trip, onUpdate, activeDisplayName }) {
   const [dayForm, setDayForm] = useState(null)
   const [itemForm, setItemForm] = useState(null)
+  const [dragItem, setDragItem] = useState(null)
+  const [overItem, setOverItem] = useState(null)
+
+  function reorderItems(dayId, fromId, toId) {
+    if (fromId === toId) return
+    onUpdate((t) => ({
+      ...t,
+      days: t.days.map((d) => {
+        if (d.id !== dayId) return d
+        const items = [...d.items]
+        const fromIdx = items.findIndex((it) => it.id === fromId)
+        const toIdx = items.findIndex((it) => it.id === toId)
+        if (fromIdx === -1 || toIdx === -1) return d
+        const [moved] = items.splice(fromIdx, 1)
+        items.splice(toIdx, 0, moved)
+        return { ...d, items }
+      })
+    }))
+  }
 
   function saveDay(e) {
     e.preventDefault()
@@ -109,7 +128,26 @@ export default function AdminDaysEditor({ trip, onUpdate, activeDisplayName }) {
             {day.items.length > 0 && (
               <ul className="flex flex-col gap-2 mt-3 border-l-2 border-[var(--line)] pl-4">
                 {day.items.map((item) => (
-                  <li key={item.id} className="flex items-start gap-1">
+                  <li
+                    key={item.id}
+                    className={`flex items-start gap-1 ${dragItem?.id === item.id ? 'opacity-40' : ''} ${overItem?.id === item.id && dragItem?.id !== item.id ? 'border-t-2 border-[var(--accent)]' : ''}`}
+                    onDragOver={(e) => { e.preventDefault(); setOverItem({ dayId: day.id, id: item.id }) }}
+                    onDrop={(e) => {
+                      e.preventDefault()
+                      if (dragItem && dragItem.dayId === day.id) reorderItems(day.id, dragItem.id, item.id)
+                      setDragItem(null)
+                      setOverItem(null)
+                    }}
+                  >
+                    <span
+                      draggable
+                      onDragStart={() => setDragItem({ dayId: day.id, id: item.id })}
+                      onDragEnd={() => { setDragItem(null); setOverItem(null) }}
+                      aria-label="Trascina per riordinare"
+                      className="p-1.5 -ml-1 text-[var(--muted)] cursor-grab"
+                    >
+                      <GripVertical size={14} />
+                    </span>
                     <div className="flex-1">
                       {item.time && <span className="font-mono text-sm text-[var(--muted)] mr-2">{item.time}</span>}
                       <KindIcon kind={item.kind} />

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, GripVertical } from 'lucide-react'
 import { stampModified } from '../data/schema.js'
 
 const inputClass = 'border border-[var(--line)] bg-[var(--paper)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
@@ -7,9 +7,24 @@ const EMPTY_FORM = { title: '', meta: '', detail: '', link: '', tags: '' }
 
 export default function AdminCardsEditor({ section, onUpdate, activeDisplayName }) {
   const [form, setForm] = useState(null)
+  const [dragId, setDragId] = useState(null)
+  const [overId, setOverId] = useState(null)
 
   function updateItems(fn) {
     onUpdate((t) => ({ ...t, sections: t.sections.map((s) => (s.id === section.id ? { ...s, items: fn(s.items) } : s)) }))
+  }
+
+  function reorderItems(fromId, toId) {
+    if (fromId === toId) return
+    updateItems((items) => {
+      const next = [...items]
+      const fromIdx = next.findIndex((it) => it.id === fromId)
+      const toIdx = next.findIndex((it) => it.id === toId)
+      if (fromIdx === -1 || toIdx === -1) return items
+      const [moved] = next.splice(fromIdx, 1)
+      next.splice(toIdx, 0, moved)
+      return next
+    })
   }
 
   function saveItem(e) {
@@ -35,9 +50,30 @@ export default function AdminCardsEditor({ section, onUpdate, activeDisplayName 
       <div className="flex flex-col gap-3">
         {section.items.length === 0 && <p className="text-base text-[var(--muted)]">Nessuna scheda ancora.</p>}
         {section.items.map((item) => (
-          <div key={item.id} className="bg-[var(--card)] border border-[var(--line)] rounded-2xl p-5">
+          <div
+            key={item.id}
+            className={`bg-[var(--card)] border border-[var(--line)] rounded-2xl p-5 ${dragId === item.id ? 'opacity-40' : ''} ${overId === item.id && dragId !== item.id ? 'border-t-2 border-t-[var(--accent)]' : ''}`}
+            onDragOver={(e) => { e.preventDefault(); setOverId(item.id) }}
+            onDrop={(e) => {
+              e.preventDefault()
+              if (dragId) reorderItems(dragId, item.id)
+              setDragId(null)
+              setOverId(null)
+            }}
+          >
             <div className="flex items-start justify-between gap-2">
-              <p className="font-display font-semibold text-xl">{item.title || 'Senza titolo'}</p>
+              <div className="flex items-start gap-1">
+                <span
+                  draggable
+                  onDragStart={() => setDragId(item.id)}
+                  onDragEnd={() => { setDragId(null); setOverId(null) }}
+                  aria-label="Trascina per riordinare"
+                  className="p-1.5 -ml-1 -mt-0.5 text-[var(--muted)] cursor-grab"
+                >
+                  <GripVertical size={15} />
+                </span>
+                <p className="font-display font-semibold text-xl">{item.title || 'Senza titolo'}</p>
+              </div>
               <div className="flex gap-1">
                 <button onClick={() => setForm({ id: item.id, title: item.title, meta: item.meta, detail: item.detail, link: item.link, tags: item.tags.join(', ') })} aria-label="Modifica scheda" className="p-2 text-[var(--muted)]">
                   <Pencil size={15} />
