@@ -6,7 +6,6 @@ import Label from '../components/Label.jsx'
 import Stat from '../components/Stat.jsx'
 import Modal from '../components/Modal.jsx'
 import ExportPanel from './ExportPanel.jsx'
-import { isCloudConfigured } from '../data/supabase.js'
 
 export const ICONS = { map: Map, check: CheckSquare, note: StickyNote, ticket: Ticket, food: Utensils, bed: Bed, bus: Bus, star: Star, people: Users }
 const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
@@ -25,7 +24,7 @@ function tripStatus(trip) {
   return 'concluso'
 }
 
-export default function Settings({ trip, onUpdate, onDelete, syncActive, onOpenActivate, onRestore, onClose }) {
+export default function Settings({ trip, onUpdate, onDelete, shareCode, onRestore, onClose }) {
   const [editForm, setEditForm] = useState(null)
   const [sectionForm, setSectionForm] = useState(null)
   const [sectionError, setSectionError] = useState('')
@@ -84,6 +83,10 @@ export default function Settings({ trip, onUpdate, onDelete, syncActive, onOpenA
     return section.type === 'cards' && section.title === 'Ristoranti'
   }
 
+  function copyShareLink() {
+    navigator.clipboard.writeText(`${window.location.origin}/j/${shareCode}`)
+  }
+
   return (
     <div style={themeStyle(trip.palette)} className="min-h-screen bg-[var(--paper)] text-[var(--ink)] font-sans">
       <header className="sticky top-0 z-30 bg-[var(--paper)] px-5 pt-[calc(env(safe-area-inset-top)+20px)] pb-4 shadow-[0_1px_0_rgb(var(--ink-rgb)/0.08)]">
@@ -116,9 +119,9 @@ export default function Settings({ trip, onUpdate, onDelete, syncActive, onOpenA
           <Btn variant="secondary" onClick={() => setExportOpen(true)}>
             <Share2 size={17} /> Esporta
           </Btn>
-          {!syncActive && isCloudConfigured && (
-            <Btn variant="secondary" onClick={onOpenActivate}>
-              <Share2 size={16} /> Attiva sync
+          {shareCode && (
+            <Btn variant="secondary" onClick={copyShareLink}>
+              <Share2 size={16} /> Copia link d'invito
             </Btn>
           )}
           {onRestore && (

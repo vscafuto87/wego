@@ -54,7 +54,7 @@ async function openAttachment(path, newWindow) {
   setTimeout(() => URL.revokeObjectURL(objectUrl), 60000)
 }
 
-export default function Lodging({ trip, section, onUpdate, activeDisplayName, remoteId, role, onOpenActivate }) {
+export default function Lodging({ trip, section, onUpdate, activeDisplayName, remoteId, role }) {
   const [form, setForm] = useState(null)
   const [uploadState, setUploadState] = useState({ status: 'idle', error: '' })
   // { itemId, message } | null — itemId lega il messaggio alla card che ha
@@ -288,10 +288,7 @@ export default function Lodging({ trip, section, onUpdate, activeDisplayName, re
             <input placeholder="Link prenotazione" value={form.bookingLink} onChange={(e) => setForm({ ...form, bookingLink: e.target.value })} className={inputClass} />
 
             {!remoteId && (
-              <div className="flex flex-col gap-2 rounded-2xl border border-[var(--line)] p-4">
-                <p className="text-sm text-[var(--muted)]">Attiva la sincronizzazione per allegare documenti.</p>
-                <Btn type="button" variant="secondary" onClick={onOpenActivate} className="self-start">Attiva la sincronizzazione</Btn>
-              </div>
+              <p className="text-sm text-[var(--muted)]">L'allegato sarà disponibile appena il viaggio si sincronizza.</p>
             )}
 
             {remoteId && role === 'viewer' && form.bookingFileName && (
