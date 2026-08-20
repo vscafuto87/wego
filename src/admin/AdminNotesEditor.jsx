@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { stampModified } from '../data/schema.js'
 
 const inputClass = 'border border-[var(--line)] bg-[var(--paper)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
 
@@ -8,11 +9,7 @@ export default function AdminNotesEditor({ section, onUpdate, activeDisplayName 
   function save() {
     onUpdate((t) => ({
       ...t,
-      sections: t.sections.map((s) => {
-        if (s.id !== section.id) return s
-        if (!activeDisplayName) return { ...s, text: draft }
-        return { ...s, text: draft, modifiedBy: activeDisplayName, modifiedAt: new Date().toISOString() }
-      })
+      sections: t.sections.map((s) => (s.id === section.id ? stampModified({ ...s, text: draft }, activeDisplayName) : s))
     }))
   }
 
