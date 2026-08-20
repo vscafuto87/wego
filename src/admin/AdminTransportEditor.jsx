@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { Plus, Pencil, Trash2 } from 'lucide-react'
 import { stampModified } from '../data/schema.js'
+import { TRANSPORT_MODES } from '../views/Transport.jsx'
 
 const inputClass = 'border border-[var(--line)] bg-[var(--paper)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
-const EMPTY_FORM = { mode: '', from: '', to: '', date: '', time: '', ticketLink: '', note: '' }
+const EMPTY_FORM = { mode: 'auto', from: '', to: '', date: '', time: '', ticketLink: '', note: '' }
 
 function sortKey(item) {
   return `${item.date}T${item.time || '00:00'}`
@@ -66,7 +67,14 @@ export default function AdminTransportEditor({ section, onUpdate, activeDisplayN
         {form && (
           <form onSubmit={saveItem} className="flex flex-col gap-3">
             <h2 className="font-display font-semibold text-xl">{form.id ? 'Modifica trasporto' : 'Nuovo trasporto'}</h2>
-            <input required placeholder="Mezzo (treno, aereo, aliscafo...)" value={form.mode} onChange={(e) => setForm({ ...form, mode: e.target.value })} className={inputClass} />
+            <select required value={form.mode} onChange={(e) => setForm({ ...form, mode: e.target.value })} className={inputClass}>
+              {!TRANSPORT_MODES.some((m) => m.value === form.mode) && form.mode && (
+                <option value={form.mode}>{form.mode}</option>
+              )}
+              {TRANSPORT_MODES.map((m) => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </select>
             <input required placeholder="Da" value={form.from} onChange={(e) => setForm({ ...form, from: e.target.value })} className={inputClass} />
             <input required placeholder="A" value={form.to} onChange={(e) => setForm({ ...form, to: e.target.value })} className={inputClass} />
             <div className="flex gap-2">

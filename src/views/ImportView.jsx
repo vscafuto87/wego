@@ -54,7 +54,7 @@ Oltre a cards/checklist/notes, "sections[].type" può valere anche "transport", 
 o "map": in quel caso gli "items" hanno la forma specifica del tipo (nessun campo delle
 altre forme):
 
-- "type": "transport" → items: { "mode": "string (treno, aereo, aliscafo...)", "from": "string", "to": "string", "date": "AAAA-MM-GG", "time": "HH:MM o vuoto", "ticketLink": "string", "note": "string" }
+- "type": "transport" → items: { "mode": "auto | treno | aereo | bus | traghetto", "from": "string", "to": "string", "date": "AAAA-MM-GG", "time": "HH:MM o vuoto", "ticketLink": "string", "note": "string" }
 - "type": "lodging" → items: { "name": "string", "checkIn": "AAAA-MM-GG", "checkOut": "AAAA-MM-GG", "address": "string", "bookingLink": "string", "note": "string" }
 - "type": "map" → items: { "name": "string", "category": "string", "mapsLink": "string", "lat": numero o null, "lng": numero o null, "note": "string" }
 

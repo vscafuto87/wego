@@ -7,12 +7,18 @@ import { stampModified } from '../data/schema.js'
 import ModifiedBy from '../components/ModifiedBy.jsx'
 
 const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
-const EMPTY_ITEM = { mode: '', from: '', to: '', date: '', time: '', ticketLink: '', note: '' }
+const EMPTY_ITEM = { mode: 'auto', from: '', to: '', date: '', time: '', ticketLink: '', note: '' }
 
-const MODE_ICONS = { treno: Train, aereo: Plane, aliscafo: Ship, traghetto: Ship, auto: Car, bus: Bus }
+export const TRANSPORT_MODES = [
+  { value: 'auto', label: 'Auto', Icon: Car },
+  { value: 'treno', label: 'Treno', Icon: Train },
+  { value: 'aereo', label: 'Aereo', Icon: Plane },
+  { value: 'bus', label: 'Bus', Icon: Bus },
+  { value: 'traghetto', label: 'Traghetto', Icon: Ship }
+]
 
 function ModeIcon({ mode }) {
-  const Icon = MODE_ICONS[mode] ?? Bus
+  const Icon = TRANSPORT_MODES.find((m) => m.value === mode)?.Icon ?? Bus
   return <Icon size={19} className="text-[var(--muted)]" />
 }
 
@@ -91,7 +97,14 @@ export default function Transport({ trip, section, onUpdate, activeDisplayName }
       <Modal open={!!form} title={form?.id ? 'Modifica trasporto' : 'Nuovo trasporto'} onClose={() => setForm(null)}>
         {form && (
           <form onSubmit={saveItem} className="flex flex-col gap-3">
-            <input required placeholder="Mezzo (treno, aereo, aliscafo...)" value={form.mode} onChange={(e) => setForm({ ...form, mode: e.target.value })} className={inputClass} />
+            <select required value={form.mode} onChange={(e) => setForm({ ...form, mode: e.target.value })} className={inputClass}>
+              {!TRANSPORT_MODES.some((m) => m.value === form.mode) && form.mode && (
+                <option value={form.mode}>{form.mode}</option>
+              )}
+              {TRANSPORT_MODES.map((m) => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </select>
             <input required placeholder="Da" value={form.from} onChange={(e) => setForm({ ...form, from: e.target.value })} className={inputClass} />
             <input required placeholder="A" value={form.to} onChange={(e) => setForm({ ...form, to: e.target.value })} className={inputClass} />
             <div className="flex gap-2">

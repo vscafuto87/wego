@@ -36,10 +36,10 @@ describe('seed/trips.json normalizzato', () => {
     }
   })
 
-  it('Ponza: treno e aliscafo sono in Trasporti', () => {
+  it('Ponza: treno e traghetto sono in Trasporti', () => {
     const ponza = trips.find((t) => t.name === 'Ponza')
     const trasporti = ponza.sections.find((s) => s.type === 'transport')
-    expect(trasporti.items.map((i) => i.mode)).toEqual(['treno', 'aliscafo'])
+    expect(trasporti.items.map((i) => i.mode)).toEqual(['treno', 'traghetto'])
   })
 
   it('Ponza: il check-in è in Pernottamento', () => {

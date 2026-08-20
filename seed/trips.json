@@ -117,7 +117,7 @@
         "title": "Trasporti", "icon": "bus", "type": "transport",
         "items": [
           { "mode": "treno", "from": "Bologna", "to": "Formia", "date": "2026-08-30", "time": "", "ticketLink": "", "note": "" },
-          { "mode": "aliscafo", "from": "Formia", "to": "Ponza", "date": "2026-08-30", "time": "", "ticketLink": "", "note": "" }
+          { "mode": "traghetto", "from": "Formia", "to": "Ponza", "date": "2026-08-30", "time": "", "ticketLink": "", "note": "" }
         ]
       },
       {
