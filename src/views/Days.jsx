@@ -147,35 +147,53 @@ function TransportDayCard({ item, onNavigate }) {
   )
 }
 
-// Unisce voci giorno e trasporti aggregati in un'unica lista ordinata per
-// orario: usata sia dall'Itinerario (con modifica/eliminazione) sia da Oggi
-// (sola lettura), così le due viste mostrano sempre lo stesso contenuto.
-export function DayItemsList({ day, transportItems = [], onEditItem, onRemoveItem, onNavigate }) {
-  const entries = [
-    ...day.items.map((item) => ({
-      key: `item-${item.id}`,
-      time: item.time,
-      node: (
-        <DayItemCard
-          item={item}
-          onEdit={onEditItem ? () => onEditItem(item) : undefined}
-          onRemove={onRemoveItem ? () => onRemoveItem(item) : undefined}
-        />
-      )
-    })),
-    ...transportItems.map((item) => ({
-      key: `transport-${item.id}`,
-      time: item.time,
-      node: <TransportDayCard item={item} onNavigate={onNavigate} />
-    }))
-  ].sort((a, b) => (a.time || '').localeCompare(b.time || ''))
-
-  if (entries.length === 0) return null
-
+// Voci del giorno in sola lettura o modificabili (a seconda dei callback
+// passati), nell'ordine salvato nell'array — non più per orario. Usata da Oggi
+// (sola lettura, senza onEditItem/onRemoveItem) e da DayItemsList sotto.
+// L'Itinerario, dove le voci sono trascinabili, usa invece DraggableDayItems
+// (aggiunto nel task successivo) al posto di questo blocco.
+function DayItemsBlock({ items, onEditItem, onRemoveItem }) {
+  if (items.length === 0) return null
   return (
     <ul className="flex flex-col gap-3">
-      {entries.map((entry) => <li key={entry.key}>{entry.node}</li>)}
+      {items.map((item) => (
+        <li key={item.id}>
+          <DayItemCard
+            item={item}
+            onEdit={onEditItem ? () => onEditItem(item) : undefined}
+            onRemove={onRemoveItem ? () => onRemoveItem(item) : undefined}
+          />
+        </li>
+      ))}
     </ul>
+  )
+}
+
+// Trasporti del giorno, aggregati dalla sezione Trasporti: sempre di sola
+// lettura qui, ordinati per orario. Usata sia da Oggi sia dall'Itinerario.
+function TransportBlock({ transportItems, onNavigate }) {
+  if (transportItems.length === 0) return null
+  const sorted = [...transportItems].sort((a, b) => (a.time || '').localeCompare(b.time || ''))
+  return (
+    <ul className="flex flex-col gap-3">
+      {sorted.map((item) => (
+        <li key={item.id}>
+          <TransportDayCard item={item} onNavigate={onNavigate} />
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+// Voci del giorno (ordine manuale) e trasporti (ordinati per orario) in due
+// blocchi separati: usata da Oggi, sola lettura per entrambi i blocchi.
+export function DayItemsList({ day, transportItems = [], onEditItem, onRemoveItem, onNavigate }) {
+  if (day.items.length === 0 && transportItems.length === 0) return null
+  return (
+    <div className="flex flex-col gap-3">
+      <DayItemsBlock items={day.items} onEditItem={onEditItem} onRemoveItem={onRemoveItem} />
+      <TransportBlock transportItems={transportItems} onNavigate={onNavigate} />
+    </div>
   )
 }
 
