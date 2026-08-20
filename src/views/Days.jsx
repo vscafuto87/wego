@@ -72,16 +72,6 @@ export function DayItemCard({ item, onEdit, onRemove }) {
             {item.kind === 'spiaggia' && (item.accesso || item.servizi) && (
               <p className="text-sm text-[var(--muted)] mt-1">{[item.accesso, item.servizi].filter(Boolean).join(' · ')}</p>
             )}
-            {stats.length > 0 && (
-              <div className="flex flex-wrap gap-4 mt-1.5">
-                {stats.map((s, i) => (
-                  <div key={i} className="flex items-center gap-1.5 text-[var(--muted)]">
-                    <s.icon size={14} />
-                    <span className="font-mono text-sm font-medium text-[var(--ink)] whitespace-nowrap">{s.value}</span>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         </div>
         {(onEdit || onRemove) && (
@@ -99,6 +89,17 @@ export function DayItemCard({ item, onEdit, onRemove }) {
           </div>
         )}
       </div>
+
+      {stats.length > 0 && (
+        <div className="flex flex-wrap gap-4 mt-2">
+          {stats.map((s, i) => (
+            <div key={i} className="flex items-center gap-1.5 text-[var(--muted)]">
+              <s.icon size={14} />
+              <span className="font-mono text-sm font-medium text-[var(--ink)] whitespace-nowrap">{s.value}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {item.kind === 'pasto' && item.prenotato && (
         <span className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-[var(--accent2)] text-[var(--paper)] text-xs font-medium mt-3">
