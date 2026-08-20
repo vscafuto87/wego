@@ -1,5 +1,5 @@
 import { forwardRef, lazy, Suspense, useImperativeHandle, useRef, useState } from 'react'
-import { Plus, Pencil, Trash2, Check } from 'lucide-react'
+import { Plus, Pencil, Trash2, Check, GripVertical } from 'lucide-react'
 import Btn from '../components/Btn.jsx'
 import Label from '../components/Label.jsx'
 import Modal from '../components/Modal.jsx'
@@ -9,6 +9,9 @@ import ModifiedBy from '../components/ModifiedBy.jsx'
 import CoordsInput from '../components/CoordsInput.jsx'
 import Transport from './Transport.jsx'
 import Lodging from './Lodging.jsx'
+import { DndContext, PointerSensor, KeyboardSensor, useSensor, useSensors, closestCenter } from '@dnd-kit/core'
+import { SortableContext, verticalListSortingStrategy, sortableKeyboardCoordinates, arrayMove, useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 const MapSection = lazy(() => import('./MapSection.jsx'))
 
@@ -23,6 +26,60 @@ function updateSection(trip, sectionId, fn) {
   return { ...trip, sections: trip.sections.map((s) => (s.id === sectionId ? fn(s) : s)) }
 }
 
+// Scheda Ristoranti trascinabile: la maniglia avvia il drag, il resto della
+// scheda si comporta come oggi (tap su matita/cestino invariato).
+function SortableCard({ item, onEdit, onRemove }) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: item.id })
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.6 : 1,
+    boxShadow: isDragging ? '0 12px 32px -10px rgb(var(--ink-rgb) / 0.4)' : undefined
+  }
+  return (
+    <div ref={setNodeRef} style={style} className="rounded-[24px] p-5 bg-[var(--card)] shadow-[0_1px_2px_rgb(var(--ink-rgb)/0.05),0_10px_24px_-14px_rgb(var(--ink-rgb)/0.25)]">
+      <div className="flex items-start justify-between gap-2">
+        <p className="font-display font-semibold text-xl">{item.title || 'Senza titolo'}</p>
+        <div className="flex gap-1 -mr-2 -mt-1">
+          <button
+            type="button"
+            ref={setActivatorNodeRef}
+            {...attributes}
+            {...listeners}
+            aria-label="Trascina per riordinare"
+            className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)] cursor-grab touch-none"
+          >
+            <GripVertical size={15} />
+          </button>
+          <button onClick={onEdit} aria-label="Modifica scheda" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
+            <Pencil size={15} />
+          </button>
+          <button onClick={onRemove} aria-label="Elimina scheda" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
+            <Trash2 size={15} />
+          </button>
+        </div>
+      </div>
+      {item.meta && <p className="font-mono text-sm text-[var(--muted)] mt-1">{item.meta}</p>}
+      {item.detail && <p className="text-base mt-2">{item.detail}</p>}
+      {item.link && (
+        <a href={item.link} target="_blank" rel="noreferrer" className="text-base text-[var(--accent)] underline mt-2 inline-block">
+          Apri il link
+        </a>
+      )}
+      {item.tags.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-2">
+          {item.tags.map((tag) => (
+            <Label key={tag} className="bg-[var(--tint)] px-2.5 py-1 rounded-full">
+              {tag}
+            </Label>
+          ))}
+        </div>
+      )}
+      <ModifiedBy modifiedBy={item.modifiedBy} modifiedAt={item.modifiedAt} />
+    </div>
+  )
+}
+
 const Section = forwardRef(function Section({ trip, section, onUpdate, activeDisplayName, onNavigate, syncState }, ref) {
   const [headerForm, setHeaderForm] = useState(null)
   const [cardForm, setCardForm] = useState(null)
@@ -32,6 +89,24 @@ const Section = forwardRef(function Section({ trip, section, onUpdate, activeDis
   // Trasporti/Pernottamento/Mappa gestiscono il proprio form "nuovo elemento"
   // internamente: la sezione si limita a inoltrare l'apertura al figlio attivo.
   const childRef = useRef(null)
+
+  const cardSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
+
+  function handleCardDragEnd(event) {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    onUpdate((t) =>
+      updateSection(t, section.id, (s) => {
+        const oldIndex = s.items.findIndex((it) => it.id === active.id)
+        const newIndex = s.items.findIndex((it) => it.id === over.id)
+        if (oldIndex === -1 || newIndex === -1) return s
+        return { ...s, items: arrayMove(s.items, oldIndex, newIndex) }
+      })
+    )
+  }
 
   useImperativeHandle(ref, () => ({
     openAdd: () => {
@@ -111,44 +186,20 @@ const Section = forwardRef(function Section({ trip, section, onUpdate, activeDis
               action={<Btn onClick={() => setCardForm({ title: '', meta: '', detail: '', link: '', tags: '', lat: null, lng: null })}>Aggiungi una scheda</Btn>}
             />
           )}
-          <div className="flex flex-col gap-3">
-            {section.items.map((item) => (
-              <div key={item.id} className="rounded-[24px] p-5 bg-[var(--card)] shadow-[0_1px_2px_rgb(var(--ink-rgb)/0.05),0_10px_24px_-14px_rgb(var(--ink-rgb)/0.25)]">
-                <div className="flex items-start justify-between gap-2">
-                  <p className="font-display font-semibold text-xl">{item.title || 'Senza titolo'}</p>
-                  <div className="flex gap-1 -mr-2 -mt-1">
-                    <button
-                      onClick={() => setCardForm({ id: item.id, title: item.title, meta: item.meta, detail: item.detail, link: item.link, tags: item.tags.join(', '), lat: item.lat, lng: item.lng })}
-                      aria-label="Modifica scheda"
-                      className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]"
-                    >
-                      <Pencil size={15} />
-                    </button>
-                    <button onClick={() => removeCard(item)} aria-label="Elimina scheda" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
-                </div>
-                {item.meta && <p className="font-mono text-sm text-[var(--muted)] mt-1">{item.meta}</p>}
-                {item.detail && <p className="text-base mt-2">{item.detail}</p>}
-                {item.link && (
-                  <a href={item.link} target="_blank" rel="noreferrer" className="text-base text-[var(--accent)] underline mt-2 inline-block">
-                    Apri il link
-                  </a>
-                )}
-                {item.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {item.tags.map((tag) => (
-                      <Label key={tag} className="bg-[var(--tint)] px-2.5 py-1 rounded-full">
-                        {tag}
-                      </Label>
-                    ))}
-                  </div>
-                )}
-                <ModifiedBy modifiedBy={item.modifiedBy} modifiedAt={item.modifiedAt} />
+          <DndContext sensors={cardSensors} collisionDetection={closestCenter} onDragEnd={handleCardDragEnd}>
+            <SortableContext items={section.items.map((it) => it.id)} strategy={verticalListSortingStrategy}>
+              <div className="flex flex-col gap-3">
+                {section.items.map((item) => (
+                  <SortableCard
+                    key={item.id}
+                    item={item}
+                    onEdit={() => setCardForm({ id: item.id, title: item.title, meta: item.meta, detail: item.detail, link: item.link, tags: item.tags.join(', '), lat: item.lat, lng: item.lng })}
+                    onRemove={() => removeCard(item)}
+                  />
+                ))}
               </div>
-            ))}
-          </div>
+            </SortableContext>
+          </DndContext>
         </>
       )}
 
