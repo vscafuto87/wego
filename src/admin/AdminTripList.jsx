@@ -10,7 +10,7 @@ function formatRange(start, end) {
   return `${start} → ${end}`
 }
 
-export default function AdminTripList({ trips, onSelect, onCreate }) {
+export default function AdminTripList({ trips, onSelect, onCreate, onLogout }) {
   const [form, setForm] = useState(EMPTY_FORM)
 
   function submit(e) {
@@ -21,7 +21,10 @@ export default function AdminTripList({ trips, onSelect, onCreate }) {
 
   return (
     <div style={themeStyle('mountain')} className="min-h-screen bg-[var(--paper)] text-[var(--ink)] font-sans max-w-5xl mx-auto px-6 py-10">
-      <h1 className="font-display font-semibold text-4xl mb-6">Dashboard admin</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="font-display font-semibold text-4xl">Dashboard admin</h1>
+        <button onClick={onLogout} className="text-base text-[var(--muted)] underline">Esci</button>
+      </div>
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 items-start">
         <div className="flex flex-col divide-y divide-[var(--line)] bg-[var(--card)] rounded-2xl border border-[var(--line)] overflow-hidden">
           {trips.length === 0 && <p className="px-5 py-6 text-base text-[var(--muted)]">Nessun viaggio ancora: creane uno dal pannello a destra.</p>}
