@@ -51,7 +51,7 @@ export default function Home({ trips, onOpen, onCreate, onImport, onDelete }) {
 
   return (
     <div style={themeStyle('mountain')} className="min-h-screen bg-[var(--paper)] text-[var(--ink)] font-sans pb-24">
-      <header className="px-5 pt-8 pb-4 flex items-center justify-between max-w-2xl mx-auto">
+      <header className="px-5 pt-[calc(env(safe-area-inset-top)+32px)] pb-4 flex items-center justify-between max-w-2xl mx-auto">
         <h1 className="font-display font-semibold text-4xl tracking-wide">WeGo</h1>
         <button onClick={onImport} aria-label="Carica il viaggio" className="h-12 w-12 flex items-center justify-center rounded-full bg-[var(--tint)] active:scale-[0.97] transition-transform duration-150 ease-out">
           <Upload size={21} />
