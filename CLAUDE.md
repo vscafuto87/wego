@@ -50,6 +50,12 @@ Test manuale della PWA prima di ogni deploy: `npm run build && npm run preview`,
 poi DevTools → Application → Service Workers, e Network → Offline per verificare
 che l'app si apra e mostri i viaggi.
 
+**Bypass login per verifica in dev**: `VITE_DEV_SKIP_LOGIN=true` in `.env.local`
+salta il `LoginGate` solo sotto `npm run dev` (`import.meta.env.DEV`, sempre `false`
+in `npm run build`/`preview`/produzione — mai un rischio per l'app deployata). Serve
+a Claude Code per verificare le schermate nel browser senza credenziali reali. Non
+disattivarlo per "pulizia" e non estenderlo oltre il gate di login.
+
 ---
 
 ## Vincoli d'ambiente

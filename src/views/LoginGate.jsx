@@ -17,6 +17,12 @@ export default function LoginGate({ onReady }) {
     let cancelled = false
 
     async function checkReady(session) {
+      // Bypass solo per sviluppo locale (mai in build/produzione: import.meta.env.DEV
+      // è sempre false fuori da `npm run dev`), per verificare le schermate senza login.
+      if (import.meta.env.DEV && import.meta.env.VITE_DEV_SKIP_LOGIN === 'true') {
+        onReady()
+        return
+      }
       const name = await getDisplayNamePreference()
       if (cancelled) return
       if (session && name) {
