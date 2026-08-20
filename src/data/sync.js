@@ -224,3 +224,29 @@ export async function leaveTripAsMember(remoteId) {
     .eq('user_id', session.user.id)
   if (error) throw new Error(error.message)
 }
+
+export function reconcileTripList({ localTrips, syncStates, remoteTrips }) {
+  const syncStateByLocalId = new Map(syncStates.map((s) => [s.localId, s.syncState]))
+  const remoteById = new Map(remoteTrips.map((r) => [r.remoteId, r]))
+
+  const survivors = localTrips.filter((trip) => {
+    const state = syncStateByLocalId.get(trip.id)
+    return !state || remoteById.has(state.remoteId)
+  })
+
+  const knownRemoteIds = new Set(
+    localTrips
+      .map((trip) => syncStateByLocalId.get(trip.id))
+      .filter(Boolean)
+      .map((state) => state.remoteId)
+  )
+
+  const additions = remoteTrips
+    .filter((remote) => !knownRemoteIds.has(remote.remoteId))
+    .map((remote) => ({
+      trip: { ...remote.trip, id: crypto.randomUUID() },
+      syncState: { remoteId: remote.remoteId, role: remote.role, lastSyncedAt: remote.updatedAt, dirty: false }
+    }))
+
+  return { trips: [...survivors, ...additions.map((a) => a.trip)], additions }
+}
