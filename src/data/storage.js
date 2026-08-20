@@ -18,7 +18,16 @@ export async function loadTrips() {
     // ad ogni apertura, come già succede dopo un pull di sync. Solo l'id del
     // viaggio resta stabile: gli id annidati si rigenerano già oggi ad ogni pull,
     // e le viste gestiscono già quel caso (vedi TripView.jsx).
-    const upgraded = stored.map((trip) => ({ ...normalizeTrip(trip), id: trip.id }))
+    // Un viaggio corrotto (es. un nome finito vuoto) non deve bloccare il
+    // caricamento di tutti gli altri: lo si scarta invece di far fallire tutto.
+    const upgraded = []
+    for (const trip of stored) {
+      try {
+        upgraded.push({ ...normalizeTrip(trip), id: trip.id })
+      } catch (err) {
+        console.error(`Viaggio "${trip?.id}" scartato al caricamento: ${err.message}`)
+      }
+    }
     await set(TRIPS_KEY, upgraded)
     return upgraded
   }

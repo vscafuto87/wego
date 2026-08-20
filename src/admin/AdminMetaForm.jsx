@@ -38,7 +38,7 @@ export default function AdminMetaForm({ trip, onUpdate }) {
   return (
     <form onSubmit={save} className="flex flex-col gap-3 max-w-md bg-[var(--card)] border border-[var(--line)] rounded-2xl p-6">
       <h2 className="font-display font-semibold text-2xl mb-1">Info viaggio</h2>
-      <input required placeholder="Nome del viaggio" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={inputClass} />
+      <input required pattern=".*\S.*" title="Il nome non può essere vuoto" placeholder="Nome del viaggio" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={inputClass} />
       <input placeholder="Emoji" value={form.emoji} onChange={(e) => setForm({ ...form, emoji: e.target.value })} className={inputClass} />
       <input placeholder="Luogo" value={form.place} onChange={(e) => setForm({ ...form, place: e.target.value })} className={inputClass} />
       <div className="flex gap-2">
