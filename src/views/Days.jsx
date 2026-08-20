@@ -210,10 +210,16 @@ function SortableDayItem({ item, onEdit, onRemove }) {
 // trascinare una voce anche su un giorno senza voci) sono bersagli di drop
 // validi.
 function DraggableDayItems({ day, onEditItem, onRemoveItem }) {
-  const { setNodeRef } = useDroppable({ id: day.id })
+  const { setNodeRef, isOver } = useDroppable({ id: day.id })
   return (
     <SortableContext items={day.items.map((it) => it.id)} strategy={verticalListSortingStrategy}>
-      <ul ref={setNodeRef} className="flex flex-col gap-3 min-h-12">
+      <ul
+        ref={setNodeRef}
+        className={`flex flex-col gap-3 min-h-12 rounded-2xl ${isOver ? 'ring-2 ring-[var(--accent)]' : ''}`}
+      >
+        {day.items.length === 0 && (
+          <li className="text-sm text-[var(--muted)] py-3">Trascina qui</li>
+        )}
         {day.items.map((item) => (
           <SortableDayItem
             key={item.id}
@@ -253,6 +259,14 @@ export function DayItemsList({ day, transportItems = [], onEditItem, onRemoveIte
       <TransportBlock transportItems={transportItems} onNavigate={onNavigate} />
     </div>
   )
+}
+
+// Confronto economico tra due array di giorni: uguali se stesso ordine degli
+// stessi oggetti giorno (riferimento), non serve un deep-equal. Basta a
+// riconoscere un drag che non ha spostato nulla (es. rilascio nello stesso
+// punto) senza scatenare onUpdate a vuoto.
+function daysUnchanged(a, b) {
+  return a === b || (a.length === b.length && a.every((d, i) => d === b[i]))
 }
 
 function withoutKindFields(item) {
@@ -328,6 +342,11 @@ const Days = forwardRef(function Days({ trip, onUpdate, activeDisplayName, onNav
     })
   }
 
+  function handleDragCancel() {
+    setActiveItem(null)
+    setWorkingDays(null)
+  }
+
   function handleDragEnd(event) {
     const { active, over } = event
     setActiveItem(null)
@@ -338,16 +357,25 @@ const Days = forwardRef(function Days({ trip, onUpdate, activeDisplayName, onNav
     if (over) {
       const fromDayId = findContainerId(days, active.id)
       const toDayId = findContainerId(days, over.id)
-      if (fromDayId && toDayId && fromDayId === toDayId && active.id !== over.id) {
+      // Un cross-day move è già stato applicato da handleDragOver e vive
+      // correttamente in `days`: qui finalizziamo solo il riordino quando
+      // active e over ricadono nello stesso giorno nello shadow state attuale.
+      if (fromDayId && toDayId && fromDayId === toDayId) {
         finalDays = days.map((d) => {
           if (d.id !== fromDayId) return d
           const oldIndex = d.items.findIndex((it) => it.id === active.id)
-          const newIndex = d.items.findIndex((it) => it.id === over.id)
-          return oldIndex === -1 || newIndex === -1 ? d : { ...d, items: arrayMove(d.items, oldIndex, newIndex) }
+          if (oldIndex === -1) return d
+          const overIndex = d.items.findIndex((it) => it.id === over.id)
+          // over.id è l'id del giorno stesso (drop nello spazio vuoto sotto
+          // l'ultima voce, non su una voce specifica): sposta in fondo.
+          const newIndex = overIndex === -1 ? d.items.length - 1 : overIndex
+          return newIndex === oldIndex ? d : { ...d, items: arrayMove(d.items, oldIndex, newIndex) }
         })
       }
     }
-    onUpdate((t) => ({ ...t, days: finalDays }))
+    if (!daysUnchanged(finalDays, trip.days)) {
+      onUpdate((t) => ({ ...t, days: finalDays }))
+    }
   }
 
   useImperativeHandle(ref, () => ({ openAdd: () => setDayForm(EMPTY_DAY) }))
@@ -413,7 +441,7 @@ const Days = forwardRef(function Days({ trip, onUpdate, activeDisplayName, onNav
         />
       )}
 
-      <DndContext sensors={daySensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
+      <DndContext sensors={daySensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} onDragCancel={handleDragCancel}>
         {displayDays.map((day) => (
           <div key={day.id} className="flex flex-col gap-3">
             <div className="flex items-start justify-between gap-2">
