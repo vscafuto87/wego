@@ -71,11 +71,26 @@ export async function markDirty(localTripId) {
   await setSyncState(localTripId, { ...state, dirty: true })
 }
 
+// localStorage e non IndexedDB: su iOS, in una PWA aperta dalla schermata Home,
+// l'IndexedDB di idb-keyval può non sopravvivere alla chiusura dell'app (bug
+// noto di WebKit in standalone mode), mentre localStorage sì — è lo stesso
+// meccanismo con cui Supabase mantiene la sessione tra un'apertura e l'altra.
+// Il nome deve restare valido con la stessa affidabilità della sessione.
 export async function getDisplayNamePreference() {
-  const name = await get(DISPLAY_NAME_KEY)
-  return name ?? ''
+  const local = localStorage.getItem(DISPLAY_NAME_KEY)
+  if (local) return local
+
+  // Migrazione una tantum: chi ha già dato il nome prima di questo fix ce l'ha
+  // ancora nel vecchio IndexedDB. Lo recuperiamo da lì una sola volta, così non
+  // viene ridisturbato al primo accesso dopo l'aggiornamento.
+  const legacy = await get(DISPLAY_NAME_KEY)
+  if (legacy) {
+    localStorage.setItem(DISPLAY_NAME_KEY, legacy)
+    return legacy
+  }
+  return ''
 }
 
 export async function setDisplayNamePreference(name) {
-  await set(DISPLAY_NAME_KEY, name)
+  localStorage.setItem(DISPLAY_NAME_KEY, name)
 }

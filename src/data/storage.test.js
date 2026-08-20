@@ -6,6 +6,18 @@ vi.mock('./seed.js', () => ({ loadSeedTrips: vi.fn() }))
 import { get, set } from 'idb-keyval'
 import { getSyncState, setSyncState, markDirty, getDisplayNamePreference, setDisplayNamePreference, loadTrips } from './storage.js'
 
+// L'ambiente di test vitest gira su Node, senza DOM: localStorage non esiste
+// di default (a differenza del browser reale). Un polyfill minimo basta,
+// non serve jsdom solo per questo.
+if (typeof localStorage === 'undefined') {
+  let data = {}
+  globalThis.localStorage = {
+    getItem: (key) => (key in data ? data[key] : null),
+    setItem: (key, value) => { data[key] = String(value) },
+    clear: () => { data = {} }
+  }
+}
+
 beforeEach(() => {
   get.mockReset()
   set.mockReset()
@@ -80,14 +92,24 @@ describe('markDirty', () => {
   })
 })
 
-describe('preferenza nome dispositivo', () => {
+describe('preferenza nome dispositivo — via localStorage, non IndexedDB (vedi storage.js)', () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
   it('torna stringa vuota se non impostata', async () => {
-    get.mockResolvedValue(undefined)
     expect(await getDisplayNamePreference()).toBe('')
   })
 
-  it('scrive con la chiave wego:display-name', async () => {
+  it('scrive con la chiave wego:display-name e la rilegge', async () => {
     await setDisplayNamePreference('Vincenzo')
-    expect(set).toHaveBeenCalledWith('wego:display-name', 'Vincenzo')
+    expect(localStorage.getItem('wego:display-name')).toBe('Vincenzo')
+    expect(await getDisplayNamePreference()).toBe('Vincenzo')
+  })
+
+  it('se localStorage è vuoto, migra il nome dal vecchio IndexedDB e lo salva lì per le letture successive', async () => {
+    get.mockResolvedValue('Vincenzo')
+    expect(await getDisplayNamePreference()).toBe('Vincenzo')
+    expect(localStorage.getItem('wego:display-name')).toBe('Vincenzo')
   })
 })
