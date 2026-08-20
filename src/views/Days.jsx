@@ -91,7 +91,7 @@ export function DayItemCard({ item, onEdit, onRemove }) {
       </div>
 
       {stats.length > 0 && (
-        <div className="flex flex-wrap gap-4 mt-2">
+        <div className="flex flex-wrap gap-4 mt-2 ml-[3.25rem]">
           {stats.map((s, i) => (
             <div key={i} className="flex items-center gap-1.5 text-[var(--muted)]">
               <s.icon size={14} />
