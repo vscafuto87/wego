@@ -149,9 +149,13 @@ export default function App() {
     if (isCloudConfigured) {
       const displayName = await getDisplayNamePreference()
       try {
+        const states = []
         for (const trip of newTrips) {
           const state = await activateTripSync(trip, displayName)
-          await setSyncState(trip.id, state)
+          states.push({ tripId: trip.id, state })
+        }
+        for (const { tripId, state } of states) {
+          await setSyncState(tripId, state)
         }
       } catch (e) {
         window.alert(`Non è stato possibile caricare il viaggio. Controlla la rete e riprova.\n\n${e.message}`)
