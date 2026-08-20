@@ -3,7 +3,8 @@ import Btn from '../components/Btn.jsx'
 import DayLabel from '../components/DayLabel.jsx'
 import Empty from '../components/Empty.jsx'
 import ModifiedBy from '../components/ModifiedBy.jsx'
-import { DayItemCard } from './Days.jsx'
+import { DayItemsList } from './Days.jsx'
+import { collectExternalDayItems } from '../data/schema.js'
 
 const DATE_FMT = new Intl.DateTimeFormat('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })
 
@@ -50,6 +51,7 @@ export default function Today({ trip, onNavigate }) {
   const todayStr = todayString()
   const day = closestDay(trip.days, todayStr)
   const diff = daysDiff(day.date, todayStr)
+  const transportItems = collectExternalDayItems(trip).filter((i) => i.date === day.date)
 
   return (
     <div className="flex flex-col gap-3 pt-5">
@@ -60,14 +62,8 @@ export default function Today({ trip, onNavigate }) {
         <ModifiedBy modifiedBy={day.modifiedBy} modifiedAt={day.modifiedAt} />
       </div>
 
-      {day.items.length > 0 ? (
-        <ul className="flex flex-col gap-3">
-          {day.items.map((item) => (
-            <li key={item.id}>
-              <DayItemCard item={item} />
-            </li>
-          ))}
-        </ul>
+      {day.items.length > 0 || transportItems.length > 0 ? (
+        <DayItemsList day={day} transportItems={transportItems} onNavigate={onNavigate} />
       ) : (
         <Empty title="Nessuna attività" detail="Questo giorno non ha ancora voci in itinerario." />
       )}

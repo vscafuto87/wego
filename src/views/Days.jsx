@@ -140,6 +140,38 @@ function TransportDayCard({ item, onNavigate }) {
   )
 }
 
+// Unisce voci giorno e trasporti aggregati in un'unica lista ordinata per
+// orario: usata sia dall'Itinerario (con modifica/eliminazione) sia da Oggi
+// (sola lettura), così le due viste mostrano sempre lo stesso contenuto.
+export function DayItemsList({ day, transportItems = [], onEditItem, onRemoveItem, onNavigate }) {
+  const entries = [
+    ...day.items.map((item) => ({
+      key: `item-${item.id}`,
+      time: item.time,
+      node: (
+        <DayItemCard
+          item={item}
+          onEdit={onEditItem ? () => onEditItem(item) : undefined}
+          onRemove={onRemoveItem ? () => onRemoveItem(item) : undefined}
+        />
+      )
+    })),
+    ...transportItems.map((item) => ({
+      key: `transport-${item.id}`,
+      time: item.time,
+      node: <TransportDayCard item={item} onNavigate={onNavigate} />
+    }))
+  ].sort((a, b) => (a.time || '').localeCompare(b.time || ''))
+
+  if (entries.length === 0) return null
+
+  return (
+    <ul className="flex flex-col gap-3">
+      {entries.map((entry) => <li key={entry.key}>{entry.node}</li>)}
+    </ul>
+  )
+}
+
 function withoutKindFields(item) {
   const clean = { ...item }
   for (const field of ALL_KIND_FIELDS) {
@@ -241,26 +273,13 @@ export default function Days({ trip, onUpdate, activeDisplayName, onNavigate }) 
             </div>
           </div>
 
-          {(() => {
-            const entries = [
-              ...day.items.map((item) => ({ key: `item-${item.id}`, time: item.time, node: (
-                <DayItemCard
-                  item={item}
-                  onEdit={() => setItemForm({ dayId: day.id, id: item.id, ...EMPTY_ITEM, ...item })}
-                  onRemove={() => removeItem(day.id, item)}
-                />
-              ) })),
-              ...(transportByDate.get(day.date) ?? []).map((item) => ({ key: `transport-${item.id}`, time: item.time, node: (
-                <TransportDayCard item={item} onNavigate={onNavigate} />
-              ) }))
-            ].sort((a, b) => (a.time || '').localeCompare(b.time || ''))
-
-            return entries.length > 0 && (
-              <ul className="flex flex-col gap-3">
-                {entries.map((entry) => <li key={entry.key}>{entry.node}</li>)}
-              </ul>
-            )
-          })()}
+          <DayItemsList
+            day={day}
+            transportItems={transportByDate.get(day.date) ?? []}
+            onEditItem={(item) => setItemForm({ dayId: day.id, id: item.id, ...EMPTY_ITEM, ...item })}
+            onRemoveItem={(item) => removeItem(day.id, item)}
+            onNavigate={onNavigate}
+          />
 
           <button onClick={() => setItemForm({ dayId: day.id, ...EMPTY_ITEM })} className="self-start flex items-center gap-1 text-base text-[var(--accent)] min-h-12">
             <Plus size={17} /> Aggiungi voce
