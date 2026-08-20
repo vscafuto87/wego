@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react'
 import { Map, CheckSquare, StickyNote, Ticket, Utensils, Bed, Bus, Star, Users, CalendarDays, Info } from 'lucide-react'
 import { getSession, subscribeAuth } from '../data/supabase.js'
-import { getSyncState, setSyncState as persistSyncState, getDisplayNamePreference } from '../data/storage.js'
-import { fetchTripOwnerId } from '../data/sync.js'
+import { getSyncState, setSyncState as persistSyncState, markDirty, getDisplayNamePreference } from '../data/storage.js'
+import { fetchTripOwnerId, syncTrip, pushTrip, pullTrip } from '../data/sync.js'
 import MagicLinkForm from '../components/MagicLinkForm.jsx'
 import { themeStyle } from '../theme/themes.js'
 import AdminMetaForm from './AdminMetaForm.jsx'
@@ -12,6 +12,7 @@ import AdminSectionEditor from './AdminSectionEditor.jsx'
 
 const ICONS = { map: Map, check: CheckSquare, note: StickyNote, ticket: Ticket, food: Utensils, bed: Bed, bus: Bus, star: Star, people: Users }
 const inputClass = 'border border-[var(--line)] bg-[var(--paper)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
+const SYNC_DEBOUNCE_MS = 2000
 
 function isFixedSection(section) {
   if (section.type === 'transport' || section.type === 'lodging' || section.type === 'map') return true
@@ -25,6 +26,47 @@ export default function AdminTripEditor({ trip, onBack, onUpdate, onDelete }) {
   const [displayName, setDisplayName] = useState('')
   const [sectionForm, setSectionForm] = useState(null)
   const [sectionError, setSectionError] = useState('')
+  const [conflict, setConflict] = useState(null)
+
+  // Riferimenti sempre aggiornati: un tentativo di sync partito da un timer o da
+  // un evento deve lavorare sul viaggio e sullo stato correnti, non su quelli
+  // catturati dal render in cui è stato pianificato.
+  const tripRef = useRef(trip)
+  const syncStateRef = useRef(null)
+  // Conta le scritture locali: serve a capire se una modifica è arrivata mentre
+  // un push era in volo.
+  const editSeqRef = useRef(0)
+  const debounceRef = useRef(null)
+
+  useEffect(() => { tripRef.current = trip }, [trip])
+  useEffect(() => { syncStateRef.current = syncState }, [syncState])
+
+  async function runSync(state) {
+    const seqAtStart = editSeqRef.current
+    try {
+      const result = await syncTrip(tripRef.current, state)
+      if (result.action === 'conflict') {
+        setConflict(result.conflict)
+        return
+      }
+      if (result.action === 'pull') {
+        // Il contenuto arriva dal server, l'identità locale del viaggio resta la
+        // stessa: altrimenti il viaggio aperto sparirebbe dalla lista.
+        onUpdate((t) => ({ ...result.trip, id: t.id }))
+      }
+      if (result.syncState !== state) {
+        // Una modifica arrivata dopo l'inizio di questo tentativo non è stata
+        // sincronizzata da questo tentativo: resta da mandare.
+        const nextState = editSeqRef.current === seqAtStart
+          ? result.syncState
+          : { ...result.syncState, dirty: true }
+        await persistSyncState(trip.id, nextState)
+        setSyncStateValue(nextState)
+      }
+    } catch {
+      // offline o errore di rete: l'indicatore di stato lo segnala già
+    }
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -35,7 +77,12 @@ export default function AdminTripEditor({ trip, onBack, onUpdate, onDelete }) {
 
   useEffect(() => {
     let cancelled = false
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current)
+      debounceRef.current = null
+    }
     setSyncStateValue(undefined)
+    syncStateRef.current = null
     getSyncState(trip.id).then(async (state) => {
       if (cancelled) return
       if (state && !state.ownerId) {
@@ -48,11 +95,70 @@ export default function AdminTripEditor({ trip, onBack, onUpdate, onDelete }) {
           // offline o remoto irraggiungibile: si riprova al prossimo apertura
         }
       }
-      if (!cancelled) setSyncStateValue(state)
+      if (cancelled) return
+      setSyncStateValue(state)
+      syncStateRef.current = state
+      if (state) runSync(state)
     })
     getDisplayNamePreference().then((name) => { if (!cancelled) setDisplayName(name) })
     return () => { cancelled = true }
   }, [trip.id])
+
+  useEffect(() => {
+    function attempt() {
+      if (syncStateRef.current) runSync(syncStateRef.current)
+    }
+    function onVisibility() {
+      if (document.visibilityState === 'visible') attempt()
+    }
+    window.addEventListener('online', attempt)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      window.removeEventListener('online', attempt)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [])
+
+  useEffect(() => () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+  }, [])
+
+  function handleUpdate(updater) {
+    onUpdate(updater)
+    editSeqRef.current += 1
+    if (syncState) {
+      markDirty(trip.id)
+      setSyncStateValue((s) => (s ? { ...s, dirty: true } : s))
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+      debounceRef.current = setTimeout(() => {
+        debounceRef.current = null
+        if (syncStateRef.current) runSync(syncStateRef.current)
+      }, SYNC_DEBOUNCE_MS)
+    }
+  }
+
+  async function keepLocalVersion() {
+    try {
+      const result = await pushTrip(tripRef.current, syncState)
+      await persistSyncState(trip.id, result.syncState)
+      setSyncStateValue(result.syncState)
+      setConflict(null)
+    } catch (e) {
+      window.alert(`Le modifiche di questo computer non sono andate online. Controlla la rete e riprova.\n\n${e.message}`)
+    }
+  }
+
+  async function keepOnlineVersion() {
+    try {
+      const result = await pullTrip(syncState)
+      onUpdate((t) => ({ ...result.trip, id: t.id }))
+      await persistSyncState(trip.id, result.syncState)
+      setSyncStateValue(result.syncState)
+      setConflict(null)
+    } catch (e) {
+      window.alert(`La versione online non è arrivata. Controlla la rete e riprova.\n\n${e.message}`)
+    }
+  }
 
   function addSection(e) {
     e.preventDefault()
@@ -67,14 +173,14 @@ export default function AdminTripEditor({ trip, onBack, onUpdate, onDelete }) {
       type: sectionForm.type,
       ...(sectionForm.type === 'notes' ? { text: '' } : { items: [] })
     }
-    onUpdate((t) => ({ ...t, sections: [...t.sections, section] }))
+    handleUpdate((t) => ({ ...t, sections: [...t.sections, section] }))
     setSectionForm(null)
     setActiveTab(section.id)
   }
 
   function removeSection(section) {
     if (window.confirm(`Eliminare la sezione "${section.title}"? Non si può annullare.`)) {
-      onUpdate((t) => ({ ...t, sections: t.sections.filter((s) => s.id !== section.id) }))
+      handleUpdate((t) => ({ ...t, sections: t.sections.filter((s) => s.id !== section.id) }))
       if (activeTab === section.id) setActiveTab('info')
     }
   }
@@ -87,7 +193,18 @@ export default function AdminTripEditor({ trip, onBack, onUpdate, onDelete }) {
 
   // undefined = ancora in caricamento, null = nessuna sync (viaggio locale)
   const loadingOwnership = syncState === undefined || session === undefined
-  const canEdit = loadingOwnership ? null : (!syncState || (session && syncState.ownerId === session.user.id))
+  const canEdit = loadingOwnership
+    ? null
+    : !syncState
+      ? true
+      : !session
+        ? false
+        : !syncState.ownerId
+          ? true // proprietario non verificabile (offline o viaggio sincronizzato prima di questa funzione): non blocchiamo
+          : syncState.ownerId === session.user.id
+  // Un viewer non può scrivere sul server: non gli si offre di forzare la propria
+  // versione, sarebbe un pulsante che la RLS rifiuta sempre.
+  const canPush = !!syncState && syncState.role === 'editor'
 
   return (
     <div style={themeStyle(trip.palette)} className="min-h-screen bg-[var(--paper)] text-[var(--ink)] font-sans max-w-6xl mx-auto px-6 py-8">
@@ -148,11 +265,11 @@ export default function AdminTripEditor({ trip, onBack, onUpdate, onDelete }) {
           </nav>
 
           <div>
-            {activeTab === 'info' && <AdminMetaForm trip={trip} onUpdate={onUpdate} />}
-            {activeTab === 'days' && <AdminDaysEditor trip={trip} onUpdate={onUpdate} activeDisplayName={displayName} />}
+            {activeTab === 'info' && <AdminMetaForm trip={trip} onUpdate={handleUpdate} />}
+            {activeTab === 'days' && <AdminDaysEditor trip={trip} onUpdate={handleUpdate} activeDisplayName={displayName} />}
             {trip.sections.map((section) =>
               activeTab === section.id ? (
-                <AdminSectionEditor key={section.id} trip={trip} section={section} onUpdate={onUpdate} activeDisplayName={displayName} />
+                <AdminSectionEditor key={section.id} trip={trip} section={section} onUpdate={handleUpdate} activeDisplayName={displayName} />
               ) : null
             )}
           </div>
@@ -177,6 +294,31 @@ export default function AdminTripEditor({ trip, onBack, onUpdate, onDelete }) {
               Aggiungi sezione
             </button>
           </form>
+        </div>
+      )}
+
+      {conflict && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+          <div className="w-full max-w-sm flex flex-col gap-3 bg-[var(--card)] rounded-2xl p-5">
+            <h2 className="font-display font-semibold text-xl">Due versioni diverse</h2>
+            <p className="text-base">
+              Questo viaggio è stato modificato sia da questo computer che online, dopo l'ultima volta che si sono
+              sincronizzati.{canPush ? ' Quale versione vuoi tenere?' : ''}
+            </p>
+            {canPush ? (
+              <button onClick={keepLocalVersion} className="inline-flex items-center justify-center rounded-full font-sans font-medium text-base h-12 px-6 text-[var(--paper)] bg-[var(--accent)]">
+                Tieni la versione su questo computer
+              </button>
+            ) : (
+              <p className="text-base text-[var(--muted)]">
+                Questo viaggio lo puoi solo leggere: le modifiche fatte qui restano su questo computer e non vanno
+                online. Se tieni la versione online, le perdi.
+              </p>
+            )}
+            <button onClick={keepOnlineVersion} className="inline-flex items-center justify-center rounded-full font-sans font-medium text-base h-12 px-6 bg-[var(--tint)]">
+              Tieni la versione online
+            </button>
+          </div>
         </div>
       )}
     </div>
