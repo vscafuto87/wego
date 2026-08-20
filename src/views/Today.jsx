@@ -1,17 +1,12 @@
-import { Mountain, Waves, Utensils, ArrowRight } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import Btn from '../components/Btn.jsx'
 import Label from '../components/Label.jsx'
 import Empty from '../components/Empty.jsx'
 import ModifiedBy from '../components/ModifiedBy.jsx'
+import { DayItemCard } from './Days.jsx'
 
 const DATE_FMT = new Intl.DateTimeFormat('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })
-const KIND_ICONS = { sentiero: Mountain, spiaggia: Waves, pasto: Utensils }
-
-function KindIcon({ kind }) {
-  const Icon = KIND_ICONS[kind]
-  if (!Icon) return null
-  return <Icon size={15} className="inline mr-1.5 -mt-0.5 text-[var(--muted)]" />
-}
+const TYPED_KINDS = ['sentiero', 'spiaggia', 'pasto']
 
 // Data locale AAAA-MM-GG: toISOString() convertirebbe in UTC e sbaglierebbe
 // giorno nei fusi avanti su UTC (es. l'Italia in agosto).
@@ -67,19 +62,24 @@ export default function Today({ trip, onNavigate }) {
       </div>
 
       {day.items.length > 0 ? (
-        <ul className="flex flex-col gap-2 border-l-2 border-[var(--line)] pl-4">
+        <ul className="flex flex-col gap-3">
           {day.items.map((item) => (
             <li key={item.id}>
-              {item.time && <span className="font-mono text-sm text-[var(--muted)] mr-2">{item.time}</span>}
-              <KindIcon kind={item.kind} />
-              <span className="text-base">{item.title}</span>
-              {item.detail && <p className="text-sm text-[var(--muted)] mt-0.5">{item.detail}</p>}
-              {item.link && (
-                <a href={item.link} target="_blank" rel="noreferrer" className="text-sm text-[var(--accent)] underline block mt-0.5">
-                  Apri il link
-                </a>
+              {TYPED_KINDS.includes(item.kind) ? (
+                <DayItemCard item={item} />
+              ) : (
+                <div className="border-l-2 border-[var(--line)] pl-4">
+                  {item.time && <span className="font-mono text-sm text-[var(--muted)] mr-2">{item.time}</span>}
+                  <span className="text-base">{item.title}</span>
+                  {item.detail && <p className="text-sm text-[var(--muted)] mt-0.5">{item.detail}</p>}
+                  {item.link && (
+                    <a href={item.link} target="_blank" rel="noreferrer" className="text-sm text-[var(--accent)] underline block mt-0.5">
+                      Apri il link
+                    </a>
+                  )}
+                  <ModifiedBy modifiedBy={item.modifiedBy} modifiedAt={item.modifiedAt} />
+                </div>
               )}
-              <ModifiedBy modifiedBy={item.modifiedBy} modifiedAt={item.modifiedAt} />
             </li>
           ))}
         </ul>

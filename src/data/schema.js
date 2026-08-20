@@ -5,7 +5,7 @@ const SECTION_TYPES = ['cards', 'checklist', 'notes', 'transport', 'lodging', 'm
 const DAY_ITEM_KINDS = ['', 'sentiero', 'spiaggia', 'pasto']
 
 const KIND_FIELDS = {
-  sentiero: ['durata', 'dislivello', 'difficolta', 'lat', 'lng'],
+  sentiero: ['distanza', 'durata', 'dislivello', 'difficolta', 'lat', 'lng'],
   spiaggia: ['accesso', 'servizi', 'lat', 'lng'],
   pasto: ['luogo', 'prenotato', 'lat', 'lng']
 }
@@ -44,7 +44,7 @@ function normalizeDayItem(raw) {
     modifiedAt: str(item.modifiedAt)
   }
   if (kind === 'sentiero') {
-    return { ...base, durata: str(item.durata), dislivello: str(item.dislivello), difficolta: str(item.difficolta), lat: toCoord(item.lat), lng: toCoord(item.lng) }
+    return { ...base, distanza: str(item.distanza), durata: str(item.durata), dislivello: str(item.dislivello), difficolta: str(item.difficolta), lat: toCoord(item.lat), lng: toCoord(item.lng) }
   }
   if (kind === 'spiaggia') {
     return { ...base, accesso: str(item.accesso), servizi: str(item.servizi), lat: toCoord(item.lat), lng: toCoord(item.lng) }

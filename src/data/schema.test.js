@@ -70,7 +70,7 @@ function tripWithItem(item) {
 
 describe('dayItemFieldsForKind', () => {
   it('sentiero', () => {
-    expect(dayItemFieldsForKind('sentiero')).toEqual(['durata', 'dislivello', 'difficolta', 'lat', 'lng'])
+    expect(dayItemFieldsForKind('sentiero')).toEqual(['distanza', 'durata', 'dislivello', 'difficolta', 'lat', 'lng'])
   })
   it('spiaggia', () => {
     expect(dayItemFieldsForKind('spiaggia')).toEqual(['accesso', 'servizi', 'lat', 'lng'])
@@ -93,9 +93,10 @@ describe('normalizeTrip — kind sulle voci del giorno', () => {
     expect(item.luogo).toBeUndefined()
   })
 
-  it('sentiero: durata, dislivello, difficolta', () => {
-    const item = tripWithItem({ title: 'Anello', kind: 'sentiero', durata: '5h14', dislivello: '480 m D+', difficolta: 'media' }).days[0].items[0]
+  it('sentiero: distanza, durata, dislivello, difficolta', () => {
+    const item = tripWithItem({ title: 'Anello', kind: 'sentiero', distanza: '14,2 km', durata: '5h14', dislivello: '480 m D+', difficolta: 'media' }).days[0].items[0]
     expect(item.kind).toBe('sentiero')
+    expect(item.distanza).toBe('14,2 km')
     expect(item.durata).toBe('5h14')
     expect(item.dislivello).toBe('480 m D+')
     expect(item.difficolta).toBe('media')
@@ -103,6 +104,7 @@ describe('normalizeTrip — kind sulle voci del giorno', () => {
 
   it('sentiero: campi propri mancanti diventano stringa vuota', () => {
     const item = tripWithItem({ title: 'Anello', kind: 'sentiero' }).days[0].items[0]
+    expect(item.distanza).toBe('')
     expect(item.durata).toBe('')
     expect(item.dislivello).toBe('')
     expect(item.difficolta).toBe('')
@@ -139,7 +141,7 @@ describe('normalizeTrip — kind sulle voci del giorno', () => {
     expect(item.id).toBeUndefined()
     expect(item).toEqual({
       time: '', title: 'Anello', kind: 'sentiero', detail: '', link: '',
-      modifiedBy: '', modifiedAt: '', durata: '5h14', dislivello: '', difficolta: '', lat: null, lng: null
+      modifiedBy: '', modifiedAt: '', distanza: '', durata: '5h14', dislivello: '', difficolta: '', lat: null, lng: null
     })
   })
 })
@@ -363,7 +365,7 @@ describe('normalizeTrip — coordinate opzionali sulle schede (cards)', () => {
 
 describe('dayItemFieldsForKind — include lat/lng per sentiero/spiaggia/pasto', () => {
   it('sentiero', () => {
-    expect(dayItemFieldsForKind('sentiero')).toEqual(['durata', 'dislivello', 'difficolta', 'lat', 'lng'])
+    expect(dayItemFieldsForKind('sentiero')).toEqual(['distanza', 'durata', 'dislivello', 'difficolta', 'lat', 'lng'])
   })
   it('spiaggia', () => {
     expect(dayItemFieldsForKind('spiaggia')).toEqual(['accesso', 'servizi', 'lat', 'lng'])

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Pencil, Trash2, Mountain, Waves, Utensils } from 'lucide-react'
+import { Plus, Pencil, Trash2, Mountain, Waves, Utensils, ExternalLink, Check } from 'lucide-react'
 import Btn from '../components/Btn.jsx'
 import Label from '../components/Label.jsx'
 import Modal from '../components/Modal.jsx'
@@ -16,7 +16,7 @@ function formatDate(date) {
 }
 
 const EMPTY_DAY = { date: '', title: '', note: '' }
-const EMPTY_ITEM = { kind: '', time: '', title: '', detail: '', link: '', durata: '', dislivello: '', difficolta: '', accesso: '', servizi: '', luogo: '', prenotato: false, lat: null, lng: null }
+const EMPTY_ITEM = { kind: '', time: '', title: '', detail: '', link: '', distanza: '', durata: '', dislivello: '', difficolta: '', accesso: '', servizi: '', luogo: '', prenotato: false, lat: null, lng: null }
 
 const KIND_OPTIONS = [
   { value: '', label: 'Generica' },
@@ -27,13 +27,88 @@ const KIND_OPTIONS = [
 
 const KIND_ICONS = { sentiero: Mountain, spiaggia: Waves, pasto: Utensils }
 
-function KindIcon({ kind }) {
-  const Icon = KIND_ICONS[kind]
-  if (!Icon) return null
-  return <Icon size={15} className="inline mr-1.5 -mt-0.5 text-[var(--muted)]" />
+const ALL_KIND_FIELDS = ['distanza', 'durata', 'dislivello', 'difficolta', 'accesso', 'servizi', 'luogo', 'prenotato', 'lat', 'lng']
+
+const TYPED_KINDS = ['sentiero', 'spiaggia', 'pasto']
+
+function LinkChip({ link }) {
+  if (!link) return null
+  return (
+    <a href={link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-[var(--tint)] text-[var(--accent)] text-sm font-medium mt-3">
+      <ExternalLink size={14} /> Apri il link
+    </a>
+  )
 }
 
-const ALL_KIND_FIELDS = ['durata', 'dislivello', 'difficolta', 'accesso', 'servizi', 'luogo', 'prenotato', 'lat', 'lng']
+// Voce sentiero/spiaggia/pasto: una scheda con badge del tipo, invece della
+// riga di testo generica, per rendere le informazioni del percorso o del
+// posto immediatamente riconoscibili.
+export function DayItemCard({ item, onEdit, onRemove }) {
+  const Icon = KIND_ICONS[item.kind]
+  const stats = item.kind === 'sentiero'
+    ? [
+        { label: 'Distanza', value: item.distanza },
+        { label: 'Durata', value: item.durata },
+        { label: 'Dislivello', value: item.dislivello },
+        { label: 'Difficoltà', value: item.difficolta }
+      ].filter((s) => s.value)
+    : []
+
+  return (
+    <div className="rounded-[24px] p-5 bg-[var(--card)] shadow-[0_1px_2px_rgb(var(--ink-rgb)/0.05),0_10px_24px_-14px_rgb(var(--ink-rgb)/0.25)]">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-start gap-3 flex-1 min-w-0">
+          <div className="h-10 w-10 rounded-full bg-[var(--tint)] flex items-center justify-center flex-shrink-0">
+            {Icon && <Icon size={18} className="text-[var(--accent)]" />}
+          </div>
+          <div className="flex-1 min-w-0">
+            {item.time && <span className="font-mono text-sm text-[var(--muted)]">{item.time}</span>}
+            <p className="font-display font-semibold text-lg leading-snug">{item.title}</p>
+            {item.detail && <p className="text-sm text-[var(--muted)] mt-1">{item.detail}</p>}
+            {item.kind === 'pasto' && item.luogo && <p className="text-sm text-[var(--muted)] mt-1">{item.luogo}</p>}
+            {item.kind === 'spiaggia' && (item.accesso || item.servizi) && (
+              <p className="text-sm text-[var(--muted)] mt-1">{[item.accesso, item.servizi].filter(Boolean).join(' · ')}</p>
+            )}
+          </div>
+        </div>
+        {(onEdit || onRemove) && (
+          <div className="flex gap-1 -mr-2 -mt-1 flex-shrink-0">
+            {onEdit && (
+              <button onClick={onEdit} aria-label="Modifica voce" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
+                <Pencil size={15} />
+              </button>
+            )}
+            {onRemove && (
+              <button onClick={onRemove} aria-label="Elimina voce" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
+                <Trash2 size={15} />
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {stats.length > 0 && (
+        <div className="flex gap-5 mt-4 pl-[52px]">
+          {stats.map((s) => (
+            <div key={s.label}>
+              <Label>{s.label}</Label>
+              <div className="font-mono text-lg font-semibold mt-0.5 whitespace-nowrap">{s.value}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {item.kind === 'pasto' && item.prenotato && (
+        <span className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-[var(--accent2)] text-[var(--paper)] text-xs font-medium mt-3">
+          <Check size={12} /> Prenotato
+        </span>
+      )}
+
+      <LinkChip link={item.link} />
+      <ModifiedBy modifiedBy={item.modifiedBy} modifiedAt={item.modifiedAt} />
+    </div>
+  )
+}
 
 function withoutKindFields(item) {
   const clean = { ...item }
@@ -127,46 +202,40 @@ export default function Days({ trip, onUpdate, activeDisplayName }) {
           </div>
 
           {day.items.length > 0 && (
-            <ul className="flex flex-col gap-2 border-l-2 border-[var(--line)] pl-4">
+            <ul className="flex flex-col gap-3">
               {day.items.map((item) => (
-                <li key={item.id} className="flex items-start gap-1">
-                  <div className="flex-1">
-                    {item.time && <span className="font-mono text-sm text-[var(--muted)] mr-2">{item.time}</span>}
-                    <KindIcon kind={item.kind} />
-                    <span className="text-base">{item.title}</span>
-                    {item.detail && <p className="text-sm text-[var(--muted)] mt-0.5">{item.detail}</p>}
-                    {item.kind === 'sentiero' && (item.durata || item.dislivello || item.difficolta) && (
-                      <p className="font-mono text-xs text-[var(--muted)] mt-0.5">
-                        {[item.durata, item.dislivello, item.difficolta].filter(Boolean).join(' · ')}
-                      </p>
-                    )}
-                    {item.kind === 'spiaggia' && (item.accesso || item.servizi) && (
-                      <p className="text-xs text-[var(--muted)] mt-0.5">
-                        {[item.accesso, item.servizi].filter(Boolean).join(' · ')}
-                      </p>
-                    )}
-                    {item.kind === 'pasto' && (item.luogo || item.prenotato) && (
-                      <p className="text-xs text-[var(--muted)] mt-0.5">
-                        {[item.luogo, item.prenotato ? 'prenotato' : ''].filter(Boolean).join(' · ')}
-                      </p>
-                    )}
-                    {item.link && (
-                      <a href={item.link} target="_blank" rel="noreferrer" className="text-sm text-[var(--accent)] underline block mt-0.5">
-                        Apri il link
-                      </a>
-                    )}
-                    <ModifiedBy modifiedBy={item.modifiedBy} modifiedAt={item.modifiedAt} />
-                  </div>
-                  <button
-                    onClick={() => setItemForm({ dayId: day.id, id: item.id, ...EMPTY_ITEM, ...item })}
-                    aria-label="Modifica voce"
-                    className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]"
-                  >
-                    <Pencil size={15} />
-                  </button>
-                  <button onClick={() => removeItem(day.id, item)} aria-label="Elimina voce" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
-                    <Trash2 size={15} />
-                  </button>
+                <li key={item.id}>
+                  {TYPED_KINDS.includes(item.kind) ? (
+                    <DayItemCard
+                      item={item}
+                      onEdit={() => setItemForm({ dayId: day.id, id: item.id, ...EMPTY_ITEM, ...item })}
+                      onRemove={() => removeItem(day.id, item)}
+                    />
+                  ) : (
+                    <div className="flex items-start gap-1 border-l-2 border-[var(--line)] pl-4">
+                      <div className="flex-1">
+                        {item.time && <span className="font-mono text-sm text-[var(--muted)] mr-2">{item.time}</span>}
+                        <span className="text-base">{item.title}</span>
+                        {item.detail && <p className="text-sm text-[var(--muted)] mt-0.5">{item.detail}</p>}
+                        {item.link && (
+                          <a href={item.link} target="_blank" rel="noreferrer" className="text-sm text-[var(--accent)] underline block mt-0.5">
+                            Apri il link
+                          </a>
+                        )}
+                        <ModifiedBy modifiedBy={item.modifiedBy} modifiedAt={item.modifiedAt} />
+                      </div>
+                      <button
+                        onClick={() => setItemForm({ dayId: day.id, id: item.id, ...EMPTY_ITEM, ...item })}
+                        aria-label="Modifica voce"
+                        className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]"
+                      >
+                        <Pencil size={15} />
+                      </button>
+                      <button onClick={() => removeItem(day.id, item)} aria-label="Elimina voce" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>
@@ -210,6 +279,7 @@ export default function Days({ trip, onUpdate, activeDisplayName }) {
 
             {itemForm.kind === 'sentiero' && (
               <>
+                <input placeholder="Distanza (es. 14,2 km)" value={itemForm.distanza} onChange={(e) => setItemForm({ ...itemForm, distanza: e.target.value })} className={inputClass} />
                 <input placeholder="Durata (es. 5h14)" value={itemForm.durata} onChange={(e) => setItemForm({ ...itemForm, durata: e.target.value })} className={inputClass} />
                 <input placeholder="Dislivello (es. 480 m D+)" value={itemForm.dislivello} onChange={(e) => setItemForm({ ...itemForm, dislivello: e.target.value })} className={inputClass} />
                 <input placeholder="Difficoltà (es. media, EE)" value={itemForm.difficolta} onChange={(e) => setItemForm({ ...itemForm, difficolta: e.target.value })} className={inputClass} />

@@ -37,9 +37,9 @@ Ogni voce di "days[].items[]" può avere anche un campo "kind" opzionale, che de
 quali campi in più aggiungere alla voce (solo quelli del kind scelto, nessun altro):
 
 - "kind": "" (o assente) → voce generica, nessun campo in più.
-- "kind": "sentiero" → aggiungi "durata", "dislivello", "difficolta" (string), "lat" e
-  "lng" (numero o null, solo se noti per certo dagli appunti, altrimenti null).
-  Es: { "time": "9:00", "title": "Salita al rifugio", "kind": "sentiero", "durata": "3h", "dislivello": "800m", "difficolta": "E", "lat": null, "lng": null, "detail": "", "link": "" }
+- "kind": "sentiero" → aggiungi "distanza", "durata", "dislivello", "difficolta" (string),
+  "lat" e "lng" (numero o null, solo se noti per certo dagli appunti, altrimenti null).
+  Es: { "time": "9:00", "title": "Salita al rifugio", "kind": "sentiero", "distanza": "8,4 km", "durata": "3h", "dislivello": "800m", "difficolta": "E", "lat": null, "lng": null, "detail": "", "link": "" }
 - "kind": "spiaggia" → aggiungi "accesso", "servizi" (string), "lat" e "lng" (numero o
   null, solo se noti per certo dagli appunti, altrimenti null).
   Es: { "time": "", "title": "Cala Fetovaia", "kind": "spiaggia", "accesso": "sentiero 15 min", "servizi": "bar, noleggio", "lat": null, "lng": null, "detail": "", "link": "" }
