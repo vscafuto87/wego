@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Plus, Pencil, Trash2, Mountain, Waves, Utensils, ExternalLink, Check, Ruler, Clock, TrendingUp } from 'lucide-react'
+import { Plus, Pencil, Trash2, Mountain, Waves, Utensils, ExternalLink, Check, Ruler, Clock, TrendingUp, MapPin } from 'lucide-react'
 import Btn from '../components/Btn.jsx'
+import Label from '../components/Label.jsx'
 import Modal from '../components/Modal.jsx'
 import Empty from '../components/Empty.jsx'
 import { stampModified, dayItemFieldsForKind } from '../data/schema.js'
@@ -24,11 +25,9 @@ const KIND_OPTIONS = [
   { value: 'pasto', label: 'Pasto' }
 ]
 
-const KIND_ICONS = { sentiero: Mountain, spiaggia: Waves, pasto: Utensils }
+const KIND_ICONS = { '': MapPin, sentiero: Mountain, spiaggia: Waves, pasto: Utensils }
 
 const ALL_KIND_FIELDS = ['distanza', 'durata', 'dislivello', 'difficolta', 'accesso', 'servizi', 'luogo', 'prenotato', 'lat', 'lng']
-
-const TYPED_KINDS = ['sentiero', 'spiaggia', 'pasto']
 
 function positiveDislivello(value) {
   return value ? value.split('·')[0].trim() : value
@@ -184,77 +183,42 @@ export default function Days({ trip, onUpdate, activeDisplayName }) {
         />
       )}
 
-      {trip.days.map((day, index) => (
-        <div key={day.id} className="flex gap-3">
-          <div className="flex flex-col items-center flex-shrink-0 w-11">
-            <div className="h-11 w-11 rounded-full bg-[var(--accent)] flex items-center justify-center flex-shrink-0 font-mono font-semibold text-lg text-[var(--paper)] shadow-[0_6px_14px_-6px_rgb(var(--accent-rgb)/0.55)]">
-              {index + 1}
+      {trip.days.map((day) => (
+        <div key={day.id} className="flex flex-col gap-3">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <Label>{formatDate(day.date)}</Label>
+              <p className="font-display font-semibold text-2xl leading-tight mt-0.5">{day.title || 'Senza titolo'}</p>
+              {day.note && <p className="text-base text-[var(--muted)] mt-1">{day.note}</p>}
+              <ModifiedBy modifiedBy={day.modifiedBy} modifiedAt={day.modifiedAt} />
             </div>
-            {index < trip.days.length - 1 && <div className="w-0.5 flex-1 mt-1 bg-[var(--line)]" />}
+            <div className="flex gap-1 -mr-2 flex-shrink-0">
+              <button onClick={() => setDayForm({ id: day.id, date: day.date, title: day.title, note: day.note })} aria-label="Modifica giorno" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
+                <Pencil size={17} />
+              </button>
+              <button onClick={() => removeDay(day)} aria-label="Elimina giorno" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
+                <Trash2 size={17} />
+              </button>
+            </div>
           </div>
 
-          <div className={`flex-1 min-w-0 flex flex-col gap-3 ${index < trip.days.length - 1 ? 'pb-8' : ''}`}>
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0 pt-0.5">
-                <span className="font-mono font-semibold text-sm tracking-wide uppercase text-[var(--accent)]">{formatDate(day.date)}</span>
-                <p className="font-display font-semibold text-2xl leading-tight mt-0.5">{day.title || 'Senza titolo'}</p>
-                {day.note && <p className="text-base text-[var(--muted)] mt-1">{day.note}</p>}
-                <ModifiedBy modifiedBy={day.modifiedBy} modifiedAt={day.modifiedAt} />
-              </div>
-              <div className="flex gap-1 -mr-2 flex-shrink-0">
-                <button onClick={() => setDayForm({ id: day.id, date: day.date, title: day.title, note: day.note })} aria-label="Modifica giorno" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
-                  <Pencil size={17} />
-                </button>
-                <button onClick={() => removeDay(day)} aria-label="Elimina giorno" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
-                  <Trash2 size={17} />
-                </button>
-              </div>
-            </div>
+          {day.items.length > 0 && (
+            <ul className="flex flex-col gap-3">
+              {day.items.map((item) => (
+                <li key={item.id}>
+                  <DayItemCard
+                    item={item}
+                    onEdit={() => setItemForm({ dayId: day.id, id: item.id, ...EMPTY_ITEM, ...item })}
+                    onRemove={() => removeItem(day.id, item)}
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
 
-            {day.items.length > 0 && (
-              <ul className="flex flex-col gap-3">
-                {day.items.map((item) => (
-                  <li key={item.id}>
-                    {TYPED_KINDS.includes(item.kind) ? (
-                      <DayItemCard
-                        item={item}
-                        onEdit={() => setItemForm({ dayId: day.id, id: item.id, ...EMPTY_ITEM, ...item })}
-                        onRemove={() => removeItem(day.id, item)}
-                      />
-                    ) : (
-                      <div className="flex items-start gap-1 border-l-2 border-[var(--line)] pl-4">
-                        <div className="flex-1">
-                          {item.time && <span className="font-mono text-sm text-[var(--muted)] mr-2">{item.time}</span>}
-                          <span className="text-base">{item.title}</span>
-                          {item.detail && <p className="text-sm text-[var(--muted)] mt-0.5">{item.detail}</p>}
-                          {item.link && (
-                            <a href={item.link} target="_blank" rel="noreferrer" className="text-sm text-[var(--accent)] underline block mt-0.5">
-                              Apri il link
-                            </a>
-                          )}
-                          <ModifiedBy modifiedBy={item.modifiedBy} modifiedAt={item.modifiedAt} />
-                        </div>
-                        <button
-                          onClick={() => setItemForm({ dayId: day.id, id: item.id, ...EMPTY_ITEM, ...item })}
-                          aria-label="Modifica voce"
-                          className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]"
-                        >
-                          <Pencil size={15} />
-                        </button>
-                        <button onClick={() => removeItem(day.id, item)} aria-label="Elimina voce" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            <button onClick={() => setItemForm({ dayId: day.id, ...EMPTY_ITEM })} className="self-start flex items-center gap-1 text-base text-[var(--accent)] min-h-12">
-              <Plus size={17} /> Aggiungi voce
-            </button>
-          </div>
+          <button onClick={() => setItemForm({ dayId: day.id, ...EMPTY_ITEM })} className="self-start flex items-center gap-1 text-base text-[var(--accent)] min-h-12">
+            <Plus size={17} /> Aggiungi voce
+          </button>
         </div>
       ))}
 
