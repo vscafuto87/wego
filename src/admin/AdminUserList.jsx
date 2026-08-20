@@ -130,6 +130,7 @@ export default function AdminUserList() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => setResetForm(null)}>
           <form onSubmit={handleResetPassword} onClick={(e) => e.stopPropagation()} className="w-full max-w-sm flex flex-col gap-3 bg-[var(--card)] rounded-2xl p-5">
             <h2 className="font-display font-semibold text-xl">Reimposta password</h2>
+            {error && <p className="text-base text-[var(--accent)]">{error}</p>}
             <input required type="password" placeholder="Nuova password" value={resetForm.password} onChange={(e) => setResetForm({ ...resetForm, password: e.target.value })} className={inputClass} />
             <button type="submit" className="inline-flex items-center justify-center rounded-full font-sans font-medium text-base h-12 px-6 text-[var(--paper)] bg-[var(--accent)]">
               Salva

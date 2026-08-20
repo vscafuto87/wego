@@ -9,7 +9,7 @@ import AdminTripEditor from './AdminTripEditor.jsx'
 import AdminUserList from './AdminUserList.jsx'
 
 function isAdminSession(session) {
-  return Boolean(session?.user?.app_metadata?.is_admin)
+  return session?.user?.app_metadata?.is_admin === true
 }
 
 export default function AdminApp() {

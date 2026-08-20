@@ -22,9 +22,9 @@ export async function getSession() {
   return data.session
 }
 
-// Login admin (email+password): stessa sessione Supabase del magic link, solo
-// un secondo modo di ottenerla. Chi è admin lo dice app_metadata.is_admin,
-// impostato a mano dalla dashboard Supabase — non modificabile dal client.
+// Login (email+password): unico meccanismo di accesso, sia per gli amici che
+// per l'admin. Chi è admin lo dice app_metadata.is_admin, controllato dopo il
+// login — non modificabile dal client.
 export async function signInWithPassword(email, password) {
   if (!isCloudConfigured) throw new Error('La sincronizzazione non è configurata su questo dispositivo.')
   const { error } = await supabase.auth.signInWithPassword({ email, password })

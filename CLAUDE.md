@@ -197,22 +197,22 @@ riusa il layer dati esistente (`schema.js`, `storage.js`, `sync.js`), non introd
 un formato diverso. Non compare in nessun link dell'app normale: si raggiunge solo
 digitando l'URL.
 
-**Accesso**: email+password (`LoginForm.jsx`), stessa sessione Supabase Auth
-del magic link degli amici — solo un secondo modo di ottenerla, non un sistema
-separato. Per essere ammessi alla dashboard non basta accedere: l'account deve
-avere `app_metadata.is_admin = true`, un campo che **solo la dashboard Supabase
-può impostare** (Authentication → Utenti → modifica utente → `raw_app_meta_data`),
-non modificabile dal client. Per aggiungere un admin: crea l'utente (email+password)
-da lì e imposta quel campo a mano — nessuna UI di invito, operazione manuale una
-tantum per persona.
+**Accesso**: stesso `LoginForm.jsx` (email+password) usato da tutti — amici e
+admin — non un sistema separato. Per essere ammessi alla dashboard non basta
+accedere: l'account deve avere `app_metadata.is_admin = true`, un campo **non
+modificabile dal client**. La schermata Utenti dentro `/admin` crea account e
+attiva/disattiva `is_admin` per gli utenti esistenti; resta manuale, una tantum,
+solo il primissimo admin, perché prima che esista un admin nessuno può aprire
+quella schermata: va creato ed elevato a mano dalla dashboard Supabase
+(Authentication → Utenti → modifica utente → `raw_app_meta_data`).
 
 Essere admin apre solo la porta della dashboard: dentro, l'editor di un singolo
 viaggio sincronizzato resta comunque riservato al suo `owner_id` (stesso controllo
 di proprietà di oggi), non a "chiunque sia admin".
 
-Questo accesso è indipendente dal login obbligatorio via magic link previsto per
-gli amici sull'app normale (`docs/superpowers/specs/2026-08-20-login-obbligatorio-sync-default-design.md`):
-sono due gate separati su due superfici diverse, non toccarli insieme per errore.
+Non esiste un gate d'accesso separato per l'admin: `/` e `/admin` usano lo stesso
+`LoginForm`/`signInWithPassword`. A distinguere chi entra in dashboard è solo
+`app_metadata.is_admin`, controllato dopo il login.
 
 ---
 
@@ -255,6 +255,9 @@ scusarsi. Le schermate vuote sono un invito, non un avviso.
   le migrazioni Supabase, modificare i token del design system.
 - Le chiavi stanno in `.env.local` (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`),
   mai nel codice, mai nei commit.
+- `SUPABASE_SERVICE_ROLE_KEY` è una variabile d'ambiente solo Vercel (Project
+  Settings → Environment Variables), letta solo dentro `api/`: mai prefissata
+  `VITE_`, mai in `.env.local`. Senza, ogni endpoint `api/admin/*` fallisce a runtime.
 - Commit piccoli, messaggio in italiano all'imperativo: "aggiungi vista itinerario".
 - Ogni fase finisce con `npm run build` che passa e una verifica offline in `preview`.
 

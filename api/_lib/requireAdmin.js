@@ -16,7 +16,7 @@ export async function requireAdmin(req) {
     err.status = 401
     throw err
   }
-  if (!data.user.app_metadata?.is_admin) {
+  if (data.user.app_metadata?.is_admin !== true) {
     const err = new Error('Il tuo account non ha accesso admin.')
     err.status = 403
     throw err

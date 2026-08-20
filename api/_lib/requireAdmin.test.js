@@ -29,6 +29,11 @@ describe('requireAdmin', () => {
     await expect(requireAdmin({ headers: { authorization: 'Bearer xxx' } })).rejects.toMatchObject({ status: 403 })
   })
 
+  it('rifiuta se is_admin è una stringa "false" (truthy ma non === true)', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1', email: 'a@x.it', app_metadata: { is_admin: 'false' } } }, error: null })
+    await expect(requireAdmin({ headers: { authorization: 'Bearer xxx' } })).rejects.toMatchObject({ status: 403 })
+  })
+
   it('risolve con l\'utente se è admin', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1', email: 'a@x.it', app_metadata: { is_admin: true } } }, error: null })
     const user = await requireAdmin({ headers: { authorization: 'Bearer xxx' } })
