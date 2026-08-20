@@ -11,8 +11,11 @@ async function authFetch(path, options = {}) {
       ...(options.headers || {})
     }
   })
-  const body = await res.json().catch(() => ({}))
+  const contentType = res.headers.get('content-type') || ''
+  const isJson = contentType.includes('application/json')
+  const body = isJson ? await res.json().catch(() => ({})) : {}
   if (!res.ok) throw new Error(body.error || 'Richiesta non riuscita.')
+  if (!isJson) throw new Error('Gli endpoint admin non rispondono: funzionano solo sul sito pubblicato, non con npm run dev.')
   return body
 }
 

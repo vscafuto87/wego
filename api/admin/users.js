@@ -21,7 +21,7 @@ export default async function handler(req, res) {
     if (membersError) { res.status(500).json({ error: membersError.message }); return }
 
     res.status(200).json({
-      users: usersData.users.map((u) => ({ id: u.id, email: u.email, isAdmin: Boolean(u.app_metadata?.is_admin) })),
+      users: usersData.users.map((u) => ({ id: u.id, email: u.email, isAdmin: u.app_metadata?.is_admin === true })),
       trips: trips.map((t) => ({ id: t.id, name: t.data?.name || 'Senza nome' })),
       access: members.map((m) => ({ userId: m.user_id, tripId: m.trip_id, role: m.role }))
     })

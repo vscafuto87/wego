@@ -18,6 +18,13 @@ export default async function handler(req, res) {
 
   const supabase = serviceClient()
 
+  const { data: trip, error: tripError } = await supabase.from('tv_trips').select('owner_id').eq('id', tripId).single()
+  if (tripError) { res.status(400).json({ error: tripError.message }); return }
+  if (trip?.owner_id === userId) {
+    res.status(400).json({ error: 'Non puoi modificare l\'accesso del proprietario a questo viaggio.' })
+    return
+  }
+
   if (role === null) {
     const { error } = await supabase.from('tv_trip_members').delete().eq('trip_id', tripId).eq('user_id', userId)
     if (error) { res.status(400).json({ error: error.message }); return }
