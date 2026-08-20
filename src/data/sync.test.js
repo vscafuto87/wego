@@ -283,3 +283,44 @@ describe('listMyTrips', () => {
     await expect(listMyTrips()).rejects.toThrow()
   })
 })
+
+describe('deleteTripAsOwner', () => {
+  it('cancella la riga tv_trips per id', async () => {
+    const eqFn = vi.fn().mockResolvedValue({ error: null })
+    mockFrom.mockReturnValue({ delete: () => ({ eq: eqFn }) })
+
+    const { deleteTripAsOwner } = await import('./sync.js')
+    await deleteTripAsOwner('trip-remote-1')
+
+    expect(mockFrom).toHaveBeenCalledWith('tv_trips')
+    expect(eqFn).toHaveBeenCalledWith('id', 'trip-remote-1')
+  })
+
+  it('propaga l\'errore di Supabase', async () => {
+    mockFrom.mockReturnValue({ delete: () => ({ eq: vi.fn().mockResolvedValue({ error: { message: 'negato' } }) }) })
+    const { deleteTripAsOwner } = await import('./sync.js')
+    await expect(deleteTripAsOwner('trip-remote-1')).rejects.toThrow('negato')
+  })
+})
+
+describe('leaveTripAsMember', () => {
+  it('cancella solo la propria riga di iscrizione', async () => {
+    mockGetSession.mockResolvedValue({ user: { id: 'user-2' } })
+    const eq2 = vi.fn().mockResolvedValue({ error: null })
+    const eq1 = vi.fn().mockReturnValue({ eq: eq2 })
+    mockFrom.mockReturnValue({ delete: () => ({ eq: eq1 }) })
+
+    const { leaveTripAsMember } = await import('./sync.js')
+    await leaveTripAsMember('trip-remote-1')
+
+    expect(mockFrom).toHaveBeenCalledWith('tv_trip_members')
+    expect(eq1).toHaveBeenCalledWith('trip_id', 'trip-remote-1')
+    expect(eq2).toHaveBeenCalledWith('user_id', 'user-2')
+  })
+
+  it('rifiuta se non c\'è una sessione', async () => {
+    mockGetSession.mockResolvedValue(null)
+    const { leaveTripAsMember } = await import('./sync.js')
+    await expect(leaveTripAsMember('trip-remote-1')).rejects.toThrow()
+  })
+})

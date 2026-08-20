@@ -207,3 +207,20 @@ export async function listMyTrips() {
     updatedAt: row.tv_trips.updated_at
   }))
 }
+
+export async function deleteTripAsOwner(remoteId) {
+  const { error } = await supabase.from('tv_trips').delete().eq('id', remoteId)
+  if (error) throw new Error(error.message)
+}
+
+export async function leaveTripAsMember(remoteId) {
+  const session = await getSession()
+  if (!session) throw new Error('Devi accedere prima di uscire dal viaggio.')
+
+  const { error } = await supabase
+    .from('tv_trip_members')
+    .delete()
+    .eq('trip_id', remoteId)
+    .eq('user_id', session.user.id)
+  if (error) throw new Error(error.message)
+}
