@@ -237,8 +237,10 @@ itinerario, sezioni, import, export), IndexedDB, seed dei due viaggi, manifest e
 worker, deploy su Vercel. Fatto quando: gli amici aprono il link, aggiungono l'app alla
 Home, attivano la modalità aereo e vedono ancora tutto.
 
-**Fase 1 — Cloud.** Auth magic link, `tv_trips`, sync bidirezionale, `share_code` per
-invitare, indicatore di stato (sincronizzato / in coda / offline).
+**Fase 1 — Cloud.** Auth magic link obbligatorio quando Supabase è configurato (gate
+di login prima di tutto il resto, sessione e nome persistiti offline), `tv_trips`, sync
+di default per ogni viaggio fin dalla creazione, `share_code` per invitare, indicatore
+di stato (sincronizzato / in coda / offline).
 
 **Fase 2 — Insieme.** Ruolo `editor`, spese divise (recuperabili da TrailMates), foto per
 giorno, mappa dei luoghi, esportazione dell'itinerario in calendario.
