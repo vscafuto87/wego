@@ -214,11 +214,10 @@ const Days = forwardRef(function Days({ trip, onUpdate, activeDisplayName, onNav
   function saveDay(e) {
     e.preventDefault()
     onUpdate((t) => {
-      if (dayForm.id) {
-        return { ...t, days: t.days.map((d) => (d.id === dayForm.id ? stampModified({ ...d, ...dayForm }, activeDisplayName) : d)) }
-      }
-      const day = stampModified({ id: crypto.randomUUID(), items: [], ...dayForm }, activeDisplayName)
-      return { ...t, days: [...t.days, day].sort((a, b) => a.date.localeCompare(b.date)) }
+      const days = dayForm.id
+        ? t.days.map((d) => (d.id === dayForm.id ? stampModified({ ...d, ...dayForm }, activeDisplayName) : d))
+        : [...t.days, stampModified({ id: crypto.randomUUID(), items: [], ...dayForm }, activeDisplayName)]
+      return { ...t, days: days.sort((a, b) => a.date.localeCompare(b.date)) }
     })
     setDayForm(null)
   }
