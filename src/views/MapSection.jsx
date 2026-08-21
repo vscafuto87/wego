@@ -5,7 +5,7 @@ import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
 import markerIcon from 'leaflet/dist/images/marker-icon.png'
 import markerShadow from 'leaflet/dist/images/marker-shadow.png'
 import 'leaflet/dist/leaflet.css'
-import { Pencil, Trash2, MapPin, LocateFixed } from 'lucide-react'
+import { Pencil, Trash2, MapPin, LocateFixed, Layers, Maximize2, Minimize2 } from 'lucide-react'
 import Btn from '../components/Btn.jsx'
 import Modal from '../components/Modal.jsx'
 import Empty from '../components/Empty.jsx'
@@ -55,6 +55,17 @@ function FlyToPosition({ position }) {
   return null
 }
 
+// Passare da card a schermo intero cambia le dimensioni del contenitore, non
+// della finestra: Leaflet non se ne accorge da solo, va invalidato a mano.
+function ResizeOnFullscreenChange({ fullscreen }) {
+  const map = useMap()
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => map.invalidateSize())
+    return () => cancelAnimationFrame(raf)
+  }, [fullscreen, map])
+  return null
+}
+
 const DATE_FMT = new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short' })
 function formatDate(date) {
   return date ? DATE_FMT.format(new Date(date)) : ''
@@ -97,6 +108,17 @@ const MapSection = forwardRef(function MapSection({ trip, section, onUpdate, act
   const [locating, setLocating] = useState(false)
   const [locateError, setLocateError] = useState(null)
   const geolocationAvailable = typeof navigator !== 'undefined' && !!navigator.geolocation
+  // Sentieri con curve di livello (OpenTopoMap) al posto della mappa standard:
+  // un interruttore manuale, non legato al tipo di viaggio, così vale per
+  // qualunque sezione Mappa.
+  const [topo, setTopo] = useState(false)
+  const [fullscreen, setFullscreen] = useState(false)
+  const tileUrl = topo
+    ? 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png'
+    : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+  const tileAttribution = topo
+    ? '&copy; OpenStreetMap contributors, SRTM | style &copy; OpenTopoMap (CC-BY-SA)'
+    : '&copy; OpenStreetMap'
 
   function locateMe() {
     if (!geolocationAvailable) return
@@ -181,20 +203,44 @@ const MapSection = forwardRef(function MapSection({ trip, section, onUpdate, act
               ))}
             </div>
           )}
-          <div className="relative rounded-[24px] overflow-hidden h-64 border border-[var(--line)]">
-            {geolocationAvailable && (
+          <div className={fullscreen ? 'fixed inset-0 z-[1100] bg-[var(--paper)]' : 'relative rounded-[24px] overflow-hidden h-64 border border-[var(--line)]'}>
+            <div
+              className={`absolute right-3 z-[1000] flex flex-col gap-2 ${fullscreen ? '' : 'top-3'}`}
+              style={fullscreen ? { top: 'calc(env(safe-area-inset-top) + 12px)' } : undefined}
+            >
+              {geolocationAvailable && (
+                <button
+                  type="button"
+                  onClick={locateMe}
+                  disabled={locating}
+                  aria-label="Mostra dove sono"
+                  className="h-11 w-11 flex items-center justify-center rounded-full bg-[var(--card)] text-[var(--ink)] shadow-[0_1px_2px_rgb(var(--ink-rgb)/0.05),0_10px_24px_-14px_rgb(var(--ink-rgb)/0.25)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 disabled:opacity-50"
+                >
+                  <LocateFixed size={18} className={locating ? 'animate-pulse' : ''} />
+                </button>
+              )}
               <button
                 type="button"
-                onClick={locateMe}
-                disabled={locating}
-                aria-label="Mostra dove sono"
-                className="absolute top-3 right-3 z-[1000] h-11 w-11 flex items-center justify-center rounded-full bg-[var(--card)] text-[var(--ink)] shadow-[0_1px_2px_rgb(var(--ink-rgb)/0.05),0_10px_24px_-14px_rgb(var(--ink-rgb)/0.25)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 disabled:opacity-50"
+                onClick={() => setTopo((t) => !t)}
+                aria-pressed={topo}
+                aria-label={topo ? 'Passa alla mappa standard' : 'Passa alla mappa topografica con i sentieri'}
+                className="h-11 w-11 flex items-center justify-center rounded-full bg-[var(--card)] shadow-[0_1px_2px_rgb(var(--ink-rgb)/0.05),0_10px_24px_-14px_rgb(var(--ink-rgb)/0.25)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
               >
-                <LocateFixed size={18} className={locating ? 'animate-pulse' : ''} />
+                <Layers size={18} className={topo ? 'text-[var(--accent)]' : 'text-[var(--ink)]'} />
               </button>
-            )}
+              <button
+                type="button"
+                onClick={() => setFullscreen((f) => !f)}
+                aria-pressed={fullscreen}
+                aria-label={fullscreen ? 'Chiudi schermo intero' : 'Apri a schermo intero'}
+                className="h-11 w-11 flex items-center justify-center rounded-full bg-[var(--card)] text-[var(--ink)] shadow-[0_1px_2px_rgb(var(--ink-rgb)/0.05),0_10px_24px_-14px_rgb(var(--ink-rgb)/0.25)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
+              >
+                {fullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+              </button>
+            </div>
             <MapContainer center={center} zoom={12} style={{ height: '100%', width: '100%' }}>
-              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap' />
+              <TileLayer url={tileUrl} attribution={tileAttribution} />
+              <ResizeOnFullscreenChange fullscreen={fullscreen} />
               <FlyToPosition position={myPosition} />
               {myPosition && (
                 <Marker position={[myPosition.lat, myPosition.lng]} icon={MY_LOCATION_ICON}>
