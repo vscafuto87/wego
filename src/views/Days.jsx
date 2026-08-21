@@ -87,21 +87,13 @@ export function sentieroStats(item) {
   ].filter((s) => s.value)
 }
 
-export function LinkChip({ link }) {
-  if (!link) return null
-  return (
-    <div className="flex justify-end mt-3">
-      <a href={link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-[var(--tint)] text-[var(--accent)] text-sm font-medium">
-        <ExternalLink size={14} /> Apri il link
-      </a>
-    </div>
-  )
-}
-
 // Voce sentiero/spiaggia/pasto: una scheda con badge del tipo, invece della
 // riga di testo generica, per rendere le informazioni del percorso o del
-// posto immediatamente riconoscibili.
-export function DayItemCard({ item, onEdit, onRemove, dragHandle }) {
+// posto immediatamente riconoscibili. Usata sia per le voci native del
+// giorno sia per le schede Ristoranti prenotate aggregate in Itinerario/Oggi
+// (via collectExternalDayItems): stessa card, stesso aspetto della sezione
+// Ristoranti da cui vengono — solo `onNavigate` cambia in base al contesto.
+export function DayItemCard({ item, onEdit, onRemove, onNavigate, dragHandle }) {
   const Icon = KIND_ICONS[item.kind]
   const stats = sentieroStats(item)
 
@@ -117,6 +109,7 @@ export function DayItemCard({ item, onEdit, onRemove, dragHandle }) {
           )}
           {item.time && <span className="font-mono text-sm text-[var(--muted)] mt-0.5 block">{item.time}</span>}
           <p className="font-display font-semibold text-xl mt-0.5 leading-snug">{item.title}</p>
+          {item.meta && <p className="font-mono text-sm text-[var(--muted)] mt-1">{item.meta}</p>}
           {item.kind !== 'sentiero' && item.detail && <p className="text-sm text-[var(--muted)] mt-1">{item.detail}</p>}
           {item.kind === 'pasto' && item.luogo && <p className="text-sm text-[var(--muted)] mt-1">{item.luogo}</p>}
           {item.kind === 'spiaggia' && (item.accesso || item.servizi) && (
@@ -166,15 +159,31 @@ export function DayItemCard({ item, onEdit, onRemove, dragHandle }) {
         </span>
       )}
 
-      {item.link && (
+      {(item.link || (item.origin && onNavigate)) && (
         <>
           <div className="h-px bg-[var(--line)] mt-3 mb-3" />
           <div className="flex gap-2 flex-wrap">
-            <a href={item.link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-[var(--tint)] text-[var(--accent)] text-sm font-medium">
-              <ExternalLink size={15} /> Apri il link
-            </a>
+            {item.link && (
+              <a href={item.link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-[var(--tint)] text-[var(--accent)] text-sm font-medium">
+                <ExternalLink size={15} /> Apri il link
+              </a>
+            )}
+            {item.origin && onNavigate && (
+              <button type="button" onClick={() => onNavigate(item.origin.tab)} className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-[var(--tint)] text-[var(--accent)] text-sm font-medium">
+                <ArrowRight size={15} /> Vai a Ristoranti
+              </button>
+            )}
           </div>
         </>
+      )}
+      {item.tags?.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-3">
+          {item.tags.map((tag) => (
+            <Label key={tag} className="bg-[var(--tint)] px-2.5 py-1 rounded-full">
+              {tag}
+            </Label>
+          ))}
+        </div>
       )}
       <ModifiedBy modifiedBy={item.modifiedBy} modifiedAt={item.modifiedAt} />
     </div>
@@ -234,50 +243,6 @@ export function TransportDayCard({ item, onNavigate, dragHandle }) {
   )
 }
 
-// Scheda Ristoranti prenotata, aggregata nel giorno: i campi si modificano
-// solo dalla sezione Ristoranti (da cui viene calcolata, vedi
-// collectExternalDayItems), ma l'ordine è trascinabile quando arriva una
-// dragHandle (solo dall'Itinerario).
-export function RestaurantDayCard({ item, onNavigate, dragHandle }) {
-  return (
-    <div className="rounded-[24px] p-4 bg-[var(--card)] shadow-[0_1px_2px_rgb(var(--ink-rgb)/0.05),0_10px_24px_-14px_rgb(var(--ink-rgb)/0.25)]">
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-start gap-3 flex-1 min-w-0">
-          <div className="h-10 w-10 rounded-full bg-[var(--tint)] flex items-center justify-center flex-shrink-0">
-            <Utensils size={18} className="text-[var(--accent)]" />
-          </div>
-          <div className="flex-1 min-w-0">
-            {item.time && <span className="font-mono text-sm text-[var(--muted)]">{item.time}</span>}
-            <p className="font-display font-semibold text-lg leading-snug">{item.title}</p>
-            {item.note && <p className="text-sm text-[var(--muted)] mt-1">{item.note}</p>}
-          </div>
-        </div>
-        {dragHandle && (
-          <button
-            type="button"
-            ref={dragHandle.setActivatorNodeRef}
-            {...dragHandle.attributes}
-            {...dragHandle.listeners}
-            aria-label="Trascina per riordinare"
-            className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)] cursor-grab touch-none -mr-2 -mt-1 flex-shrink-0"
-          >
-            <GripVertical size={15} />
-          </button>
-        )}
-      </div>
-      <LinkChip link={item.link} />
-      {onNavigate && (
-        <div className="flex justify-end mt-3">
-          <button type="button" onClick={() => onNavigate(item.origin.tab)} className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-[var(--tint)] text-[var(--accent)] text-sm font-medium">
-            <ArrowRight size={14} /> Vai a Ristoranti
-          </button>
-        </div>
-      )}
-      <ModifiedBy modifiedBy={item.modifiedBy} modifiedAt={item.modifiedAt} />
-    </div>
-  )
-}
-
 // Voci del giorno, trasporti e ristoranti prenotati in un'unica lista,
 // nell'ordine combinato salvato in day.order — non più per orario. Sola
 // lettura: usata da Oggi quando il giorno mostrato non è quello odierno
@@ -299,7 +264,7 @@ function TimelineBlock({ day, externalItems, onEditItem, onRemoveItem, onNavigat
           ) : entry.type === 'transport' ? (
             <TransportDayCard item={entry.item} onNavigate={onNavigate} />
           ) : (
-            <RestaurantDayCard item={entry.item} onNavigate={onNavigate} />
+            <DayItemCard item={entry.item} onNavigate={onNavigate} />
           )}
         </li>
       ))}
@@ -325,7 +290,7 @@ function SortableTimelineEntry({ entry, onEdit, onRemove, onNavigate }) {
       ) : entry.type === 'transport' ? (
         <TransportDayCard item={entry.item} onNavigate={onNavigate} dragHandle={dragHandle} />
       ) : (
-        <RestaurantDayCard item={entry.item} onNavigate={onNavigate} dragHandle={dragHandle} />
+        <DayItemCard item={entry.item} onNavigate={onNavigate} dragHandle={dragHandle} />
       )}
     </li>
   )
@@ -557,7 +522,7 @@ const Days = forwardRef(function Days({ trip, onUpdate, activeDisplayName, onNav
                   ) : activeEntry.type === 'transport' ? (
                     <TransportDayCard item={activeEntry.item} />
                   ) : (
-                    <RestaurantDayCard item={activeEntry.item} />
+                    <DayItemCard item={activeEntry.item} />
                   )}
                 </div>
               ) : null}

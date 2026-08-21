@@ -4,7 +4,7 @@ import Btn from '../components/Btn.jsx'
 import DayLabel from '../components/DayLabel.jsx'
 import Empty from '../components/Empty.jsx'
 import ModifiedBy from '../components/ModifiedBy.jsx'
-import { KIND_ICONS, sentieroStats, DayItemCard, TransportDayCard, RestaurantDayCard, DayItemsList } from './Days.jsx'
+import { KIND_ICONS, sentieroStats, DayItemCard, TransportDayCard, DayItemsList } from './Days.jsx'
 import { collectExternalDayItems } from '../data/schema.js'
 import { getTodayWeather, weatherIcon } from '../data/weather.js'
 
@@ -152,7 +152,7 @@ function AgendaGroup({ group, currentId, doneIds, onNavigate }) {
         currentExternal
           ? currentExternal.type === 'transport'
             ? <TransportDayCard item={current} onNavigate={onNavigate} />
-            : <RestaurantDayCard item={current} onNavigate={onNavigate} />
+            : <DayItemCard item={current} onNavigate={onNavigate} />
           : <DayItemCard item={current} />
       )}
     </div>

@@ -654,12 +654,23 @@ describe('collectExternalDayItems', () => {
     expect(items.map((i) => i.type).sort()).toEqual(['card', 'transport'])
   })
 
-  it('la voce ristorante porta titolo, dettaglio come nota, link e origin verso la sezione', () => {
+  it('la voce ristorante porta titolo, dettaglio, link e origin verso la sezione', () => {
     const trip = tripWithRistorantiEDate()
     const ristorantiSection = trip.sections.find((s) => s.title === 'Ristoranti')
     const card = collectExternalDayItems(trip).find((i) => i.type === 'card')
-    expect(card).toMatchObject({ date: '2026-08-30', time: '20:30', title: 'Da Assunta', note: 'Pesce', link: 'https://example.com' })
+    expect(card).toMatchObject({ date: '2026-08-30', time: '20:30', title: 'Da Assunta', detail: 'Pesce', link: 'https://example.com' })
     expect(card.origin).toEqual({ tab: ristorantiSection.id })
+  })
+
+  it('la voce ristorante porta anche kind, meta, luogo, prenotato e tag, per renderla identica alla scheda di origine', () => {
+    const trip = normalizeTrip({
+      name: 'X',
+      sections: [{ title: 'Ristoranti', type: 'cards', items: [
+        { title: 'Da Assunta', kind: 'pasto', meta: '€€', luogo: 'Porto', prenotato: true, tags: ['pesce'], date: '2026-08-30', time: '20:30' }
+      ] }]
+    })
+    const card = collectExternalDayItems(trip).find((i) => i.type === 'card')
+    expect(card).toMatchObject({ kind: 'pasto', meta: '€€', luogo: 'Porto', prenotato: true, tags: ['pesce'] })
   })
 
   it('viaggio senza sezione Ristoranti prenotata: nessuna voce card', () => {
