@@ -9,6 +9,7 @@ import ImportView from './views/ImportView.jsx'
 import JoinView from './views/JoinView.jsx'
 import AdminApp from './admin/AdminApp.jsx'
 import LoginGate from './views/LoginGate.jsx'
+import PortraitGuard from './components/PortraitGuard.jsx'
 
 export default function App() {
   const [authReady, setAuthReady] = useState(!isCloudConfigured)
@@ -171,34 +172,43 @@ export default function App() {
     goHome()
   }
 
+  function renderMain() {
+    if (!authReady) {
+      return <LoginGate onReady={() => setAuthReady(true)} />
+    }
+
+    if (trips === null) {
+      return <div className="min-h-screen flex items-center justify-center font-sans text-[#6E7B72]">Carico i viaggi…</div>
+    }
+
+    if (joinCode) {
+      return <JoinView code={joinCode} onJoined={finishJoin} onCancel={cancelJoin} />
+    }
+
+    if (view === 'import') {
+      return <ImportView onImport={importTrips} onCancel={goHome} />
+    }
+
+    if (view === 'trip') {
+      const trip = trips.find((t) => t.id === activeTripId)
+      if (!trip) {
+        goHome()
+        return null
+      }
+      return <TripView trip={trip} onBack={goHome} onUpdate={(updater) => updateTrip(trip.id, updater)} onDelete={() => deleteTrip(trip.id)} />
+    }
+
+    return <Home trips={trips} onOpen={openTrip} onCreate={createTrip} onImport={() => setView('import')} onDelete={deleteTrip} />
+  }
+
   if (isAdmin) {
     return <AdminApp />
   }
 
-  if (!authReady) {
-    return <LoginGate onReady={() => setAuthReady(true)} />
-  }
-
-  if (trips === null) {
-    return <div className="min-h-screen flex items-center justify-center font-sans text-[#6E7B72]">Carico i viaggi…</div>
-  }
-
-  if (joinCode) {
-    return <JoinView code={joinCode} onJoined={finishJoin} onCancel={cancelJoin} />
-  }
-
-  if (view === 'import') {
-    return <ImportView onImport={importTrips} onCancel={goHome} />
-  }
-
-  if (view === 'trip') {
-    const trip = trips.find((t) => t.id === activeTripId)
-    if (!trip) {
-      goHome()
-      return null
-    }
-    return <TripView trip={trip} onBack={goHome} onUpdate={(updater) => updateTrip(trip.id, updater)} onDelete={() => deleteTrip(trip.id)} />
-  }
-
-  return <Home trips={trips} onOpen={openTrip} onCreate={createTrip} onImport={() => setView('import')} onDelete={deleteTrip} />
+  return (
+    <>
+      <PortraitGuard />
+      {renderMain()}
+    </>
+  )
 }
