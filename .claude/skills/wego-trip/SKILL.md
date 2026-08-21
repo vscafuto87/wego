@@ -139,6 +139,42 @@ node --env-file-if-exists=.env.local scripts/wego-trip-sync.mjs items "<nome o s
 node --env-file-if-exists=.env.local scripts/wego-trip-sync.mjs attach "<nome o share_code>" transport 2 /percorso/biglietto.pdf
 ```
 
+## Usare questi comandi dall'app desktop Claude.ai (server MCP)
+
+Fuori da Claude Code (es. dall'app desktop generica di Claude.ai), questi
+stessi comandi sono disponibili come strumenti MCP (`wego_list`, `wego_pull`,
+`wego_push`, `wego_create`, `wego_items`, `wego_attach`) tramite
+`scripts/wego-trip-mcp-server.mjs`, registrato una tantum
+nel file di configurazione dell'app desktop:
+
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+
+```jsonc
+{
+  "mcpServers": {
+    "wego-trip": {
+      "command": "node",
+      "args": ["/percorso/assoluto/al/repo/scripts/wego-trip-mcp-server.mjs"],
+      "env": {
+        "VITE_SUPABASE_URL": "...",
+        "VITE_SUPABASE_ANON_KEY": "...",
+        "WEGO_SCRIPT_EMAIL": "...",
+        "WEGO_SCRIPT_PASSWORD": "..."
+      }
+    }
+  }
+}
+```
+
+Sostituisci il percorso con quello assoluto del repo sulla tua macchina, e le
+quattro variabili con i valori reali (stessi di `.env.local`). Richiede il
+riavvio completo dell'app desktop. Gli strumenti di scrittura (`wego_push`,
+`wego_create`, `wego_attach`) seguono la stessa procedura di conferma di
+`push`/`create`/`attach` da Claude Code: prima con `yes: false`, riepilogo in
+chat, sì esplicito, poi `yes: true` — con in più il dialogo di approvazione
+che l'app desktop stessa mostra per ogni chiamata di strumento.
+
 ## Conferma obbligatoria prima di scrivere
 
 `push` e `create` **senza** `--yes` non scrivono nulla: stampano solo un
