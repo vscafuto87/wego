@@ -205,13 +205,57 @@ export function TransportDayCard({ item, onNavigate, dragHandle }) {
   )
 }
 
-// Voci del giorno e trasporti in un'unica lista, nell'ordine combinato
-// salvato in day.order — non più per orario. Sola lettura: usata da Oggi
-// quando il giorno mostrato non è quello odierno (l'agenda a fasce orarie ha
-// senso solo per "oggi": su un giorno passato/futuro si torna a questa lista
-// completa) e da DayItemsList sotto.
-function TimelineBlock({ day, transportItems, onEditItem, onRemoveItem, onNavigate }) {
-  const timeline = buildDayTimeline(day, transportItems)
+// Scheda Ristoranti prenotata, aggregata nel giorno: i campi si modificano
+// solo dalla sezione Ristoranti (da cui viene calcolata, vedi
+// collectExternalDayItems), ma l'ordine è trascinabile quando arriva una
+// dragHandle (solo dall'Itinerario).
+export function RestaurantDayCard({ item, onNavigate, dragHandle }) {
+  return (
+    <div className="rounded-[24px] p-4 bg-[var(--card)] shadow-[0_1px_2px_rgb(var(--ink-rgb)/0.05),0_10px_24px_-14px_rgb(var(--ink-rgb)/0.25)]">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-start gap-3 flex-1 min-w-0">
+          <div className="h-10 w-10 rounded-full bg-[var(--tint)] flex items-center justify-center flex-shrink-0">
+            <Utensils size={18} className="text-[var(--accent)]" />
+          </div>
+          <div className="flex-1 min-w-0">
+            {item.time && <span className="font-mono text-sm text-[var(--muted)]">{item.time}</span>}
+            <p className="font-display font-semibold text-lg leading-snug">{item.title}</p>
+            {item.note && <p className="text-sm text-[var(--muted)] mt-1">{item.note}</p>}
+          </div>
+        </div>
+        {dragHandle && (
+          <button
+            type="button"
+            ref={dragHandle.setActivatorNodeRef}
+            {...dragHandle.attributes}
+            {...dragHandle.listeners}
+            aria-label="Trascina per riordinare"
+            className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)] cursor-grab touch-none -mr-2 -mt-1 flex-shrink-0"
+          >
+            <GripVertical size={15} />
+          </button>
+        )}
+      </div>
+      <LinkChip link={item.link} />
+      {onNavigate && (
+        <div className="flex justify-end mt-3">
+          <button type="button" onClick={() => onNavigate(item.origin.tab)} className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-[var(--tint)] text-[var(--accent)] text-sm font-medium">
+            <ArrowRight size={14} /> Vai a Ristoranti
+          </button>
+        </div>
+      )}
+      <ModifiedBy modifiedBy={item.modifiedBy} modifiedAt={item.modifiedAt} />
+    </div>
+  )
+}
+
+// Voci del giorno, trasporti e ristoranti prenotati in un'unica lista,
+// nell'ordine combinato salvato in day.order — non più per orario. Sola
+// lettura: usata da Oggi quando il giorno mostrato non è quello odierno
+// (l'agenda a fasce orarie ha senso solo per "oggi": su un giorno
+// passato/futuro si torna a questa lista completa) e da DayItemsList sotto.
+function TimelineBlock({ day, externalItems, onEditItem, onRemoveItem, onNavigate }) {
+  const timeline = buildDayTimeline(day, externalItems)
   if (timeline.length === 0) return null
   return (
     <ul className="flex flex-col gap-3">
@@ -223,8 +267,10 @@ function TimelineBlock({ day, transportItems, onEditItem, onRemoveItem, onNaviga
               onEdit={onEditItem ? () => onEditItem(entry.item) : undefined}
               onRemove={onRemoveItem ? () => onRemoveItem(entry.item) : undefined}
             />
-          ) : (
+          ) : entry.type === 'transport' ? (
             <TransportDayCard item={entry.item} onNavigate={onNavigate} />
+          ) : (
+            <RestaurantDayCard item={entry.item} onNavigate={onNavigate} />
           )}
         </li>
       ))}
@@ -232,8 +278,9 @@ function TimelineBlock({ day, transportItems, onEditItem, onRemoveItem, onNaviga
   )
 }
 
-// Voce dell'Itinerario trascinabile (voce giorno o trasporto): la maniglia
-// avvia il drag, il resto della scheda si comporta come oggi.
+// Voce dell'Itinerario trascinabile (voce giorno, trasporto o ristorante
+// prenotato): la maniglia avvia il drag, il resto della scheda si comporta
+// come oggi.
 function SortableTimelineEntry({ entry, onEdit, onRemove, onNavigate }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: entry.item.id })
   const style = {
@@ -246,18 +293,20 @@ function SortableTimelineEntry({ entry, onEdit, onRemove, onNavigate }) {
     <li ref={setNodeRef} style={style}>
       {entry.type === 'item' ? (
         <DayItemCard item={entry.item} onEdit={onEdit} onRemove={onRemove} dragHandle={dragHandle} />
-      ) : (
+      ) : entry.type === 'transport' ? (
         <TransportDayCard item={entry.item} onNavigate={onNavigate} dragHandle={dragHandle} />
+      ) : (
+        <RestaurantDayCard item={entry.item} onNavigate={onNavigate} dragHandle={dragHandle} />
       )}
     </li>
   )
 }
 
-// Voci del giorno e trasporti, nell'ordine combinato, di sola lettura: usata
-// da Oggi quando il giorno mostrato non è oggi.
-export function DayItemsList({ day, transportItems = [], onEditItem, onRemoveItem, onNavigate }) {
-  if (day.items.length === 0 && transportItems.length === 0) return null
-  return <TimelineBlock day={day} transportItems={transportItems} onEditItem={onEditItem} onRemoveItem={onRemoveItem} onNavigate={onNavigate} />
+// Voci del giorno, trasporti e ristoranti prenotati, nell'ordine combinato,
+// di sola lettura: usata da Oggi quando il giorno mostrato non è oggi.
+export function DayItemsList({ day, externalItems = [], onEditItem, onRemoveItem, onNavigate }) {
+  if (day.items.length === 0 && externalItems.length === 0) return null
+  return <TimelineBlock day={day} externalItems={externalItems} onEditItem={onEditItem} onRemoveItem={onRemoveItem} onNavigate={onNavigate} />
 }
 
 function withoutKindFields(item) {
@@ -297,7 +346,7 @@ const Days = forwardRef(function Days({ trip, onUpdate, activeDisplayName, onNav
 
   useImperativeHandle(ref, () => ({ openAdd: () => setDayForm(EMPTY_DAY) }))
 
-  const transportByDate = useMemo(() => {
+  const externalByDate = useMemo(() => {
     const map = new Map()
     for (const item of collectExternalDayItems(trip)) {
       const list = map.get(item.date) ?? []
@@ -307,9 +356,10 @@ const Days = forwardRef(function Days({ trip, onUpdate, activeDisplayName, onNav
     return map
   }, [trip])
 
-  // Voci giorno e trasporti di quella data, in un'unica lista trascinabile
-  // (vedi buildDayTimeline): il riordino può mischiare liberamente i due tipi.
-  const timeline = selectedDay ? buildDayTimeline(selectedDay, transportByDate.get(selectedDay.date) ?? []) : []
+  // Voci giorno, trasporti e ristoranti prenotati di quella data, in un'unica
+  // lista trascinabile (vedi buildDayTimeline): il riordino può mischiare
+  // liberamente i tre tipi.
+  const timeline = selectedDay ? buildDayTimeline(selectedDay, externalByDate.get(selectedDay.date) ?? []) : []
 
   function handleDragStart(event) {
     setActiveEntry(timeline.find((e) => e.item.id === event.active.id) ?? null)
@@ -325,22 +375,29 @@ const Days = forwardRef(function Days({ trip, onUpdate, activeDisplayName, onNav
     const reordered = arrayMove(timeline, oldIndex, newIndex)
     const newItems = reordered.filter((e) => e.type === 'item').map((e) => e.item)
     const newTransportIds = reordered.filter((e) => e.type === 'transport').map((e) => e.item.id)
+    const newCardIds = reordered.filter((e) => e.type === 'card').map((e) => e.item.id)
     const newOrder = reordered.map((e) => e.type)
+
+    function reorderSubset(items, ids) {
+      const dateIndices = []
+      items.forEach((it, i) => { if (it.date === selectedDay.date) dateIndices.push(i) })
+      // Se il sottoinsieme di quella data è cambiato da quando è stata
+      // calcolata la timeline (modifica concorrente), non tocca l'ordine
+      // piuttosto che corromperlo.
+      if (dateIndices.length !== ids.length) return items
+      const byId = new Map(items.map((it) => [it.id, it]))
+      const result = [...items]
+      dateIndices.forEach((i, pos) => { result[i] = byId.get(ids[pos]) })
+      return result
+    }
+
     onUpdate((t) => ({
       ...t,
       days: t.days.map((d) => (d.id === selectedDay.id ? { ...d, items: newItems, order: newOrder } : d)),
       sections: t.sections.map((s) => {
-        if (s.type !== 'transport') return s
-        const dateIndices = []
-        s.items.forEach((it, i) => { if (it.date === selectedDay.date) dateIndices.push(i) })
-        // Se il sottoinsieme di quella data è cambiato da quando è stata
-        // calcolata la timeline (modifica concorrente), non tocca l'ordine
-        // dei trasporti piuttosto che corromperlo.
-        if (dateIndices.length !== newTransportIds.length) return s
-        const byId = new Map(s.items.map((it) => [it.id, it]))
-        const items = [...s.items]
-        dateIndices.forEach((i, pos) => { items[i] = byId.get(newTransportIds[pos]) })
-        return { ...s, items }
+        if (s.type === 'transport') return { ...s, items: reorderSubset(s.items, newTransportIds) }
+        if (s.type === 'cards' && s.title === 'Ristoranti') return { ...s, items: reorderSubset(s.items, newCardIds) }
+        return s
       })
     }))
   }
@@ -458,7 +515,7 @@ const Days = forwardRef(function Days({ trip, onUpdate, activeDisplayName, onNav
                     entry={entry}
                     onEdit={entry.type === 'item' ? () => setItemForm({ dayId: selectedDay.id, id: entry.item.id, ...EMPTY_ITEM, ...entry.item }) : undefined}
                     onRemove={entry.type === 'item' ? () => removeItem(selectedDay.id, entry.item) : undefined}
-                    onNavigate={entry.type === 'transport' ? onNavigate : undefined}
+                    onNavigate={entry.type !== 'item' ? onNavigate : undefined}
                   />
                 ))}
               </ul>
@@ -466,7 +523,13 @@ const Days = forwardRef(function Days({ trip, onUpdate, activeDisplayName, onNav
             <DragOverlay>
               {activeEntry ? (
                 <div className="rounded-[24px] shadow-[0_12px_32px_-10px_rgb(var(--ink-rgb)/0.4)]">
-                  {activeEntry.type === 'item' ? <DayItemCard item={activeEntry.item} /> : <TransportDayCard item={activeEntry.item} />}
+                  {activeEntry.type === 'item' ? (
+                    <DayItemCard item={activeEntry.item} />
+                  ) : activeEntry.type === 'transport' ? (
+                    <TransportDayCard item={activeEntry.item} />
+                  ) : (
+                    <RestaurantDayCard item={activeEntry.item} />
+                  )}
                 </div>
               ) : null}
             </DragOverlay>
