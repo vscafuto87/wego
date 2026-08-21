@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Plus, Pencil, Trash2, Mountain, Waves, Utensils, GripVertical, Bus, ExternalLink, ArrowRight } from 'lucide-react'
-import { stampModified, dayItemFieldsForKind, collectExternalDayItems } from '../data/schema.js'
+import { stampModified, dayItemFieldsForKind, collectExternalDayItems, buildDayTimeline } from '../data/schema.js'
 import { sentieroStats } from '../views/Days.jsx'
 
 const inputClass = 'border border-[var(--line)] bg-[var(--paper)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
@@ -45,10 +45,8 @@ function fieldsForForm(itemForm) {
 export default function AdminDaysEditor({ trip, onUpdate, activeDisplayName, onNavigate }) {
   const [dayForm, setDayForm] = useState(null)
   const [itemForm, setItemForm] = useState(null)
-  const [dragItem, setDragItem] = useState(null)
-  const [overItem, setOverItem] = useState(null)
-  const [dragTransport, setDragTransport] = useState(null)
-  const [overTransport, setOverTransport] = useState(null)
+  const [dragEntry, setDragEntry] = useState(null)
+  const [overEntry, setOverEntry] = useState(null)
 
   // Voci Trasporti con una data, raggruppate per giorno: sola lettura qui (si
   // modificano solo dalla sezione Trasporti, vedi collectExternalDayItems),
@@ -63,42 +61,36 @@ export default function AdminDaysEditor({ trip, onUpdate, activeDisplayName, onN
     return map
   }, [trip])
 
-  function reorderItems(dayId, fromId, toId) {
+  // Riordina voci giorno e trasporti insieme (vedi buildDayTimeline): sposta
+  // fromId sulla posizione di toId nella lista combinata, poi salva sia
+  // day.items/day.order sia (se tra i trasporti c'è di mezzo uno spostamento)
+  // la sezione Trasporti, in un unico aggiornamento.
+  function reorderTimeline(day, transportItems, fromId, toId) {
     if (fromId === toId) return
+    const timeline = buildDayTimeline(day, transportItems)
+    const fromIdx = timeline.findIndex((e) => e.item.id === fromId)
+    const toIdx = timeline.findIndex((e) => e.item.id === toId)
+    if (fromIdx === -1 || toIdx === -1) return
+    const entries = [...timeline]
+    const [moved] = entries.splice(fromIdx, 1)
+    entries.splice(toIdx, 0, moved)
+    const newItems = entries.filter((e) => e.type === 'item').map((e) => e.item)
+    const newTransportIds = entries.filter((e) => e.type === 'transport').map((e) => e.item.id)
+    const newOrder = entries.map((e) => e.type)
     onUpdate((t) => ({
       ...t,
-      days: t.days.map((d) => {
-        if (d.id !== dayId) return d
-        const items = [...d.items]
-        const fromIdx = items.findIndex((it) => it.id === fromId)
-        const toIdx = items.findIndex((it) => it.id === toId)
-        if (fromIdx === -1 || toIdx === -1) return d
-        const [moved] = items.splice(fromIdx, 1)
-        items.splice(toIdx, 0, moved)
-        return { ...d, items }
-      })
-    }))
-  }
-
-  // Riordina i trasporti di un giorno: si sposta solo tra le voci di quella
-  // data, preservando la posizione relativa dei trasporti degli altri giorni
-  // nell'array della sezione Trasporti (unica fonte di verità dell'ordine).
-  function reorderTransport(date, fromId, toId) {
-    if (fromId === toId) return
-    onUpdate((t) => ({
-      ...t,
+      days: t.days.map((d) => (d.id === day.id ? { ...d, items: newItems, order: newOrder } : d)),
       sections: t.sections.map((s) => {
         if (s.type !== 'transport') return s
-        const indices = []
-        s.items.forEach((it, i) => { if (it.date === date) indices.push(i) })
-        const subset = indices.map((i) => s.items[i])
-        const fromIdx = subset.findIndex((it) => it.id === fromId)
-        const toIdx = subset.findIndex((it) => it.id === toId)
-        if (fromIdx === -1 || toIdx === -1) return s
-        const [moved] = subset.splice(fromIdx, 1)
-        subset.splice(toIdx, 0, moved)
+        const dateIndices = []
+        s.items.forEach((it, i) => { if (it.date === day.date) dateIndices.push(i) })
+        // Se il sottoinsieme di quella data è cambiato da quando è stata
+        // calcolata la timeline (modifica concorrente), non tocca l'ordine
+        // dei trasporti piuttosto che corromperlo.
+        if (dateIndices.length !== newTransportIds.length) return s
+        const byId = new Map(s.items.map((it) => [it.id, it]))
         const items = [...s.items]
-        indices.forEach((i, pos) => { items[i] = subset[pos] })
+        dateIndices.forEach((i, pos) => { items[i] = byId.get(newTransportIds[pos]) })
         return { ...s, items }
       })
     }))
@@ -165,99 +157,86 @@ export default function AdminDaysEditor({ trip, onUpdate, activeDisplayName, onN
               </div>
             </div>
 
-            {day.items.length > 0 && (
-              <ul className="flex flex-col gap-2 mt-3 border-l-2 border-[var(--line)] pl-4">
-                {day.items.map((item) => (
-                  <li
-                    key={item.id}
-                    className={`flex items-start gap-1 ${dragItem?.id === item.id ? 'opacity-40' : ''} ${overItem?.id === item.id && dragItem?.id !== item.id ? 'border-t-2 border-[var(--accent)]' : ''}`}
-                    onDragOver={(e) => { e.preventDefault(); setOverItem({ dayId: day.id, id: item.id }) }}
-                    onDrop={(e) => {
-                      e.preventDefault()
-                      if (dragItem && dragItem.dayId === day.id) reorderItems(day.id, dragItem.id, item.id)
-                      setDragItem(null)
-                      setOverItem(null)
-                    }}
-                  >
-                    <span
-                      draggable
-                      onDragStart={() => setDragItem({ dayId: day.id, id: item.id })}
-                      onDragEnd={() => { setDragItem(null); setOverItem(null) }}
-                      aria-label="Trascina per riordinare"
-                      className="p-1.5 -ml-1 text-[var(--muted)] cursor-grab"
-                    >
-                      <GripVertical size={14} />
-                    </span>
-                    <div className="flex-1">
-                      {item.time && <span className="font-mono text-sm text-[var(--muted)] mr-2">{item.time}</span>}
-                      <KindIcon kind={item.kind} />
-                      <span className="text-base">{item.title}</span>
-                      {item.kind !== 'sentiero' && item.detail && <p className="text-sm text-[var(--muted)] mt-0.5">{item.detail}</p>}
-                      {sentieroStats(item).length > 0 && (
-                        <div className="flex flex-wrap gap-3 mt-1">
-                          {sentieroStats(item).map((s, i) => (
-                            <div key={i} className="flex items-center gap-1 text-[var(--muted)]">
-                              <s.icon size={13} />
-                              <span className="font-mono text-sm font-medium text-[var(--ink)] whitespace-nowrap">{s.value}</span>
+            {(() => {
+              const transportItems = transportByDate.get(day.date) ?? []
+              const timeline = buildDayTimeline(day, transportItems)
+              if (timeline.length === 0) return null
+              return (
+                <ul className="flex flex-col gap-2 mt-3 border-l-2 border-[var(--line)] pl-4">
+                  {timeline.map((entry) => {
+                    const item = entry.item
+                    return (
+                      <li
+                        key={item.id}
+                        className={`flex items-start gap-1 ${dragEntry?.id === item.id ? 'opacity-40' : ''} ${overEntry?.id === item.id && dragEntry?.id !== item.id ? 'border-t-2 border-[var(--accent)]' : ''}`}
+                        onDragOver={(e) => { e.preventDefault(); setOverEntry({ dayId: day.id, id: item.id }) }}
+                        onDrop={(e) => {
+                          e.preventDefault()
+                          if (dragEntry && dragEntry.dayId === day.id) reorderTimeline(day, transportItems, dragEntry.id, item.id)
+                          setDragEntry(null)
+                          setOverEntry(null)
+                        }}
+                      >
+                        <span
+                          draggable
+                          onDragStart={() => setDragEntry({ dayId: day.id, id: item.id })}
+                          onDragEnd={() => { setDragEntry(null); setOverEntry(null) }}
+                          aria-label="Trascina per riordinare"
+                          className="p-1.5 -ml-1 text-[var(--muted)] cursor-grab"
+                        >
+                          <GripVertical size={14} />
+                        </span>
+                        {entry.type === 'item' ? (
+                          <>
+                            <div className="flex-1">
+                              {item.time && <span className="font-mono text-sm text-[var(--muted)] mr-2">{item.time}</span>}
+                              <KindIcon kind={item.kind} />
+                              <span className="text-base">{item.title}</span>
+                              {item.kind !== 'sentiero' && item.detail && <p className="text-sm text-[var(--muted)] mt-0.5">{item.detail}</p>}
+                              {sentieroStats(item).length > 0 && (
+                                <div className="flex flex-wrap gap-3 mt-1">
+                                  {sentieroStats(item).map((s, i) => (
+                                    <div key={i} className="flex items-center gap-1 text-[var(--muted)]">
+                                      <s.icon size={13} />
+                                      <span className="font-mono text-sm font-medium text-[var(--ink)] whitespace-nowrap">{s.value}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <button onClick={() => setItemForm({ dayId: day.id, id: item.id, ...EMPTY_ITEM, ...item })} aria-label="Modifica voce" className="p-1.5 text-[var(--muted)]">
-                      <Pencil size={14} />
-                    </button>
-                    <button onClick={() => removeItem(day.id, item)} aria-label="Elimina voce" className="p-1.5 text-[var(--muted)]">
-                      <Trash2 size={14} />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            {(transportByDate.get(day.date) ?? []).length > 0 && (
-              <ul className="flex flex-col gap-2 mt-3 border-l-2 border-[var(--accent)]/40 pl-4">
-                {(transportByDate.get(day.date) ?? []).map((item) => (
-                  <li
-                    key={item.id}
-                    className={`flex items-start gap-1 ${dragTransport?.id === item.id ? 'opacity-40' : ''} ${overTransport?.id === item.id && dragTransport?.id !== item.id ? 'border-t-2 border-[var(--accent)]' : ''}`}
-                    onDragOver={(e) => { e.preventDefault(); setOverTransport({ date: day.date, id: item.id }) }}
-                    onDrop={(e) => {
-                      e.preventDefault()
-                      if (dragTransport && dragTransport.date === day.date) reorderTransport(day.date, dragTransport.id, item.id)
-                      setDragTransport(null)
-                      setOverTransport(null)
-                    }}
-                  >
-                    <span
-                      draggable
-                      onDragStart={() => setDragTransport({ date: day.date, id: item.id })}
-                      onDragEnd={() => { setDragTransport(null); setOverTransport(null) }}
-                      aria-label="Trascina per riordinare"
-                      className="p-1.5 -ml-1 text-[var(--muted)] cursor-grab"
-                    >
-                      <GripVertical size={14} />
-                    </span>
-                    <div className="flex-1">
-                      {item.time && <span className="font-mono text-sm text-[var(--muted)] mr-2">{item.time}</span>}
-                      <Bus size={15} className="inline mr-1.5 -mt-0.5 text-[var(--muted)]" />
-                      <span className="text-base">{item.title}</span>
-                      {item.note && <p className="text-sm text-[var(--muted)] mt-0.5">{item.note}</p>}
-                    </div>
-                    {item.link && (
-                      <a href={item.link} target="_blank" rel="noreferrer" aria-label="Apri il biglietto" className="p-1.5 text-[var(--muted)]">
-                        <ExternalLink size={14} />
-                      </a>
-                    )}
-                    {onNavigate && (
-                      <button onClick={() => onNavigate(item.origin.tab)} aria-label="Vai a Trasporti" className="p-1.5 text-[var(--muted)]">
-                        <ArrowRight size={14} />
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
+                            <button onClick={() => setItemForm({ dayId: day.id, id: item.id, ...EMPTY_ITEM, ...item })} aria-label="Modifica voce" className="p-1.5 text-[var(--muted)]">
+                              <Pencil size={14} />
+                            </button>
+                            <button onClick={() => removeItem(day.id, item)} aria-label="Elimina voce" className="p-1.5 text-[var(--muted)]">
+                              <Trash2 size={14} />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex-1">
+                              {item.time && <span className="font-mono text-sm text-[var(--muted)] mr-2">{item.time}</span>}
+                              <Bus size={15} className="inline mr-1.5 -mt-0.5 text-[var(--muted)]" />
+                              <span className="text-base">{item.title}</span>
+                              {item.note && <p className="text-sm text-[var(--muted)] mt-0.5">{item.note}</p>}
+                            </div>
+                            {item.link && (
+                              <a href={item.link} target="_blank" rel="noreferrer" aria-label="Apri il biglietto" className="p-1.5 text-[var(--muted)]">
+                                <ExternalLink size={14} />
+                              </a>
+                            )}
+                            {onNavigate && (
+                              <button onClick={() => onNavigate(item.origin.tab)} aria-label="Vai a Trasporti" className="p-1.5 text-[var(--muted)]">
+                                <ArrowRight size={14} />
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </li>
+                    )
+                  })}
+                </ul>
+              )
+            })()}
 
             <button onClick={() => setItemForm({ dayId: day.id, ...EMPTY_ITEM })} className="mt-3 flex items-center gap-1 text-base text-[var(--accent)]">
               <Plus size={16} /> Aggiungi voce

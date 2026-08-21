@@ -3,6 +3,7 @@ const ICONS = ['map', 'check', 'note', 'ticket', 'food', 'bed', 'bus', 'star', '
 const SECTION_TYPES = ['cards', 'checklist', 'notes', 'transport', 'lodging', 'map']
 
 const DAY_ITEM_KINDS = ['', 'sentiero', 'spiaggia', 'pasto']
+const DAY_ORDER_TAGS = ['item', 'transport']
 
 const KIND_FIELDS = {
   sentiero: ['distanza', 'durata', 'dislivello', 'difficolta', 'lat', 'lng'],
@@ -64,7 +65,14 @@ function normalizeDay(raw) {
     note: str(day.note),
     modifiedBy: str(day.modifiedBy),
     modifiedAt: str(day.modifiedAt),
-    items: arr(day.items).map(normalizeDayItem)
+    items: arr(day.items).map(normalizeDayItem),
+    // Ordine combinato di voci giorno e trasporti (vedi buildDayTimeline):
+    // sequenza di tag "item"/"transport" da consumare nell'ordine già salvato
+    // di day.items e dei trasporti di quella data. Non referenzia id (che
+    // vengono rigenerati a ogni caricamento), quindi resta valido tra un
+    // caricamento e l'altro; se mancante o disallineato si ricade su
+    // "voci poi trasporti".
+    order: arr(day.order).filter((tag) => DAY_ORDER_TAGS.includes(tag))
   }
 }
 
@@ -236,7 +244,8 @@ export function exportTrip(trip) {
       note: day.note,
       modifiedBy: day.modifiedBy,
       modifiedAt: day.modifiedAt,
-      items: day.items.map(withoutId)
+      items: day.items.map(withoutId),
+      order: day.order
     })),
     sections: trip.sections.map((section) => {
       const base = { title: section.title, icon: section.icon, type: section.type }
@@ -317,6 +326,25 @@ export function collectExternalDayItems(trip) {
       modifiedAt: i.modifiedAt,
       origin: { tab: transportSection.id }
     }))
+}
+
+// Interleaccia le voci del giorno e i trasporti di quella data in un'unica
+// lista ordinata, secondo day.order: consuma le due code già ordinate
+// (day.items, transportItems) seguendo la sequenza di tag salvata, e in coda
+// mette ciò che non è (più) coperto dall'ordine — voci nuove, o modifiche
+// fatte da dove l'ordine combinato non viene aggiornato (dashboard admin) —
+// così il fallback resta "voci poi trasporti" come prima di questo campo.
+export function buildDayTimeline(day, transportItems) {
+  const items = [...day.items]
+  const transports = [...transportItems]
+  const timeline = []
+  for (const tag of day.order) {
+    if (tag === 'item' && items.length > 0) timeline.push({ type: 'item', item: items.shift() })
+    else if (tag === 'transport' && transports.length > 0) timeline.push({ type: 'transport', item: transports.shift() })
+  }
+  items.forEach((item) => timeline.push({ type: 'item', item }))
+  transports.forEach((item) => timeline.push({ type: 'transport', item }))
+  return timeline
 }
 
 const DAY_MAP_KINDS = ['sentiero', 'spiaggia', 'pasto']

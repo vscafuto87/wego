@@ -7,7 +7,7 @@ import Modal from '../components/Modal.jsx'
 import Empty from '../components/Empty.jsx'
 
 const DayMiniMap = lazy(() => import('./DayMiniMap.jsx'))
-import { stampModified, dayItemFieldsForKind, collectExternalDayItems } from '../data/schema.js'
+import { stampModified, dayItemFieldsForKind, collectExternalDayItems, buildDayTimeline } from '../data/schema.js'
 import ModifiedBy from '../components/ModifiedBy.jsx'
 import CoordsInput from '../components/CoordsInput.jsx'
 import { DndContext, DragOverlay, PointerSensor, KeyboardSensor, useSensor, useSensors, closestCenter } from '@dnd-kit/core'
@@ -205,117 +205,59 @@ export function TransportDayCard({ item, onNavigate, dragHandle }) {
   )
 }
 
-// Voci del giorno in sola lettura o modificabili (a seconda dei callback
-// passati), nell'ordine salvato nell'array — non più per orario. Usata da Oggi
+// Voci del giorno e trasporti in un'unica lista, nell'ordine combinato
+// salvato in day.order — non più per orario. Sola lettura: usata da Oggi
 // quando il giorno mostrato non è quello odierno (l'agenda a fasce orarie ha
 // senso solo per "oggi": su un giorno passato/futuro si torna a questa lista
 // completa) e da DayItemsList sotto.
-function DayItemsBlock({ items, onEditItem, onRemoveItem }) {
-  if (items.length === 0) return null
+function TimelineBlock({ day, transportItems, onEditItem, onRemoveItem, onNavigate }) {
+  const timeline = buildDayTimeline(day, transportItems)
+  if (timeline.length === 0) return null
   return (
     <ul className="flex flex-col gap-3">
-      {items.map((item) => (
-        <li key={item.id}>
-          <DayItemCard
-            item={item}
-            onEdit={onEditItem ? () => onEditItem(item) : undefined}
-            onRemove={onRemoveItem ? () => onRemoveItem(item) : undefined}
-          />
+      {timeline.map((entry) => (
+        <li key={entry.item.id}>
+          {entry.type === 'item' ? (
+            <DayItemCard
+              item={entry.item}
+              onEdit={onEditItem ? () => onEditItem(entry.item) : undefined}
+              onRemove={onRemoveItem ? () => onRemoveItem(entry.item) : undefined}
+            />
+          ) : (
+            <TransportDayCard item={entry.item} onNavigate={onNavigate} />
+          )}
         </li>
       ))}
     </ul>
   )
 }
 
-// Voce dell'Itinerario trascinabile: la maniglia avvia il drag, il resto della
-// scheda si comporta come oggi (tap su matita/cestino invariato).
-function SortableDayItem({ item, onEdit, onRemove }) {
-  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: item.id })
+// Voce dell'Itinerario trascinabile (voce giorno o trasporto): la maniglia
+// avvia il drag, il resto della scheda si comporta come oggi.
+function SortableTimelineEntry({ entry, onEdit, onRemove, onNavigate }) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: entry.item.id })
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.4 : 1
   }
+  const dragHandle = { setActivatorNodeRef, attributes, listeners }
   return (
     <li ref={setNodeRef} style={style}>
-      <DayItemCard
-        item={item}
-        onEdit={onEdit}
-        onRemove={onRemove}
-        dragHandle={{ setActivatorNodeRef, attributes, listeners }}
-      />
+      {entry.type === 'item' ? (
+        <DayItemCard item={entry.item} onEdit={onEdit} onRemove={onRemove} dragHandle={dragHandle} />
+      ) : (
+        <TransportDayCard item={entry.item} onNavigate={onNavigate} dragHandle={dragHandle} />
+      )}
     </li>
   )
 }
 
-// Trasporto trascinabile dentro il blocco del giorno: la maniglia avvia il
-// drag, il resto della scheda si comporta come oggi.
-function SortableTransportDayItem({ item, onNavigate }) {
-  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: item.id })
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.4 : 1
-  }
-  return (
-    <li ref={setNodeRef} style={style}>
-      <TransportDayCard item={item} onNavigate={onNavigate} dragHandle={{ setActivatorNodeRef, attributes, listeners }} />
-    </li>
-  )
-}
-
-// Trasporti del giorno, aggregati dalla sezione Trasporti, nell'ordine
-// salvato lì. Con onReorder (solo dall'Itinerario) sono trascinabili e il
-// riordino si salva sulla sezione Trasporti; altrove (Oggi) sono di sola
-// lettura, nello stesso ordine.
-function TransportBlock({ transportItems, onNavigate, onReorder }) {
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  )
-  if (transportItems.length === 0) return null
-
-  if (!onReorder) {
-    return (
-      <ul className="flex flex-col gap-3">
-        {transportItems.map((item) => (
-          <li key={item.id}>
-            <TransportDayCard item={item} onNavigate={onNavigate} />
-          </li>
-        ))}
-      </ul>
-    )
-  }
-
-  function handleDragEnd(event) {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
-    onReorder(active.id, over.id)
-  }
-
-  return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-      <SortableContext items={transportItems.map((it) => it.id)} strategy={verticalListSortingStrategy}>
-        <ul className="flex flex-col gap-3">
-          {transportItems.map((item) => (
-            <SortableTransportDayItem key={item.id} item={item} onNavigate={onNavigate} />
-          ))}
-        </ul>
-      </SortableContext>
-    </DndContext>
-  )
-}
-
-// Voci del giorno e trasporti, entrambi in ordine manuale, in due blocchi
-// separati: usata da Oggi quando il giorno mostrato non è oggi.
+// Voci del giorno e trasporti, nell'ordine combinato, di sola lettura: usata
+// da Oggi quando il giorno mostrato non è oggi.
 export function DayItemsList({ day, transportItems = [], onEditItem, onRemoveItem, onNavigate }) {
   if (day.items.length === 0 && transportItems.length === 0) return null
-  return (
-    <div className="flex flex-col gap-3">
-      <DayItemsBlock items={day.items} onEditItem={onEditItem} onRemoveItem={onRemoveItem} />
-      <TransportBlock transportItems={transportItems} onNavigate={onNavigate} />
-    </div>
-  )
+  return <TimelineBlock day={day} transportItems={transportItems} onEditItem={onEditItem} onRemoveItem={onRemoveItem} onNavigate={onNavigate} />
 }
 
 function withoutKindFields(item) {
@@ -338,7 +280,7 @@ const Days = forwardRef(function Days({ trip, onUpdate, activeDisplayName, onNav
   const [dayForm, setDayForm] = useState(null)
   const [itemForm, setItemForm] = useState(null)
   const [selectedDayId, setSelectedDayId] = useState(null)
-  const [activeItem, setActiveItem] = useState(null)
+  const [activeEntry, setActiveEntry] = useState(null)
   // Un pull rigenera gli id dei giorni: se il giorno selezionato non esiste
   // più si ricade su quello più vicino a oggi, non sul primo a caso.
   const selectedDay = trip.days.length > 0
@@ -353,26 +295,6 @@ const Days = forwardRef(function Days({ trip, onUpdate, activeDisplayName, onNav
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 
-  function handleDragStart(event) {
-    setActiveItem(selectedDay?.items.find((it) => it.id === event.active.id) ?? null)
-  }
-
-  function handleDragEnd(event) {
-    const { active, over } = event
-    setActiveItem(null)
-    if (!over || active.id === over.id || !selectedDay) return
-    onUpdate((t) => ({
-      ...t,
-      days: t.days.map((d) => {
-        if (d.id !== selectedDay.id) return d
-        const oldIndex = d.items.findIndex((it) => it.id === active.id)
-        const newIndex = d.items.findIndex((it) => it.id === over.id)
-        if (oldIndex === -1 || newIndex === -1) return d
-        return { ...d, items: arrayMove(d.items, oldIndex, newIndex) }
-      })
-    }))
-  }
-
   useImperativeHandle(ref, () => ({ openAdd: () => setDayForm(EMPTY_DAY) }))
 
   const transportByDate = useMemo(() => {
@@ -384,6 +306,44 @@ const Days = forwardRef(function Days({ trip, onUpdate, activeDisplayName, onNav
     }
     return map
   }, [trip])
+
+  // Voci giorno e trasporti di quella data, in un'unica lista trascinabile
+  // (vedi buildDayTimeline): il riordino può mischiare liberamente i due tipi.
+  const timeline = selectedDay ? buildDayTimeline(selectedDay, transportByDate.get(selectedDay.date) ?? []) : []
+
+  function handleDragStart(event) {
+    setActiveEntry(timeline.find((e) => e.item.id === event.active.id) ?? null)
+  }
+
+  function handleDragEnd(event) {
+    const { active, over } = event
+    setActiveEntry(null)
+    if (!over || active.id === over.id || !selectedDay) return
+    const oldIndex = timeline.findIndex((e) => e.item.id === active.id)
+    const newIndex = timeline.findIndex((e) => e.item.id === over.id)
+    if (oldIndex === -1 || newIndex === -1) return
+    const reordered = arrayMove(timeline, oldIndex, newIndex)
+    const newItems = reordered.filter((e) => e.type === 'item').map((e) => e.item)
+    const newTransportIds = reordered.filter((e) => e.type === 'transport').map((e) => e.item.id)
+    const newOrder = reordered.map((e) => e.type)
+    onUpdate((t) => ({
+      ...t,
+      days: t.days.map((d) => (d.id === selectedDay.id ? { ...d, items: newItems, order: newOrder } : d)),
+      sections: t.sections.map((s) => {
+        if (s.type !== 'transport') return s
+        const dateIndices = []
+        s.items.forEach((it, i) => { if (it.date === selectedDay.date) dateIndices.push(i) })
+        // Se il sottoinsieme di quella data è cambiato da quando è stata
+        // calcolata la timeline (modifica concorrente), non tocca l'ordine
+        // dei trasporti piuttosto che corromperlo.
+        if (dateIndices.length !== newTransportIds.length) return s
+        const byId = new Map(s.items.map((it) => [it.id, it]))
+        const items = [...s.items]
+        dateIndices.forEach((i, pos) => { items[i] = byId.get(newTransportIds[pos]) })
+        return { ...s, items }
+      })
+    }))
+  }
 
   function saveDay(e) {
     e.preventDefault()
@@ -424,28 +384,6 @@ const Days = forwardRef(function Days({ trip, onUpdate, activeDisplayName, onNav
         days: t.days.map((d) => (d.id === dayId ? { ...d, items: d.items.filter((it) => it.id !== item.id) } : d))
       }))
     }
-  }
-
-  // Riordina i trasporti di un giorno: si sposta solo tra le voci di quella
-  // data, preservando la posizione relativa dei trasporti degli altri giorni
-  // nell'array della sezione Trasporti (unica fonte di verità dell'ordine).
-  function reorderTransport(date, activeId, overId) {
-    onUpdate((t) => ({
-      ...t,
-      sections: t.sections.map((s) => {
-        if (s.type !== 'transport') return s
-        const indices = []
-        s.items.forEach((it, i) => { if (it.date === date) indices.push(i) })
-        const subset = indices.map((i) => s.items[i])
-        const oldIndex = subset.findIndex((it) => it.id === activeId)
-        const newIndex = subset.findIndex((it) => it.id === overId)
-        if (oldIndex === -1 || newIndex === -1) return s
-        const reordered = arrayMove(subset, oldIndex, newIndex)
-        const items = [...s.items]
-        indices.forEach((i, pos) => { items[i] = reordered[pos] })
-        return { ...s, items }
-      })
-    }))
   }
 
   return (
@@ -512,32 +450,27 @@ const Days = forwardRef(function Days({ trip, onUpdate, activeDisplayName, onNav
           )}
 
           <DndContext sensors={itemSensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-            <SortableContext items={selectedDay.items.map((it) => it.id)} strategy={verticalListSortingStrategy}>
+            <SortableContext items={timeline.map((e) => e.item.id)} strategy={verticalListSortingStrategy}>
               <ul className="flex flex-col gap-3">
-                {selectedDay.items.map((item) => (
-                  <SortableDayItem
-                    key={item.id}
-                    item={item}
-                    onEdit={() => setItemForm({ dayId: selectedDay.id, id: item.id, ...EMPTY_ITEM, ...item })}
-                    onRemove={() => removeItem(selectedDay.id, item)}
+                {timeline.map((entry) => (
+                  <SortableTimelineEntry
+                    key={entry.item.id}
+                    entry={entry}
+                    onEdit={entry.type === 'item' ? () => setItemForm({ dayId: selectedDay.id, id: entry.item.id, ...EMPTY_ITEM, ...entry.item }) : undefined}
+                    onRemove={entry.type === 'item' ? () => removeItem(selectedDay.id, entry.item) : undefined}
+                    onNavigate={entry.type === 'transport' ? onNavigate : undefined}
                   />
                 ))}
               </ul>
             </SortableContext>
             <DragOverlay>
-              {activeItem ? (
+              {activeEntry ? (
                 <div className="rounded-[24px] shadow-[0_12px_32px_-10px_rgb(var(--ink-rgb)/0.4)]">
-                  <DayItemCard item={activeItem} />
+                  {activeEntry.type === 'item' ? <DayItemCard item={activeEntry.item} /> : <TransportDayCard item={activeEntry.item} />}
                 </div>
               ) : null}
             </DragOverlay>
           </DndContext>
-
-          <TransportBlock
-            transportItems={transportByDate.get(selectedDay.date) ?? []}
-            onNavigate={onNavigate}
-            onReorder={(activeId, overId) => reorderTransport(selectedDay.date, activeId, overId)}
-          />
 
           <button onClick={() => setItemForm({ dayId: selectedDay.id, ...EMPTY_ITEM })} className="self-start flex items-center gap-1 text-base text-[var(--accent)] min-h-12">
             <Plus size={17} /> Aggiungi voce
