@@ -85,7 +85,9 @@ Due `SortableContext` di `@dnd-kit`, uno per gruppo, entrambi dentro un unico
 `DndContext`: **trascinare una scheda nell'altro gruppo cambia la prenotazione**.
 Verso "Prenotati": un prompt (`window.prompt`, come i `window.confirm` già usati per
 le eliminazioni) chiede data e ora; annullare il prompt annulla lo spostamento.
-Verso "Consigliati": svuota `date`/`time` senza chiedere conferma. Ogni gruppo resta
+Verso "Consigliati": un `window.confirm` avverte che la prenotazione verrà
+annullata; annullare la conferma annulla lo spostamento, confermare svuota
+`date`/`time`. Ogni gruppo resta
 un'area di drop valida anche da vuoto (contenitore `useDroppable` dedicato), pattern
 standard "board a più colonne" di dnd-kit.
 
