@@ -7,6 +7,7 @@ import DayLabel from '../components/DayLabel.jsx'
 import Label from '../components/Label.jsx'
 import Modal from '../components/Modal.jsx'
 import Empty from '../components/Empty.jsx'
+import { TRANSPORT_MODES } from './Transport.jsx'
 
 const DayMiniMap = lazy(() => import('./DayMiniMap.jsx'))
 import { stampModified, dayItemFieldsForKind, collectExternalDayItems, buildDayTimeline } from '../data/schema.js'
@@ -57,6 +58,16 @@ export const KIND_ICONS = { '': MapPin, sentiero: Mountain, spiaggia: Waves, pas
 
 function kindLabel(kind) {
   return KIND_OPTIONS.find((k) => k.value === kind)?.label ?? kind
+}
+
+// Icona/etichetta del mezzo per la scheda Trasporti aggregata nel giorno:
+// stessa fonte (TRANSPORT_MODES) della sezione Trasporti, per restare identica.
+function transportModeIcon(mode) {
+  return TRANSPORT_MODES.find((m) => m.value === mode)?.Icon ?? Bus
+}
+
+function transportModeLabel(mode) {
+  return TRANSPORT_MODES.find((m) => m.value === mode)?.label ?? 'Trasporto'
 }
 
 const ALL_KIND_FIELDS = ['distanza', 'durata', 'dislivello', 'difficolta', 'accesso', 'servizi', 'luogo', 'prenotato', 'lat', 'lng']
@@ -174,18 +185,18 @@ export function DayItemCard({ item, onEdit, onRemove, dragHandle }) {
 // sezione Trasporti (da cui viene calcolata, vedi collectExternalDayItems),
 // ma l'ordine è trascinabile quando arriva una dragHandle (solo dall'Itinerario).
 export function TransportDayCard({ item, onNavigate, dragHandle }) {
+  const ModeIcon = transportModeIcon(item.mode)
   return (
     <div className="rounded-[24px] p-4 bg-[var(--card)] shadow-[0_1px_2px_rgb(var(--ink-rgb)/0.05),0_10px_24px_-14px_rgb(var(--ink-rgb)/0.25)]">
       <div className="flex items-start justify-between gap-2">
-        <div className="flex items-start gap-3 flex-1 min-w-0">
-          <div className="h-10 w-10 rounded-full bg-[var(--tint)] flex items-center justify-center flex-shrink-0">
-            <Bus size={18} className="text-[var(--accent)]" />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <ModeIcon size={13} className="text-[var(--accent)]" />
+            <p className="font-display font-semibold text-xs uppercase tracking-wider text-[var(--accent)]">{transportModeLabel(item.mode)}</p>
           </div>
-          <div className="flex-1 min-w-0">
-            {item.time && <span className="font-mono text-sm text-[var(--muted)]">{item.time}</span>}
-            <p className="font-display font-semibold text-lg leading-snug">{item.title}</p>
-            {item.note && <p className="text-sm text-[var(--muted)] mt-1">{item.note}</p>}
-          </div>
+          {item.time && <span className="font-mono text-sm text-[var(--muted)] mt-0.5 block">{item.time}</span>}
+          <p className="font-display font-semibold text-xl mt-0.5 leading-snug">{item.title}</p>
+          {item.note && <p className="text-sm text-[var(--muted)] mt-1">{item.note}</p>}
         </div>
         {dragHandle && (
           <button
@@ -194,25 +205,29 @@ export function TransportDayCard({ item, onNavigate, dragHandle }) {
             {...dragHandle.attributes}
             {...dragHandle.listeners}
             aria-label="Trascina per riordinare"
-            className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)] cursor-grab touch-none -mr-2 -mt-1 flex-shrink-0"
+            className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)] cursor-grab touch-none -mr-2 -mt-4 flex-none"
           >
             <GripVertical size={15} />
           </button>
         )}
       </div>
-      {item.link && (
-        <div className="flex justify-end mt-3">
-          <a href={item.link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-[var(--tint)] text-[var(--accent)] text-sm font-medium">
-            <ExternalLink size={14} /> Apri il biglietto
-          </a>
-        </div>
-      )}
-      {onNavigate && (
-        <div className="flex justify-end mt-3">
-          <button type="button" onClick={() => onNavigate(item.origin.tab)} className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-[var(--tint)] text-[var(--accent)] text-sm font-medium">
-            <ArrowRight size={14} /> Vai a Trasporti
-          </button>
-        </div>
+
+      {(item.link || onNavigate) && (
+        <>
+          <div className="h-px bg-[var(--line)] mt-3 mb-3" />
+          <div className="flex gap-2 flex-wrap">
+            {item.link && (
+              <a href={item.link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-[var(--tint)] text-[var(--accent)] text-sm font-medium">
+                <ExternalLink size={15} /> Apri il biglietto
+              </a>
+            )}
+            {onNavigate && (
+              <button type="button" onClick={() => onNavigate(item.origin.tab)} className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-[var(--tint)] text-[var(--accent)] text-sm font-medium">
+                <ArrowRight size={15} /> Vai a Trasporti
+              </button>
+            )}
+          </div>
+        </>
       )}
       <ModifiedBy modifiedBy={item.modifiedBy} modifiedAt={item.modifiedAt} />
     </div>

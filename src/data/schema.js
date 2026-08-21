@@ -334,6 +334,7 @@ export function collectExternalDayItems(trip) {
         id: i.id,
         date: i.date,
         time: i.time,
+        mode: i.mode,
         title: [i.from, i.to].filter(Boolean).join(' → '),
         note: i.note,
         link: i.ticketLink,
