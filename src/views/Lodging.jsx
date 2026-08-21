@@ -1,17 +1,47 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
-import { Pencil, Trash2, Bed, FileText } from 'lucide-react'
+import { Bed, FileText, MapPin } from 'lucide-react'
+import EditIcon from '../components/EditIcon.jsx'
+import DeleteIcon from '../components/DeleteIcon.jsx'
 import Btn from '../components/Btn.jsx'
 import Modal from '../components/Modal.jsx'
 import Empty from '../components/Empty.jsx'
 import { stampModified } from '../data/schema.js'
 import ModifiedBy from '../components/ModifiedBy.jsx'
 import CoordsInput from '../components/CoordsInput.jsx'
+import { ACCENT_GRADIENT } from '../theme/themes.js'
 import { uploadLodgingAttachment, removeLodgingAttachment, getAttachmentSignedUrl } from '../data/sync.js'
 import { getCachedAttachment, setCachedAttachment, removeCachedAttachment } from '../data/attachments.js'
 
 const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
+const chipClass = 'inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-[var(--tint)] text-[var(--accent)] text-sm font-medium'
 const EMPTY_ITEM = { name: '', checkIn: '', checkOut: '', address: '', bookingLink: '', lat: null, lng: null, bookingFilePath: '', bookingFileName: '', note: '' }
 const MAX_FILE_BYTES = 20 * 1024 * 1024
+
+function nightsBetween(checkIn, checkOut) {
+  if (!checkIn || !checkOut) return null
+  const n = Math.round((new Date(checkOut) - new Date(checkIn)) / 86400000)
+  return n > 0 ? n : null
+}
+
+// Confronto lessicografico su stringhe AAAA-MM-GG: funziona perché lo stesso
+// formato ordina già cronologicamente, senza passare da Date/timezone.
+function isCurrentStay(checkIn, checkOut) {
+  if (!checkIn || !checkOut) return false
+  const today = new Date().toISOString().slice(0, 10)
+  return today >= checkIn && today < checkOut
+}
+
+// Preferisce le coordinate (più precise, sempre apribili in Maps); usa
+// l'indirizzo come ricerca solo se lat/lng non sono stati impostati.
+function mapsUrl(item) {
+  if (typeof item.lat === 'number' && typeof item.lng === 'number') {
+    return `https://www.google.com/maps?q=${item.lat},${item.lng}`
+  }
+  if (item.address) {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.address)}`
+  }
+  return null
+}
 
 // Stesso hook, non condiviso, già usato in MapSection.jsx: duplicare tre
 // righe è più semplice che introdurre un import incrociato tra viste per
@@ -225,46 +255,67 @@ const Lodging = forwardRef(function Lodging({ trip, section, onUpdate, activeDis
       )}
 
       <div className="flex flex-col gap-3">
-        {sorted.map((item) => (
-          <div key={item.id} className="rounded-[24px] p-5 bg-[var(--card)] shadow-[0_1px_2px_rgb(var(--ink-rgb)/0.05),0_10px_24px_-14px_rgb(var(--ink-rgb)/0.25)]">
-            <div className="flex items-start justify-between gap-2">
-              <p className="font-display font-semibold text-xl">{item.name || 'Senza nome'}</p>
-              <div className="flex gap-1 -mr-2 -mt-1">
-                <button onClick={() => openForm({ ...item })} aria-label="Modifica alloggio" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
-                  <Pencil size={15} />
-                </button>
-                <button onClick={() => removeItem(item)} aria-label="Elimina alloggio" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
-                  <Trash2 size={15} />
-                </button>
+        {sorted.map((item) => {
+          const nights = nightsBetween(item.checkIn, item.checkOut)
+          const current = isCurrentStay(item.checkIn, item.checkOut)
+          const maps = mapsUrl(item)
+          return (
+            <div key={item.id} className="rounded-[24px] p-5 bg-[var(--card)] shadow-[0_1px_2px_rgb(var(--ink-rgb)/0.05),0_10px_24px_-14px_rgb(var(--ink-rgb)/0.25)]">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="font-display font-semibold text-xs uppercase tracking-wider text-[var(--accent)]">Alloggio</p>
+                  <p className="font-display font-semibold text-xl mt-0.5">{item.name || 'Senza nome'}</p>
+                  {(item.checkIn || item.checkOut) && (
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                      <span className="font-mono text-sm text-[var(--muted)]">{item.checkIn || '?'} → {item.checkOut || '?'}</span>
+                      {nights != null && (
+                        <span className="font-mono text-xs bg-[var(--tint)] rounded-full px-2 py-0.5">{nights} nott{nights === 1 ? 'e' : 'i'}</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-1 -mr-2 -mt-1 flex-none">
+                  {current && (
+                    <span className="font-mono text-xs font-semibold tracking-wide text-[var(--paper)] rounded-full px-2.5 py-1 mr-1" style={{ background: ACCENT_GRADIENT }}>
+                      IN CORSO
+                    </span>
+                  )}
+                  <button onClick={() => openForm({ ...item })} aria-label="Modifica alloggio" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
+                    <EditIcon size={15} />
+                  </button>
+                  <button onClick={() => removeItem(item)} aria-label="Elimina alloggio" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
+                    <DeleteIcon size={15} />
+                  </button>
+                </div>
               </div>
+
+              {item.address && <p className="text-base mt-3">{item.address}</p>}
+
+              {(maps || item.bookingFilePath) && (
+                <>
+                  <div className="h-px bg-[var(--line)] mt-3 mb-3" />
+                  <div className="flex gap-2 flex-wrap">
+                    {maps && (
+                      <a href={maps} target="_blank" rel="noreferrer" className={chipClass}>
+                        <MapPin size={15} /> Apri in Maps
+                      </a>
+                    )}
+                    {item.bookingFilePath && (
+                      <button type="button" onClick={() => handleOpenAttachment(item.id, item.bookingFilePath)} className={chipClass}>
+                        <FileText size={15} /> PDF prenotazione
+                      </button>
+                    )}
+                  </div>
+                  {openError?.itemId === item.id && (
+                    <p className="text-sm text-[var(--accent)] mt-1">{openError.message}</p>
+                  )}
+                </>
+              )}
+
+              <ModifiedBy modifiedBy={item.modifiedBy} modifiedAt={item.modifiedAt} />
             </div>
-            {(item.checkIn || item.checkOut) && (
-              <p className="font-mono text-sm text-[var(--muted)] mt-1">{item.checkIn || '?'} → {item.checkOut || '?'}</p>
-            )}
-            {item.address && <p className="text-base mt-2">{item.address}</p>}
-            {item.note && <p className="text-sm text-[var(--muted)] mt-1">{item.note}</p>}
-            {item.bookingLink && (
-              <a href={item.bookingLink} target="_blank" rel="noreferrer" className="text-base text-[var(--accent)] underline mt-2 inline-block">
-                Apri la prenotazione
-              </a>
-            )}
-            {item.bookingFilePath && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => handleOpenAttachment(item.id, item.bookingFilePath)}
-                  className="flex items-center gap-1.5 text-base text-[var(--accent)] underline mt-2"
-                >
-                  <FileText size={15} /> Apri il PDF della prenotazione
-                </button>
-                {openError?.itemId === item.id && (
-                  <p className="text-sm text-[var(--accent)] mt-1">{openError.message}</p>
-                )}
-              </>
-            )}
-            <ModifiedBy modifiedBy={item.modifiedBy} modifiedAt={item.modifiedAt} />
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       <Modal open={!!form} title={form?.id ? 'Modifica alloggio' : 'Nuovo alloggio'} onClose={closeForm}>

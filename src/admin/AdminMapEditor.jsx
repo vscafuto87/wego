@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { Plus, Pencil, Trash2 } from 'lucide-react'
+import { Plus } from 'lucide-react'
+import EditIcon from '../components/EditIcon.jsx'
+import DeleteIcon from '../components/DeleteIcon.jsx'
 import { stampModified } from '../data/schema.js'
 
 const inputClass = 'border border-[var(--line)] bg-[var(--paper)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
@@ -47,10 +49,10 @@ export default function AdminMapEditor({ section, onUpdate, activeDisplayName })
               </div>
               <div className="flex gap-1">
                 <button onClick={() => setForm({ ...item, lat: item.lat ?? '', lng: item.lng ?? '' })} aria-label="Modifica punto" className="p-2 text-[var(--muted)]">
-                  <Pencil size={15} />
+                  <EditIcon size={15} />
                 </button>
                 <button onClick={() => removeItem(item)} aria-label="Elimina punto" className="p-2 text-[var(--muted)]">
-                  <Trash2 size={15} />
+                  <DeleteIcon size={15} />
                 </button>
               </div>
             </div>

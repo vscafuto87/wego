@@ -1,5 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
-import { Pencil, Trash2, Train, Plane, Ship, Car, Bus, GripVertical, FileText } from 'lucide-react'
+import { Train, Plane, Ship, Car, Bus, GripVertical, FileText } from 'lucide-react'
+import EditIcon from '../components/EditIcon.jsx'
+import DeleteIcon from '../components/DeleteIcon.jsx'
 import Btn from '../components/Btn.jsx'
 import Modal from '../components/Modal.jsx'
 import Empty from '../components/Empty.jsx'
@@ -91,10 +93,10 @@ function SortableTransportItem({ item, onEdit, onRemove, onOpenAttachment, openE
             <GripVertical size={15} />
           </button>
           <button onClick={onEdit} aria-label="Modifica trasporto" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
-            <Pencil size={15} />
+            <EditIcon size={15} />
           </button>
           <button onClick={onRemove} aria-label="Elimina trasporto" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
-            <Trash2 size={15} />
+            <DeleteIcon size={15} />
           </button>
         </div>
       </div>

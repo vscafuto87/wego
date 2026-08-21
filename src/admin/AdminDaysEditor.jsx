@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
-import { Plus, Pencil, Trash2, Mountain, Waves, Utensils, GripVertical, Bus, ExternalLink, ArrowRight } from 'lucide-react'
+import { Plus, Mountain, Waves, Utensils, GripVertical, Bus, ExternalLink, ArrowRight } from 'lucide-react'
+import EditIcon from '../components/EditIcon.jsx'
+import DeleteIcon from '../components/DeleteIcon.jsx'
 import { stampModified, dayItemFieldsForKind, collectExternalDayItems, buildDayTimeline } from '../data/schema.js'
 import { sentieroStats } from '../views/Days.jsx'
 
@@ -149,10 +151,10 @@ export default function AdminDaysEditor({ trip, onUpdate, activeDisplayName, onN
               </div>
               <div className="flex gap-1">
                 <button onClick={() => setDayForm({ id: day.id, date: day.date, title: day.title, note: day.note })} aria-label="Modifica giorno" className="p-2 text-[var(--muted)]">
-                  <Pencil size={16} />
+                  <EditIcon size={16} />
                 </button>
                 <button onClick={() => removeDay(day)} aria-label="Elimina giorno" className="p-2 text-[var(--muted)]">
-                  <Trash2 size={16} />
+                  <DeleteIcon size={16} />
                 </button>
               </div>
             </div>
@@ -205,10 +207,10 @@ export default function AdminDaysEditor({ trip, onUpdate, activeDisplayName, onN
                               )}
                             </div>
                             <button onClick={() => setItemForm({ dayId: day.id, id: item.id, ...EMPTY_ITEM, ...item })} aria-label="Modifica voce" className="p-1.5 text-[var(--muted)]">
-                              <Pencil size={14} />
+                              <EditIcon size={14} />
                             </button>
                             <button onClick={() => removeItem(day.id, item)} aria-label="Elimina voce" className="p-1.5 text-[var(--muted)]">
-                              <Trash2 size={14} />
+                              <DeleteIcon size={14} />
                             </button>
                           </>
                         ) : (

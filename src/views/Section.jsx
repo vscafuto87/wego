@@ -1,5 +1,7 @@
 import { forwardRef, lazy, Suspense, useImperativeHandle, useRef, useState } from 'react'
-import { Plus, Pencil, Trash2, Check, GripVertical } from 'lucide-react'
+import { Plus, Check, GripVertical } from 'lucide-react'
+import EditIcon from '../components/EditIcon.jsx'
+import DeleteIcon from '../components/DeleteIcon.jsx'
 import Btn from '../components/Btn.jsx'
 import Label from '../components/Label.jsx'
 import Modal from '../components/Modal.jsx'
@@ -84,10 +86,10 @@ function SortableCard({ item, onEdit, onRemove }) {
             <GripVertical size={15} />
           </button>
           <button onClick={onEdit} aria-label="Modifica scheda" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
-            <Pencil size={15} />
+            <EditIcon size={15} />
           </button>
           <button onClick={onRemove} aria-label="Elimina scheda" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
-            <Trash2 size={15} />
+            <DeleteIcon size={15} />
           </button>
         </div>
       </div>
@@ -223,7 +225,7 @@ const Section = forwardRef(function Section({ trip, section, onUpdate, activeDis
         <h2 className="font-display font-semibold text-3xl">{section.title}</h2>
         {!isFixedSection(section) && (
           <button onClick={() => setHeaderForm({ title: section.title })} aria-label="Rinomina sezione" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
-            <Pencil size={17} />
+            <EditIcon size={17} />
           </button>
         )}
       </div>
@@ -270,7 +272,7 @@ const Section = forwardRef(function Section({ trip, section, onUpdate, activeDis
                   <ModifiedBy modifiedBy={item.modifiedBy} modifiedAt={item.modifiedAt} />
                 </div>
                 <button onClick={() => removeChecklistItem(item)} aria-label="Elimina voce" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
-                  <Trash2 size={15} />
+                  <DeleteIcon size={15} />
                 </button>
               </li>
             ))}

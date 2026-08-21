@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { Plus, Pencil, Trash2, FileText } from 'lucide-react'
+import { Plus, FileText } from 'lucide-react'
+import EditIcon from '../components/EditIcon.jsx'
+import DeleteIcon from '../components/DeleteIcon.jsx'
 import { stampModified } from '../data/schema.js'
 import { TRANSPORT_MODES } from '../views/Transport.jsx'
 import { uploadTransportAttachment, removeTransportAttachment, getAttachmentSignedUrl } from '../data/sync.js'
@@ -168,10 +170,10 @@ export default function AdminTransportEditor({ section, onUpdate, activeDisplayN
               <p className="font-display font-semibold text-xl">{item.mode} · {item.from} → {item.to}</p>
               <div className="flex gap-1">
                 <button onClick={() => openForm({ ...item })} aria-label="Modifica trasporto" className="p-2 text-[var(--muted)]">
-                  <Pencil size={15} />
+                  <EditIcon size={15} />
                 </button>
                 <button onClick={() => removeItem(item)} aria-label="Elimina trasporto" className="p-2 text-[var(--muted)]">
-                  <Trash2 size={15} />
+                  <DeleteIcon size={15} />
                 </button>
               </div>
             </div>

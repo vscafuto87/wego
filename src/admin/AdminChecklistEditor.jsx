@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Plus, Trash2, Check } from 'lucide-react'
+import { Plus, Check } from 'lucide-react'
+import DeleteIcon from '../components/DeleteIcon.jsx'
 import { stampModified } from '../data/schema.js'
 
 const inputClass = 'border border-[var(--line)] bg-[var(--paper)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
@@ -39,7 +40,7 @@ export default function AdminChecklistEditor({ section, onUpdate, activeDisplayN
             </button>
             <span className={`flex-1 text-base ${item.done ? 'line-through text-[var(--muted)]' : ''}`}>{item.text}</span>
             <button onClick={() => removeItem(item)} aria-label="Elimina voce" className="p-1.5 text-[var(--muted)]">
-              <Trash2 size={15} />
+              <DeleteIcon size={15} />
             </button>
           </li>
         ))}

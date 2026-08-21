@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { Plus, Pencil, Trash2, GripVertical, Mountain, Waves, Utensils } from 'lucide-react'
+import { Plus, GripVertical, Mountain, Waves, Utensils } from 'lucide-react'
+import EditIcon from '../components/EditIcon.jsx'
+import DeleteIcon from '../components/DeleteIcon.jsx'
 import CoordsInput from '../components/CoordsInput.jsx'
 import { stampModified, dayItemFieldsForKind } from '../data/schema.js'
 import { sentieroStats } from '../views/Days.jsx'
@@ -110,10 +112,10 @@ export default function AdminCardsEditor({ section, onUpdate, activeDisplayName 
               </div>
               <div className="flex gap-1">
                 <button onClick={() => setForm({ id: item.id, ...EMPTY_FORM, ...item, tags: item.tags.join(', ') })} aria-label="Modifica scheda" className="p-2 text-[var(--muted)]">
-                  <Pencil size={15} />
+                  <EditIcon size={15} />
                 </button>
                 <button onClick={() => removeItem(item)} aria-label="Elimina scheda" className="p-2 text-[var(--muted)]">
-                  <Trash2 size={15} />
+                  <DeleteIcon size={15} />
                 </button>
               </div>
             </div>

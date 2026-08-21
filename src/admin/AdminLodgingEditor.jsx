@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { Plus, Pencil, Trash2, FileText } from 'lucide-react'
+import { Plus, FileText } from 'lucide-react'
+import EditIcon from '../components/EditIcon.jsx'
+import DeleteIcon from '../components/DeleteIcon.jsx'
 import { stampModified } from '../data/schema.js'
 import { uploadLodgingAttachment, removeLodgingAttachment, getAttachmentSignedUrl } from '../data/sync.js'
 import { getCachedAttachment, setCachedAttachment, removeCachedAttachment } from '../data/attachments.js'
@@ -163,10 +165,10 @@ export default function AdminLodgingEditor({ section, onUpdate, activeDisplayNam
               <p className="font-display font-semibold text-xl">{item.name || 'Senza nome'}</p>
               <div className="flex gap-1">
                 <button onClick={() => openForm({ ...item })} aria-label="Modifica alloggio" className="p-2 text-[var(--muted)]">
-                  <Pencil size={15} />
+                  <EditIcon size={15} />
                 </button>
                 <button onClick={() => removeItem(item)} aria-label="Elimina alloggio" className="p-2 text-[var(--muted)]">
-                  <Trash2 size={15} />
+                  <DeleteIcon size={15} />
                 </button>
               </div>
             </div>

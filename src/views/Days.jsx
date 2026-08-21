@@ -1,5 +1,7 @@
 import { forwardRef, lazy, Suspense, useImperativeHandle, useMemo, useState } from 'react'
-import { Plus, Pencil, Trash2, Mountain, Waves, Utensils, ExternalLink, Check, Ruler, Clock, TrendingUp, MapPin, Bus, ArrowRight, GripVertical } from 'lucide-react'
+import { Plus, Mountain, Waves, Utensils, ExternalLink, Check, Ruler, Clock, TrendingUp, MapPin, Bus, ArrowRight, GripVertical } from 'lucide-react'
+import EditIcon from '../components/EditIcon.jsx'
+import DeleteIcon from '../components/DeleteIcon.jsx'
 import Btn from '../components/Btn.jsx'
 import DayLabel from '../components/DayLabel.jsx'
 import Label from '../components/Label.jsx'
@@ -121,12 +123,12 @@ export function DayItemCard({ item, onEdit, onRemove, dragHandle }) {
             )}
             {onEdit && (
               <button onClick={onEdit} aria-label="Modifica voce" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
-                <Pencil size={15} />
+                <EditIcon size={15} />
               </button>
             )}
             {onRemove && (
               <button onClick={onRemove} aria-label="Elimina voce" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
-                <Trash2 size={15} />
+                <DeleteIcon size={15} />
               </button>
             )}
           </div>
@@ -432,10 +434,10 @@ const Days = forwardRef(function Days({ trip, onUpdate, activeDisplayName, onNav
             </div>
             <div className="flex gap-1 -mr-2 flex-shrink-0">
               <button onClick={() => setDayForm({ id: selectedDay.id, date: selectedDay.date, title: selectedDay.title, note: selectedDay.note })} aria-label="Modifica giorno" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
-                <Pencil size={17} />
+                <EditIcon size={17} />
               </button>
               <button onClick={() => removeDay(selectedDay)} aria-label="Elimina giorno" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
-                <Trash2 size={17} />
+                <DeleteIcon size={17} />
               </button>
             </div>
           </div>

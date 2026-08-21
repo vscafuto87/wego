@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { ArrowLeft, Map, CheckSquare, StickyNote, Ticket, Utensils, Bed, Bus, Star, Users, Plus, Trash2, Pencil, Share2 } from 'lucide-react'
+import { ArrowLeft, Map, CheckSquare, StickyNote, Ticket, Utensils, Bed, Bus, Star, Users, Plus, Share2 } from 'lucide-react'
+import EditIcon from '../components/EditIcon.jsx'
+import DeleteIcon from '../components/DeleteIcon.jsx'
 import { themeStyle } from '../theme/themes.js'
 import Btn from '../components/Btn.jsx'
 import Label from '../components/Label.jsx'
@@ -114,7 +116,7 @@ export default function Settings({ trip, onUpdate, onDelete, shareCode, onRestor
 
         <div className="flex flex-wrap gap-2">
           <Btn variant="secondary" onClick={openEdit}>
-            <Pencil size={17} /> Modifica
+            <EditIcon size={17} /> Modifica
           </Btn>
           <Btn variant="secondary" onClick={() => setExportOpen(true)}>
             <Share2 size={17} /> Esporta
@@ -130,7 +132,7 @@ export default function Settings({ trip, onUpdate, onDelete, shareCode, onRestor
             </Btn>
           )}
           <Btn variant="danger" onClick={removeTrip}>
-            <Trash2 size={17} /> Elimina viaggio
+            <DeleteIcon size={17} /> Elimina viaggio
           </Btn>
         </div>
 
@@ -149,7 +151,7 @@ export default function Settings({ trip, onUpdate, onDelete, shareCode, onRestor
                   <Icon size={19} className="text-[var(--muted)]" />
                   <span className="flex-1 text-base">{section.title || 'Senza titolo'}</span>
                   <button onClick={() => removeSection(section)} aria-label={`Elimina ${section.title}`} className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
-                    <Trash2 size={17} />
+                    <DeleteIcon size={17} />
                   </button>
                 </li>
               )

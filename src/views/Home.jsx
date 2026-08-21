@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Plus, Upload, Trash2 } from 'lucide-react'
+import { Plus, Upload } from 'lucide-react'
+import DeleteIcon from '../components/DeleteIcon.jsx'
 import { TerrainSeal } from '../theme/Terrain.jsx'
 import { themeStyle } from '../theme/themes.js'
 import Btn from '../components/Btn.jsx'
@@ -122,7 +123,7 @@ export default function Home({ trips, onOpen, onCreate, onImport, onDelete }) {
                     aria-label={`Elimina ${trip.name}`}
                     className="h-11 w-11 flex items-center justify-center rounded-full text-[var(--muted)] active:scale-[0.94] transition-transform duration-150 ease-out"
                   >
-                    <Trash2 size={18} />
+                    <DeleteIcon size={18} />
                   </button>
                 </div>
                 <button onClick={() => onOpen(trip.id)} className="block w-full text-left mt-4">

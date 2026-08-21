@@ -5,7 +5,9 @@ import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
 import markerIcon from 'leaflet/dist/images/marker-icon.png'
 import markerShadow from 'leaflet/dist/images/marker-shadow.png'
 import 'leaflet/dist/leaflet.css'
-import { Pencil, Trash2, MapPin, LocateFixed, Layers, Maximize2, Minimize2 } from 'lucide-react'
+import { MapPin, LocateFixed, Layers, Maximize2, Minimize2 } from 'lucide-react'
+import EditIcon from '../components/EditIcon.jsx'
+import DeleteIcon from '../components/DeleteIcon.jsx'
 import Btn from '../components/Btn.jsx'
 import Modal from '../components/Modal.jsx'
 import Empty from '../components/Empty.jsx'
@@ -310,10 +312,10 @@ const MapSection = forwardRef(function MapSection({ trip, section, onUpdate, act
               </div>
               <div className="flex gap-1 -mr-2 -mt-1">
                 <button onClick={() => setForm(item)} aria-label="Modifica punto" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
-                  <Pencil size={15} />
+                  <EditIcon size={15} />
                 </button>
                 <button onClick={() => removeItem(item)} aria-label="Elimina punto" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
-                  <Trash2 size={15} />
+                  <DeleteIcon size={15} />
                 </button>
               </div>
             </div>

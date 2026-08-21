@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, Plus } from 'lucide-react'
+import DeleteIcon from '../components/DeleteIcon.jsx'
 import { Map, CheckSquare, StickyNote, Ticket, Utensils, Bed, Bus, Star, Users, CalendarDays, Info } from 'lucide-react'
 import { getSession, subscribeAuth } from '../data/supabase.js'
 import { getSyncState, setSyncState as persistSyncState, markDirty, getDisplayNamePreference } from '../data/storage.js'
@@ -241,7 +242,7 @@ export default function AdminTripEditor({ trip, onBack, onUpdate, onDelete }) {
                   </button>
                   {!isFixedSection(section) && (
                     <button onClick={() => removeSection(section)} aria-label={`Elimina ${section.title}`} className="mr-1 p-1.5 text-[var(--muted)]">
-                      <Trash2 size={14} />
+                      <DeleteIcon size={14} />
                     </button>
                   )}
                 </div>
@@ -252,7 +253,7 @@ export default function AdminTripEditor({ trip, onBack, onUpdate, onDelete }) {
             </button>
             <hr className="border-[var(--line)] my-2" />
             <button onClick={removeTrip} className="text-left px-3 py-2 rounded-lg flex items-center gap-2 text-[var(--accent)]">
-              <Trash2 size={16} /> Elimina viaggio
+              <DeleteIcon size={16} /> Elimina viaggio
             </button>
           </nav>
 
