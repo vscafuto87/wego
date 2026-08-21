@@ -275,13 +275,16 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
     }
   }
 
+  // Colori fissi, non legati alla palette del viaggio: --accent/--accent2 cambiano
+  // tonalità per ambiente (in "sea" accent2 è un ocra, non verde), quindi non
+  // possono portare un significato universale come "tutto ok" o "attenzione".
   function syncStatus() {
     if (!syncState) return null
-    if (conflict) return { dot: 'bg-[var(--accent)]', label: 'due versioni in conflitto' }
-    if (typeof navigator !== 'undefined' && !navigator.onLine) return { dot: 'bg-[var(--muted)]', label: 'in attesa di rete' }
-    if (syncState.dirty && syncState.role === 'viewer') return { dot: 'bg-[var(--accent)]', label: 'modifiche salvate solo su questo telefono' }
-    if (syncState.dirty) return { dot: 'bg-[var(--accent)]', label: 'modifiche in coda' }
-    return { dot: 'bg-[var(--accent2)]', label: 'sincronizzato' }
+    if (conflict) return { dot: 'bg-amber-500', label: 'due versioni in conflitto' }
+    if (typeof navigator !== 'undefined' && !navigator.onLine) return { dot: 'bg-gray-400', label: 'in attesa di rete' }
+    if (syncState.dirty && syncState.role === 'viewer') return { dot: 'bg-amber-500', label: 'modifiche salvate solo su questo telefono' }
+    if (syncState.dirty) return { dot: 'bg-amber-500', label: 'modifiche in coda' }
+    return { dot: 'bg-emerald-500', label: 'sincronizzato' }
   }
 
   const status = syncStatus()
