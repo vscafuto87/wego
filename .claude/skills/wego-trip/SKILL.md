@@ -25,8 +25,8 @@ dell'app (`src/views/ImportView.jsx`) — stesso schema, zero divergenza.
   ],
   "sections": [
     { "title": "Ristoranti", "icon": "food", "type": "cards", "items": [ { "title": "", "meta": "", "detail": "", "link": "", "tags": [], "lat": null, "lng": null } ] },
-    { "title": "Trasporti", "icon": "bus", "type": "transport", "items": [ { "mode": "auto | treno | aereo | bus | traghetto", "from": "", "to": "", "date": "AAAA-MM-GG", "time": "", "ticketLink": "", "note": "" } ] },
-    { "title": "Pernottamento", "icon": "bed", "type": "lodging", "items": [ { "name": "", "checkIn": "AAAA-MM-GG", "checkOut": "AAAA-MM-GG", "address": "", "bookingLink": "", "note": "" } ] },
+    { "title": "Trasporti", "icon": "bus", "type": "transport", "items": [ { "mode": "auto | treno | aereo | bus | traghetto", "from": "", "to": "", "date": "AAAA-MM-GG", "time": "", "ticketLink": "", "note": "", "ticketFilePath": "", "ticketFileName": "" } ] },
+    { "title": "Pernottamento", "icon": "bed", "type": "lodging", "items": [ { "name": "", "checkIn": "AAAA-MM-GG", "checkOut": "AAAA-MM-GG", "address": "", "bookingLink": "", "note": "", "bookingFilePath": "", "bookingFileName": "" } ] },
     { "title": "Mappa", "icon": "map", "type": "map", "items": [ { "name": "", "category": "", "mapsLink": "", "lat": null, "lng": null, "note": "" } ] },
     { "title": "string", "icon": "check", "type": "checklist", "items": [ { "text": "", "done": false } ] },
     { "title": "string", "icon": "note", "type": "notes", "text": "" }
@@ -54,6 +54,14 @@ modificando solo `items` o il resto del giorno: ometterlo non rompe nulla
 personalizzato che l'utente aveva impostato trascinando le voci nell'app. Per
 un giorno nuovo che stai creando da zero, ometti `order` (o lascialo `[]`):
 l'app userà l'ordine di default finché l'utente non lo trascina lui stesso.
+
+`ticketFilePath`/`ticketFileName` (trasporti) e `bookingFilePath`/
+`bookingFileName` (alloggi) sono gestiti dal comando `attach`, non
+dall'utente. Se una voce pullata ha già questi campi valorizzati,
+**riportali invariati** quando riscrivi quella voce con `push`, anche se
+stai modificando solo altri campi: ometterli cancella silenziosamente il
+collegamento al PDF già caricato (il file resta nel bucket di Storage,
+orfano, senza più nulla che lo referenzi).
 
 ## Dati mancanti: chiedi, non lasciare vuoto
 

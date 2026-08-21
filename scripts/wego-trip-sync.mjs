@@ -181,10 +181,7 @@ export async function cmdAttach(supabase, session, identifier, sectionType, inde
     return { written: false }
   }
 
-  if (item[pathField]) {
-    const { error: removeError } = await supabase.storage.from('trip-attachments').remove([item[pathField]])
-    if (removeError) console.error(`Avviso: impossibile rimuovere il vecchio allegato (${removeError.message}). Procedo comunque.`)
-  }
+  const oldPath = item[pathField]
 
   const buffer = readFileSync(filePath)
   const storagePath = `${trip.id}/${crypto.randomUUID()}.pdf`
@@ -209,6 +206,11 @@ export async function cmdAttach(supabase, session, identifier, sectionType, inde
     .update({ data: updatedData, previous_data: trip.data, updated_at: new Date().toISOString() })
     .eq('id', trip.id)
   if (error) throw new Error(error.message)
+
+  if (oldPath) {
+    const { error: removeError } = await supabase.storage.from('trip-attachments').remove([oldPath])
+    if (removeError) console.error(`Avviso: impossibile rimuovere il vecchio allegato (${removeError.message}).`)
+  }
 
   console.log(`Allegato "${fileName}" collegato a ${description}.`)
   return { written: true }

@@ -434,7 +434,7 @@ describe('cmdAttach', () => {
     }))
   })
 
-  it('sostituendo un allegato esistente, tenta prima la rimozione del vecchio file', async () => {
+  it('sostituendo un allegato esistente, rimuove il vecchio file dopo aver scritto il nuovo', async () => {
     const tripData = tripDataWithTransport({ ticketFileName: 'vecchio.pdf', ticketFilePath: 'trip-1/vecchio-uuid.pdf' })
     const { supabase, remove, upload } = supabaseFor(tripData)
     const filePath = writeTempPdfFile('nuovo.pdf')
@@ -447,7 +447,7 @@ describe('cmdAttach', () => {
     expect(upload).toHaveBeenCalledTimes(1)
   })
 
-  it('se la rimozione del vecchio allegato fallisce, procede comunque con il nuovo upload', async () => {
+  it('se la rimozione del vecchio allegato fallisce, il comando ha comunque già scritto il nuovo allegato', async () => {
     const tripData = tripDataWithTransport({ ticketFileName: 'vecchio.pdf', ticketFilePath: 'trip-1/vecchio-uuid.pdf' })
     const { supabase, upload, update } = supabaseFor(tripData, { removeError: { message: 'file già assente' } })
     const filePath = writeTempPdfFile('nuovo.pdf')
