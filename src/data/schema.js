@@ -3,7 +3,7 @@ const ICONS = ['map', 'check', 'note', 'ticket', 'food', 'bed', 'bus', 'star', '
 const SECTION_TYPES = ['cards', 'checklist', 'notes', 'transport', 'lodging', 'map']
 
 const DAY_ITEM_KINDS = ['', 'sentiero', 'spiaggia', 'pasto']
-const DAY_ORDER_TAGS = ['item', 'transport']
+const DAY_ORDER_TAGS = ['item', 'transport', 'card']
 
 const KIND_FIELDS = {
   sentiero: ['distanza', 'durata', 'dislivello', 'difficolta', 'lat', 'lng'],
@@ -66,12 +66,12 @@ function normalizeDay(raw) {
     modifiedBy: str(day.modifiedBy),
     modifiedAt: str(day.modifiedAt),
     items: arr(day.items).map(normalizeDayItem),
-    // Ordine combinato di voci giorno e trasporti (vedi buildDayTimeline):
-    // sequenza di tag "item"/"transport" da consumare nell'ordine già salvato
-    // di day.items e dei trasporti di quella data. Non referenzia id (che
-    // vengono rigenerati a ogni caricamento), quindi resta valido tra un
-    // caricamento e l'altro; se mancante o disallineato si ricade su
-    // "voci poi trasporti".
+    // Ordine combinato di voci giorno, trasporti e ristoranti prenotati (vedi
+    // buildDayTimeline): sequenza di tag "item"/"transport"/"card" da consumare
+    // nell'ordine già salvato di day.items, dei trasporti e delle schede
+    // Ristoranti di quella data. Non referenzia id (che vengono rigenerati a
+    // ogni caricamento), quindi resta valido tra un caricamento e l'altro; se
+    // mancante o disallineato si ricade su "voci poi trasporti poi ristoranti".
     order: arr(day.order).filter((tag) => DAY_ORDER_TAGS.includes(tag))
   }
 }
@@ -89,6 +89,8 @@ function normalizeCardItem(raw) {
     tags: arr(item.tags).map(str),
     lat: toCoord(item.lat),
     lng: toCoord(item.lng),
+    date: str(item.date),
+    time: str(item.time),
     modifiedBy: str(item.modifiedBy),
     modifiedAt: str(item.modifiedAt)
   }
@@ -318,44 +320,70 @@ export function parseAddressFromMapsLink(url) {
   return null
 }
 
-// Voci Trasporti con una data, mostrate anche nel giorno corrispondente
-// dell'Itinerario. Calcolo derivato come collectExternalMapPoints: nessuna
-// copia salvata, la voce resta editabile solo dalla sezione Trasporti.
+// Voci Trasporti e schede Ristoranti con una data, mostrate anche nel giorno
+// corrispondente dell'Itinerario. Calcolo derivato come collectExternalMapPoints:
+// nessuna copia salvata, ogni voce resta editabile solo dalla sua sezione di
+// origine (Trasporti o Ristoranti).
 export function collectExternalDayItems(trip) {
   const transportSection = trip.sections.find((s) => s.type === 'transport')
-  if (!transportSection) return []
-  return transportSection.items
-    .filter((i) => i.date)
-    .map((i) => ({
-      id: i.id,
-      date: i.date,
-      time: i.time,
-      mode: i.mode,
-      title: [i.from, i.to].filter(Boolean).join(' → '),
-      note: i.note,
-      link: i.ticketLink,
-      modifiedBy: i.modifiedBy,
-      modifiedAt: i.modifiedAt,
-      origin: { tab: transportSection.id }
-    }))
+  const transportEntries = transportSection
+    ? transportSection.items
+      .filter((i) => i.date)
+      .map((i) => ({
+        type: 'transport',
+        id: i.id,
+        date: i.date,
+        time: i.time,
+        title: [i.from, i.to].filter(Boolean).join(' → '),
+        note: i.note,
+        link: i.ticketLink,
+        modifiedBy: i.modifiedBy,
+        modifiedAt: i.modifiedAt,
+        origin: { tab: transportSection.id }
+      }))
+    : []
+
+  const ristorantiSection = trip.sections.find((s) => s.type === 'cards' && s.title === 'Ristoranti')
+  const cardEntries = ristorantiSection
+    ? ristorantiSection.items
+      .filter((i) => i.date)
+      .map((i) => ({
+        type: 'card',
+        id: i.id,
+        date: i.date,
+        time: i.time,
+        title: i.title,
+        note: i.detail,
+        link: i.link,
+        modifiedBy: i.modifiedBy,
+        modifiedAt: i.modifiedAt,
+        origin: { tab: ristorantiSection.id }
+      }))
+    : []
+
+  return [...transportEntries, ...cardEntries]
 }
 
-// Interleaccia le voci del giorno e i trasporti di quella data in un'unica
-// lista ordinata, secondo day.order: consuma le due code già ordinate
-// (day.items, transportItems) seguendo la sequenza di tag salvata, e in coda
-// mette ciò che non è (più) coperto dall'ordine — voci nuove, o modifiche
-// fatte da dove l'ordine combinato non viene aggiornato (dashboard admin) —
-// così il fallback resta "voci poi trasporti" come prima di questo campo.
-export function buildDayTimeline(day, transportItems) {
+// Interfoglia le voci del giorno e le voci esterne (trasporti/ristoranti) di
+// quella data in un'unica lista ordinata, secondo day.order: consuma le code
+// già ordinate (day.items, per tipo dentro externalItems) seguendo la
+// sequenza di tag salvata, e in coda mette ciò che non è (più) coperto
+// dall'ordine — voci nuove, o modifiche fatte da dove l'ordine combinato non
+// viene aggiornato (dashboard admin) — così il fallback resta "voci poi
+// trasporti poi ristoranti" come prima di questo campo.
+export function buildDayTimeline(day, externalItems) {
   const items = [...day.items]
-  const transports = [...transportItems]
+  const transports = externalItems.filter((i) => i.type === 'transport')
+  const cards = externalItems.filter((i) => i.type === 'card')
   const timeline = []
   for (const tag of day.order) {
     if (tag === 'item' && items.length > 0) timeline.push({ type: 'item', item: items.shift() })
     else if (tag === 'transport' && transports.length > 0) timeline.push({ type: 'transport', item: transports.shift() })
+    else if (tag === 'card' && cards.length > 0) timeline.push({ type: 'card', item: cards.shift() })
   }
   items.forEach((item) => timeline.push({ type: 'item', item }))
   transports.forEach((item) => timeline.push({ type: 'transport', item }))
+  cards.forEach((item) => timeline.push({ type: 'card', item }))
   return timeline
 }
 

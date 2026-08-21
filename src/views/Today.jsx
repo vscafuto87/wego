@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import { ArrowRight, Bus, Check, Sun, Cloud, CloudFog, CloudRain, CloudSnow, CloudLightning } from 'lucide-react'
+import { ArrowRight, Bus, Utensils, Check, Sun, Cloud, CloudFog, CloudRain, CloudSnow, CloudLightning } from 'lucide-react'
 import Btn from '../components/Btn.jsx'
 import DayLabel from '../components/DayLabel.jsx'
 import Empty from '../components/Empty.jsx'
 import ModifiedBy from '../components/ModifiedBy.jsx'
-import { KIND_ICONS, sentieroStats, DayItemCard, TransportDayCard, DayItemsList } from './Days.jsx'
+import { KIND_ICONS, sentieroStats, DayItemCard, TransportDayCard, RestaurantDayCard, DayItemsList } from './Days.jsx'
 import { collectExternalDayItems } from '../data/schema.js'
 import { getTodayWeather, weatherIcon } from '../data/weather.js'
 
@@ -73,15 +73,16 @@ const DAYPARTS = [
   { key: 'senzaOrario', label: 'Senza orario', match: (t) => !t }
 ]
 
-// Raggruppa voci del giorno e trasporti in fasce orarie, mantenendo l'ordine
-// manuale relativo dentro ogni fascia (i trasporti, che non hanno un ordine
-// manuale, si ordinano per orario dentro la propria fascia).
-function groupByDaypart(items, transportItems) {
-  const buckets = Object.fromEntries(DAYPARTS.map((d) => [d.key, { items: [], transportItems: [] }]))
+// Raggruppa voci del giorno e voci esterne (trasporti/ristoranti) in fasce
+// orarie, mantenendo l'ordine manuale relativo dentro ogni fascia (le voci
+// esterne, che non hanno un ordine manuale, si ordinano per orario dentro la
+// propria fascia).
+function groupByDaypart(items, externalItems) {
+  const buckets = Object.fromEntries(DAYPARTS.map((d) => [d.key, { items: [], externalItems: [] }]))
   for (const item of items) buckets[DAYPARTS.find((d) => d.match(item.time)).key].items.push(item)
-  for (const item of transportItems) buckets[DAYPARTS.find((d) => d.match(item.time)).key].transportItems.push(item)
-  for (const key of Object.keys(buckets)) buckets[key].transportItems.sort((a, b) => (a.time || '').localeCompare(b.time || ''))
-  return DAYPARTS.map((d) => ({ key: d.key, label: d.label, ...buckets[d.key] })).filter((g) => g.items.length > 0 || g.transportItems.length > 0)
+  for (const item of externalItems) buckets[DAYPARTS.find((d) => d.match(item.time)).key].externalItems.push(item)
+  for (const key of Object.keys(buckets)) buckets[key].externalItems.sort((a, b) => (a.time || '').localeCompare(b.time || ''))
+  return DAYPARTS.map((d) => ({ key: d.key, label: d.label, ...buckets[d.key] })).filter((g) => g.items.length > 0 || g.externalItems.length > 0)
 }
 
 // Tra le voci già iniziate (orario <= ora) l'ultima è "in corso", le
@@ -94,7 +95,7 @@ function computeStatus(groups, isToday) {
   let currentId = null
   let currentTime = null
   const doneIds = new Set()
-  for (const entry of groups.flatMap((g) => [...g.items, ...g.transportItems])) {
+  for (const entry of groups.flatMap((g) => [...g.items, ...g.externalItems])) {
     if (!entry.time || entry.time > now) continue
     if (currentTime === null || entry.time >= currentTime) {
       if (currentId !== null) doneIds.add(currentId)
@@ -108,7 +109,7 @@ function computeStatus(groups, isToday) {
 }
 
 function AgendaRow({ entry, kind, done }) {
-  const Icon = kind === 'transport' ? Bus : (KIND_ICONS[entry.kind] ?? KIND_ICONS[''])
+  const Icon = kind === 'transport' ? Bus : kind === 'card' ? Utensils : (KIND_ICONS[entry.kind] ?? KIND_ICONS[''])
   return (
     <li className={`flex items-center gap-3 px-3.5 py-3 ${done ? 'opacity-[0.55]' : ''}`}>
       <span className="h-8 w-8 rounded-full bg-[var(--tint)] flex items-center justify-center flex-shrink-0">
@@ -132,10 +133,10 @@ function AgendaRow({ entry, kind, done }) {
 function AgendaGroup({ group, currentId, doneIds, onNavigate }) {
   const rows = [
     ...group.items.map((entry) => ({ entry, kind: 'day' })),
-    ...group.transportItems.map((entry) => ({ entry, kind: 'transport' }))
+    ...group.externalItems.map((entry) => ({ entry, kind: entry.type }))
   ].filter(({ entry }) => entry.id !== currentId)
-  const current = [...group.items, ...group.transportItems].find((entry) => entry.id === currentId)
-  const currentIsTransport = current && group.transportItems.some((t) => t.id === current.id)
+  const current = [...group.items, ...group.externalItems].find((entry) => entry.id === currentId)
+  const currentExternal = group.externalItems.find((e) => e.id === current?.id)
 
   return (
     <div className="flex flex-col gap-3">
@@ -147,7 +148,13 @@ function AgendaGroup({ group, currentId, doneIds, onNavigate }) {
           ))}
         </ul>
       )}
-      {current && (currentIsTransport ? <TransportDayCard item={current} onNavigate={onNavigate} /> : <DayItemCard item={current} />)}
+      {current && (
+        currentExternal
+          ? currentExternal.type === 'transport'
+            ? <TransportDayCard item={current} onNavigate={onNavigate} />
+            : <RestaurantDayCard item={current} onNavigate={onNavigate} />
+          : <DayItemCard item={current} />
+      )}
     </div>
   )
 }
@@ -172,11 +179,11 @@ export default function Today({ trip, onNavigate }) {
 
   const diff = daysDiff(day.date, todayStr)
   const WeatherIcon = weather ? WEATHER_ICONS[weatherIcon(weather.code)] : null
-  const transportItems = collectExternalDayItems(trip).filter((i) => i.date === day.date)
-  const hasContent = day.items.length > 0 || transportItems.length > 0
-  const groups = isToday ? groupByDaypart(day.items, transportItems) : []
+  const externalItems = collectExternalDayItems(trip).filter((i) => i.date === day.date)
+  const hasContent = day.items.length > 0 || externalItems.length > 0
+  const groups = isToday ? groupByDaypart(day.items, externalItems) : []
   const { currentId, doneIds } = computeStatus(groups, isToday)
-  const totalCount = day.items.length + transportItems.length
+  const totalCount = day.items.length + externalItems.length
   const statoLabel = currentId ? 'ora' : (totalCount > 0 ? 'a breve' : '—')
 
   return (
@@ -224,7 +231,7 @@ export default function Today({ trip, onNavigate }) {
       )}
 
       {hasContent && !isToday && (
-        <DayItemsList day={day} transportItems={transportItems} onNavigate={onNavigate} />
+        <DayItemsList day={day} externalItems={externalItems} onNavigate={onNavigate} />
       )}
 
       <Btn variant="secondary" onClick={() => onNavigate('days')} className="self-start">

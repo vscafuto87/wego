@@ -50,10 +50,10 @@ export default function AdminDaysEditor({ trip, onUpdate, activeDisplayName, onN
   const [dragEntry, setDragEntry] = useState(null)
   const [overEntry, setOverEntry] = useState(null)
 
-  // Voci Trasporti con una data, raggruppate per giorno: sola lettura qui (si
-  // modificano solo dalla sezione Trasporti, vedi collectExternalDayItems),
-  // ma l'ordine si trascina come le voci del giorno.
-  const transportByDate = useMemo(() => {
+  // Voci Trasporti e schede Ristoranti con una data, raggruppate per giorno:
+  // sola lettura qui (si modificano solo dalle rispettive sezioni, vedi
+  // collectExternalDayItems), ma l'ordine si trascina come le voci del giorno.
+  const externalByDate = useMemo(() => {
     const map = new Map()
     for (const item of collectExternalDayItems(trip)) {
       const list = map.get(item.date) ?? []
@@ -63,13 +63,9 @@ export default function AdminDaysEditor({ trip, onUpdate, activeDisplayName, onN
     return map
   }, [trip])
 
-  // Riordina voci giorno e trasporti insieme (vedi buildDayTimeline): sposta
-  // fromId sulla posizione di toId nella lista combinata, poi salva sia
-  // day.items/day.order sia (se tra i trasporti c'è di mezzo uno spostamento)
-  // la sezione Trasporti, in un unico aggiornamento.
-  function reorderTimeline(day, transportItems, fromId, toId) {
+  function reorderTimeline(day, externalItems, fromId, toId) {
     if (fromId === toId) return
-    const timeline = buildDayTimeline(day, transportItems)
+    const timeline = buildDayTimeline(day, externalItems)
     const fromIdx = timeline.findIndex((e) => e.item.id === fromId)
     const toIdx = timeline.findIndex((e) => e.item.id === toId)
     if (fromIdx === -1 || toIdx === -1) return
@@ -78,22 +74,26 @@ export default function AdminDaysEditor({ trip, onUpdate, activeDisplayName, onN
     entries.splice(toIdx, 0, moved)
     const newItems = entries.filter((e) => e.type === 'item').map((e) => e.item)
     const newTransportIds = entries.filter((e) => e.type === 'transport').map((e) => e.item.id)
+    const newCardIds = entries.filter((e) => e.type === 'card').map((e) => e.item.id)
     const newOrder = entries.map((e) => e.type)
+
+    function reorderSubset(items, ids) {
+      const dateIndices = []
+      items.forEach((it, i) => { if (it.date === day.date) dateIndices.push(i) })
+      if (dateIndices.length !== ids.length) return items
+      const byId = new Map(items.map((it) => [it.id, it]))
+      const result = [...items]
+      dateIndices.forEach((i, pos) => { result[i] = byId.get(ids[pos]) })
+      return result
+    }
+
     onUpdate((t) => ({
       ...t,
       days: t.days.map((d) => (d.id === day.id ? { ...d, items: newItems, order: newOrder } : d)),
       sections: t.sections.map((s) => {
-        if (s.type !== 'transport') return s
-        const dateIndices = []
-        s.items.forEach((it, i) => { if (it.date === day.date) dateIndices.push(i) })
-        // Se il sottoinsieme di quella data è cambiato da quando è stata
-        // calcolata la timeline (modifica concorrente), non tocca l'ordine
-        // dei trasporti piuttosto che corromperlo.
-        if (dateIndices.length !== newTransportIds.length) return s
-        const byId = new Map(s.items.map((it) => [it.id, it]))
-        const items = [...s.items]
-        dateIndices.forEach((i, pos) => { items[i] = byId.get(newTransportIds[pos]) })
-        return { ...s, items }
+        if (s.type === 'transport') return { ...s, items: reorderSubset(s.items, newTransportIds) }
+        if (s.type === 'cards' && s.title === 'Ristoranti') return { ...s, items: reorderSubset(s.items, newCardIds) }
+        return s
       })
     }))
   }
@@ -160,8 +160,8 @@ export default function AdminDaysEditor({ trip, onUpdate, activeDisplayName, onN
             </div>
 
             {(() => {
-              const transportItems = transportByDate.get(day.date) ?? []
-              const timeline = buildDayTimeline(day, transportItems)
+              const externalItems = externalByDate.get(day.date) ?? []
+              const timeline = buildDayTimeline(day, externalItems)
               if (timeline.length === 0) return null
               return (
                 <ul className="flex flex-col gap-2 mt-3 border-l-2 border-[var(--line)] pl-4">
@@ -174,7 +174,7 @@ export default function AdminDaysEditor({ trip, onUpdate, activeDisplayName, onN
                         onDragOver={(e) => { e.preventDefault(); setOverEntry({ dayId: day.id, id: item.id }) }}
                         onDrop={(e) => {
                           e.preventDefault()
-                          if (dragEntry && dragEntry.dayId === day.id) reorderTimeline(day, transportItems, dragEntry.id, item.id)
+                          if (dragEntry && dragEntry.dayId === day.id) reorderTimeline(day, externalItems, dragEntry.id, item.id)
                           setDragEntry(null)
                           setOverEntry(null)
                         }}
@@ -213,7 +213,7 @@ export default function AdminDaysEditor({ trip, onUpdate, activeDisplayName, onN
                               <DeleteIcon size={14} />
                             </button>
                           </>
-                        ) : (
+                        ) : entry.type === 'transport' ? (
                           <>
                             <div className="flex-1">
                               {item.time && <span className="font-mono text-sm text-[var(--muted)] mr-2">{item.time}</span>}
@@ -228,6 +228,25 @@ export default function AdminDaysEditor({ trip, onUpdate, activeDisplayName, onN
                             )}
                             {onNavigate && (
                               <button onClick={() => onNavigate(item.origin.tab)} aria-label="Vai a Trasporti" className="p-1.5 text-[var(--muted)]">
+                                <ArrowRight size={14} />
+                              </button>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex-1">
+                              {item.time && <span className="font-mono text-sm text-[var(--muted)] mr-2">{item.time}</span>}
+                              <Utensils size={15} className="inline mr-1.5 -mt-0.5 text-[var(--muted)]" />
+                              <span className="text-base">{item.title}</span>
+                              {item.note && <p className="text-sm text-[var(--muted)] mt-0.5">{item.note}</p>}
+                            </div>
+                            {item.link && (
+                              <a href={item.link} target="_blank" rel="noreferrer" aria-label="Apri il link" className="p-1.5 text-[var(--muted)]">
+                                <ExternalLink size={14} />
+                              </a>
+                            )}
+                            {onNavigate && (
+                              <button onClick={() => onNavigate(item.origin.tab)} aria-label="Vai a Ristoranti" className="p-1.5 text-[var(--muted)]">
                                 <ArrowRight size={14} />
                               </button>
                             )}

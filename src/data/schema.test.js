@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { normalizeTrip, exportTrip, stampModified, dayItemFieldsForKind, parseCoordsFromMapsLink, parseAddressFromMapsLink, collectExternalMapPoints } from './schema.js'
+import { normalizeTrip, exportTrip, stampModified, dayItemFieldsForKind, parseCoordsFromMapsLink, parseAddressFromMapsLink, collectExternalMapPoints, collectExternalDayItems, buildDayTimeline } from './schema.js'
 
 describe('normalizeTrip — attribuzione', () => {
   it('riempie modifiedBy/modifiedAt vuoti quando assenti', () => {
@@ -363,6 +363,28 @@ describe('normalizeTrip — coordinate opzionali sulle schede (cards)', () => {
   })
 })
 
+describe('normalizeTrip — prenotazione sulle schede (cards)', () => {
+  it('riempie date/time vuoti quando assenti', () => {
+    const trip = normalizeTrip({
+      name: 'Ponza',
+      sections: [{ title: 'Ristoranti', type: 'cards', items: [{ title: 'Da Assunta' }] }]
+    })
+    const ristoranti = trip.sections.find((s) => s.title === 'Ristoranti')
+    expect(ristoranti.items[0].date).toBe('')
+    expect(ristoranti.items[0].time).toBe('')
+  })
+
+  it('preserva date/time quando presenti', () => {
+    const trip = normalizeTrip({
+      name: 'Ponza',
+      sections: [{ title: 'Ristoranti', type: 'cards', items: [{ title: 'Da Assunta', date: '2026-08-31', time: '20:30' }] }]
+    })
+    const ristoranti = trip.sections.find((s) => s.title === 'Ristoranti')
+    expect(ristoranti.items[0].date).toBe('2026-08-31')
+    expect(ristoranti.items[0].time).toBe('20:30')
+  })
+})
+
 describe('dayItemFieldsForKind — include lat/lng per sentiero/spiaggia/pasto', () => {
   it('sentiero', () => {
     expect(dayItemFieldsForKind('sentiero')).toEqual(['distanza', 'durata', 'dislivello', 'difficolta', 'lat', 'lng'])
@@ -584,5 +606,65 @@ describe('collectExternalMapPoints', () => {
     const points = collectExternalMapPoints(trip)
     const pernottamento = trip.sections.find((s) => s.type === 'lodging')
     expect(points[0].origin.tab).toBe(pernottamento.id)
+  })
+})
+
+describe('collectExternalDayItems', () => {
+  function tripWithRistorantiEDate() {
+    return normalizeTrip({
+      name: 'Ponza',
+      sections: [
+        { title: 'Trasporti', type: 'transport', items: [{ mode: 'Traghetto', from: 'Formia', to: 'Ponza', date: '2026-08-30', time: '09:00' }] },
+        { title: 'Ristoranti', type: 'cards', items: [
+          { title: 'Da Assunta', detail: 'Pesce', link: 'https://example.com', date: '2026-08-30', time: '20:30' },
+          { title: 'Non prenotato' }
+        ] }
+      ]
+    })
+  }
+
+  it('include i trasporti con data e le schede Ristoranti con data, escludendo le altre', () => {
+    const items = collectExternalDayItems(tripWithRistorantiEDate())
+    expect(items).toHaveLength(2)
+    expect(items.map((i) => i.type).sort()).toEqual(['card', 'transport'])
+  })
+
+  it('la voce ristorante porta titolo, dettaglio come nota, link e origin verso la sezione', () => {
+    const trip = tripWithRistorantiEDate()
+    const ristorantiSection = trip.sections.find((s) => s.title === 'Ristoranti')
+    const card = collectExternalDayItems(trip).find((i) => i.type === 'card')
+    expect(card).toMatchObject({ date: '2026-08-30', time: '20:30', title: 'Da Assunta', note: 'Pesce', link: 'https://example.com' })
+    expect(card.origin).toEqual({ tab: ristorantiSection.id })
+  })
+
+  it('viaggio senza sezione Ristoranti prenotata: nessuna voce card', () => {
+    const trip = normalizeTrip({ name: 'X', sections: [{ title: 'Ristoranti', type: 'cards', items: [{ title: 'Senza data' }] }] })
+    expect(collectExternalDayItems(trip).filter((i) => i.type === 'card')).toEqual([])
+  })
+})
+
+describe('buildDayTimeline', () => {
+  it('interfoglia voci giorno, trasporti e ristoranti secondo day.order', () => {
+    const trip = normalizeTrip({
+      name: 'X',
+      days: [{ date: '2026-08-30', items: [{ title: 'Sveglia' }], order: ['transport', 'item', 'card'] }]
+    })
+    const day = trip.days[0]
+    const external = [
+      { type: 'transport', id: 't1', date: '2026-08-30', time: '09:00', title: 'Traghetto' },
+      { type: 'card', id: 'c1', date: '2026-08-30', time: '20:30', title: 'Da Assunta' }
+    ]
+    const timeline = buildDayTimeline(day, external)
+    expect(timeline.map((e) => e.type)).toEqual(['transport', 'item', 'card'])
+    expect(timeline[0].item.id).toBe('t1')
+    expect(timeline[2].item.id).toBe('c1')
+  })
+
+  it('voci non coperte da day.order finiscono in coda, raggruppate per tipo', () => {
+    const trip = normalizeTrip({ name: 'X', days: [{ date: '2026-08-30', items: [{ title: 'Sveglia' }], order: [] }] })
+    const day = trip.days[0]
+    const external = [{ type: 'card', id: 'c1', date: '2026-08-30', title: 'Da Assunta' }]
+    const timeline = buildDayTimeline(day, external)
+    expect(timeline.map((e) => e.type)).toEqual(['item', 'card'])
   })
 })
