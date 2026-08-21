@@ -22,11 +22,25 @@ function isRistoranti(section) {
 const CARD_DATE_FMT = new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short' })
 
 function formatCardDate(date) {
-  return date ? CARD_DATE_FMT.format(new Date(`${date}T00:00:00`)) : ''
+  if (!date) return ''
+  const d = new Date(`${date}T00:00:00`)
+  if (Number.isNaN(d.getTime())) return ''
+  return CARD_DATE_FMT.format(d)
 }
 
 function groupKeyFor(item) {
   return item.date ? 'prenotati' : 'consigliati'
+}
+
+// Accetta solo AAAA-MM-GG che corrisponda a una data reale (rifiuta "domani",
+// "3/9", "2026-02-30", ecc.): il valore finisce diretto in item.date e viene
+// riletto da formatCardDate/new Date ovunque si mostra la scheda.
+function isValidISODate(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+  const [y, m, day] = value.split('-').map(Number)
+  const d = new Date(`${value}T00:00:00`)
+  if (Number.isNaN(d.getTime())) return false
+  return d.getFullYear() === y && d.getMonth() === m - 1 && d.getDate() === day
 }
 
 function isFixedSection(section) {
@@ -46,9 +60,14 @@ const RISTORANTI_GROUPS = [
 ]
 
 // Contenitore di un gruppo Prenotati/Consigliati: resta un'area di drop
-// valida anche quando il gruppo è vuoto (dnd-kit "multiple containers").
-function DroppableGroup({ groupKey, children }) {
-  const { setNodeRef } = useDroppable({ id: `group-${groupKey}` })
+// valida quando il gruppo è vuoto (dnd-kit "multiple containers"). Quando il
+// gruppo ha già delle schede, il droppable del contenitore è disattivato:
+// altrimenti il suo centro (che copre l'intero gruppo) può risultare più
+// vicino al cursore di quanto lo sia la scheda sotto il cursore secondo
+// closestCenter, "vincendo" la collisione e facendo cadere ogni drop a metà
+// gruppo in fondo alla lista invece che nel punto rilasciato.
+function DroppableGroup({ groupKey, disabled, children }) {
+  const { setNodeRef } = useDroppable({ id: `group-${groupKey}`, disabled })
   return <div ref={setNodeRef} className="flex flex-col gap-3 min-h-[3rem]">{children}</div>
 }
 
@@ -166,7 +185,10 @@ const Section = forwardRef(function Section({ trip, section, onUpdate, activeDis
         let updatedItem = activeItem
         if (fromGroup !== toGroup) {
           if (toGroup === 'prenotati') {
-            const date = window.prompt('Data della prenotazione (AAAA-MM-GG)', '')
+            let date = window.prompt('Data della prenotazione (AAAA-MM-GG)', '')
+            while (date !== null && !isValidISODate(date)) {
+              date = window.prompt('Data non valida. Usa il formato AAAA-MM-GG (es. 2026-08-30)', date)
+            }
             if (!date) return s
             const time = window.prompt('Ora della prenotazione (HH:MM, lascia vuoto se non serve)', '') ?? ''
             updatedItem = stampModified({ ...activeItem, date, time }, activeDisplayName)
@@ -176,8 +198,20 @@ const Section = forwardRef(function Section({ trip, section, onUpdate, activeDis
           }
         }
 
-        const withoutActive = s.items.filter((it) => it.id !== active.id)
         const overIsGroupContainer = over.id === 'group-prenotati' || over.id === 'group-consigliati'
+
+        if (fromGroup === toGroup && !overIsGroupContainer) {
+          // Stesso gruppo: riordino puro, stesso calcolo di handleCardDragEnd
+          // (arrayMove sugli indici nell'array ORIGINALE, non su un array
+          // già privato dell'item attivo — altrimenti un drag di una
+          // posizione verso il basso non produce alcun cambiamento visibile).
+          const oldIndex = s.items.findIndex((it) => it.id === active.id)
+          const newIndex = s.items.findIndex((it) => it.id === over.id)
+          if (oldIndex === -1 || newIndex === -1) return s
+          return { ...s, items: arrayMove(s.items, oldIndex, newIndex) }
+        }
+
+        const withoutActive = s.items.filter((it) => it.id !== active.id)
         const overIndex = overIsGroupContainer ? -1 : withoutActive.findIndex((it) => it.id === over.id)
 
         if (overIndex === -1) {
@@ -308,7 +342,7 @@ const Section = forwardRef(function Section({ trip, section, onUpdate, activeDis
                   <Label>{label}</Label>
                   {groupItems.length === 0 && <p className="text-sm text-[var(--muted)]">Nessuna scheda qui.</p>}
                   <SortableContext items={groupItems.map((it) => it.id)} strategy={verticalListSortingStrategy}>
-                    <DroppableGroup groupKey={key}>
+                    <DroppableGroup groupKey={key} disabled={groupItems.length > 0}>
                       {groupItems.map((item) => (
                         <SortableCard
                           key={item.id}
@@ -420,8 +454,14 @@ const Section = forwardRef(function Section({ trip, section, onUpdate, activeDis
             <CoordsInput value={{ lat: cardForm.lat, lng: cardForm.lng }} onChange={(coords) => setCardForm({ ...cardForm, ...coords })} />
             {isRistoranti(section) && (
               <>
-                <input type="date" value={cardForm.date} onChange={(e) => setCardForm({ ...cardForm, date: e.target.value })} className={inputClass} />
-                <input type="time" value={cardForm.time} onChange={(e) => setCardForm({ ...cardForm, time: e.target.value })} className={inputClass} />
+                <label className="flex flex-col gap-1">
+                  <Label>Data della prenotazione</Label>
+                  <input type="date" aria-label="Data della prenotazione" value={cardForm.date} onChange={(e) => setCardForm({ ...cardForm, date: e.target.value })} className={inputClass} />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <Label>Ora della prenotazione</Label>
+                  <input type="time" aria-label="Ora della prenotazione" value={cardForm.time} onChange={(e) => setCardForm({ ...cardForm, time: e.target.value })} className={inputClass} />
+                </label>
               </>
             )}
             <Btn type="submit">Salva</Btn>
