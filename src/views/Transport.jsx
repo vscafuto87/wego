@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
-import { Train, Plane, Ship, Car, Bus, GripVertical, FileText } from 'lucide-react'
+import { Train, Plane, Ship, Car, Bus, GripVertical, FileText, ExternalLink } from 'lucide-react'
 import EditIcon from '../components/EditIcon.jsx'
 import DeleteIcon from '../components/DeleteIcon.jsx'
 import Btn from '../components/Btn.jsx'
@@ -14,6 +14,7 @@ import { SortableContext, verticalListSortingStrategy, sortableKeyboardCoordinat
 import { CSS } from '@dnd-kit/utilities'
 
 const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
+const chipClass = 'inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-[var(--tint)] text-[var(--accent)] text-sm font-medium'
 const EMPTY_ITEM = { mode: 'auto', from: '', to: '', date: '', time: '', ticketLink: '', ticketFilePath: '', ticketFileName: '', note: '' }
 const MAX_FILE_BYTES = 20 * 1024 * 1024
 
@@ -25,9 +26,13 @@ export const TRANSPORT_MODES = [
   { value: 'traghetto', label: 'Traghetto', Icon: Ship }
 ]
 
-function ModeIcon({ mode }) {
+function modeLabel(mode) {
+  return TRANSPORT_MODES.find((m) => m.value === mode)?.label ?? mode
+}
+
+function ModeIcon({ mode, size = 19, className = 'text-[var(--muted)]' }) {
   const Icon = TRANSPORT_MODES.find((m) => m.value === mode)?.Icon ?? Bus
-  return <Icon size={19} className="text-[var(--muted)]" />
+  return <Icon size={size} className={className} />
 }
 
 // Stesso hook duplicato in Lodging.jsx e MapSection.jsx: tre righe, non vale
@@ -77,11 +82,20 @@ function SortableTransportItem({ item, onEdit, onRemove, onOpenAttachment, openE
   return (
     <div ref={setNodeRef} style={style} className="rounded-[24px] p-5 bg-[var(--card)] shadow-[0_1px_2px_rgb(var(--ink-rgb)/0.05),0_10px_24px_-14px_rgb(var(--ink-rgb)/0.25)]">
       <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <ModeIcon mode={item.mode} />
-          <p className="font-display font-semibold text-xl">{item.from} → {item.to}</p>
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5">
+            <ModeIcon mode={item.mode} size={13} className="text-[var(--accent)]" />
+            <p className="font-display font-semibold text-xs uppercase tracking-wider text-[var(--accent)]">{modeLabel(item.mode)}</p>
+          </div>
+          <p className="font-display font-semibold text-xl mt-0.5">{item.from} → {item.to}</p>
+          {(item.date || item.time) && (
+            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+              {item.date && <span className="font-mono text-sm text-[var(--muted)]">{item.date}</span>}
+              {item.time && <span className="font-mono text-xs bg-[var(--tint)] rounded-full px-2 py-0.5">{item.time}</span>}
+            </div>
+          )}
         </div>
-        <div className="flex gap-1 -mr-2 -mt-1">
+        <div className="flex gap-1 -mr-2 -mt-1 flex-none">
           <button
             type="button"
             ref={setActivatorNodeRef}
@@ -100,24 +114,24 @@ function SortableTransportItem({ item, onEdit, onRemove, onOpenAttachment, openE
           </button>
         </div>
       </div>
-      {(item.date || item.time) && (
-        <p className="font-mono text-sm text-[var(--muted)] mt-1">{[item.date, item.time].filter(Boolean).join(' · ')}</p>
-      )}
-      {item.note && <p className="text-base mt-2">{item.note}</p>}
-      {item.ticketLink && (
-        <a href={item.ticketLink} target="_blank" rel="noreferrer" className="text-base text-[var(--accent)] underline mt-2 inline-block">
-          Apri il biglietto
-        </a>
-      )}
-      {item.ticketFilePath && (
+
+      {item.note && <p className="text-base mt-3">{item.note}</p>}
+
+      {(item.ticketLink || item.ticketFilePath) && (
         <>
-          <button
-            type="button"
-            onClick={() => onOpenAttachment(item.id, item.ticketFilePath)}
-            className="flex items-center gap-1.5 text-base text-[var(--accent)] underline mt-2"
-          >
-            <FileText size={15} /> Apri il PDF del biglietto
-          </button>
+          <div className="h-px bg-[var(--line)] mt-3 mb-3" />
+          <div className="flex gap-2 flex-wrap">
+            {item.ticketLink && (
+              <a href={item.ticketLink} target="_blank" rel="noreferrer" className={chipClass}>
+                <ExternalLink size={15} /> Apri il biglietto
+              </a>
+            )}
+            {item.ticketFilePath && (
+              <button type="button" onClick={() => onOpenAttachment(item.id, item.ticketFilePath)} className={chipClass}>
+                <FileText size={15} /> PDF biglietto
+              </button>
+            )}
+          </div>
           {openError?.itemId === item.id && (
             <p className="text-sm text-[var(--accent)] mt-1">{openError.message}</p>
           )}
