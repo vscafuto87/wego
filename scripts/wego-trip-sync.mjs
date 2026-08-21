@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
 import { createClient } from '@supabase/supabase-js'
-import { isShareCode, generateShareCode, validateTripPayload, diffTrip, formatDiffSummary } from './wego-trip-lib.mjs'
+import { isShareCode, generateShareCode, validateTripPayload, diffTrip, formatDiffSummary, ATTACHMENT_SECTION_TYPES, formatItemsList } from './wego-trip-lib.mjs'
 
 export function parseArgs(argv) {
   const [command, ...rest] = argv
@@ -132,6 +132,23 @@ export async function cmdCreate(supabase, session, filePath, { yes }) {
   throw new Error(lastError?.message || 'Impossibile creare il viaggio.')
 }
 
+export function findAttachmentSection(tripData, sectionType) {
+  if (!ATTACHMENT_SECTION_TYPES.includes(sectionType)) {
+    throw new Error(`Sezione non valida: "${sectionType}". Tipi ammessi: ${ATTACHMENT_SECTION_TYPES.join(', ')}.`)
+  }
+  const section = (tripData.sections ?? []).find((s) => s.type === sectionType)
+  if (!section) {
+    throw new Error(`Il viaggio non ha una sezione di tipo "${sectionType}".`)
+  }
+  return section
+}
+
+export async function cmdItems(supabase, session, identifier, sectionType) {
+  const trip = await findTrip(supabase, session, identifier)
+  const section = findAttachmentSection(trip.data, sectionType)
+  return { sectionTitle: section.title, items: section.items ?? [] }
+}
+
 export async function main() {
   const { command, positional, yes } = parseArgs(process.argv.slice(2))
   try {
@@ -171,7 +188,15 @@ export async function main() {
       return
     }
 
-    console.error(`Comando sconosciuto: "${command}". Comandi disponibili: list, pull, push, create.`)
+    if (command === 'items') {
+      const [identifier, sectionType] = positional
+      if (!identifier || !sectionType) throw new Error('Uso: items <nome|share_code> <transport|lodging>')
+      const { sectionTitle, items } = await cmdItems(supabase, session, identifier, sectionType)
+      console.log(formatItemsList(sectionType, sectionTitle, items))
+      return
+    }
+
+    console.error(`Comando sconosciuto: "${command}". Comandi disponibili: list, pull, push, create, items, attach.`)
     process.exitCode = 1
   } catch (err) {
     console.error(err.message)

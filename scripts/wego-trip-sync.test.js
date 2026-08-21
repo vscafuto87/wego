@@ -328,3 +328,38 @@ describe('cmdCreate', () => {
     expect(insertTrip).toHaveBeenCalledTimes(3)
   })
 })
+
+const { findAttachmentSection, cmdItems } = await import('./wego-trip-sync.mjs')
+
+describe('findAttachmentSection', () => {
+  it('trova la sezione transport nel data del viaggio', () => {
+    const tripData = { sections: [{ title: 'Trasporti', type: 'transport', items: [{ mode: 'auto' }] }] }
+    const section = findAttachmentSection(tripData, 'transport')
+    expect(section.title).toBe('Trasporti')
+  })
+
+  it('rifiuta un sectionType non transport/lodging', () => {
+    const tripData = { sections: [] }
+    expect(() => findAttachmentSection(tripData, 'cards')).toThrow(/transport, lodging/)
+  })
+
+  it('rifiuta se il viaggio non ha quella sezione', () => {
+    const tripData = { sections: [{ title: 'Trasporti', type: 'transport', items: [] }] }
+    expect(() => findAttachmentSection(tripData, 'lodging')).toThrow(/lodging/)
+  })
+})
+
+describe('cmdItems', () => {
+  it('torna titolo sezione e voci per il viaggio risolto', async () => {
+    const tripData = { name: 'Ponza', sections: [{ title: 'Pernottamento', type: 'lodging', items: [{ name: 'Hotel Roma' }] }] }
+    const supabase = {
+      from: vi.fn((table) => {
+        if (table === 'tv_trips') return { select: () => ({ ilike: async () => ({ data: [tripRow({ data: tripData })], error: null }) }) }
+        if (table === 'tv_trip_members') return { select: () => ({ eq: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { role: 'editor' }, error: null }) }) }) }) }
+        throw new Error(`tabella inattesa: ${table}`)
+      })
+    }
+    const result = await cmdItems(supabase, { user: { id: 'user-1' } }, 'Ponza', 'lodging')
+    expect(result).toEqual({ sectionTitle: 'Pernottamento', items: [{ name: 'Hotel Roma' }] })
+  })
+})
