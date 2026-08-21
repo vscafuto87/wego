@@ -407,10 +407,12 @@ const DAY_MAP_KINDS = ['sentiero', 'spiaggia', 'pasto']
 
 // Punti con coordinate (o, per il Pernottamento, anche solo un indirizzo) che
 // vivono in altre sezioni/giorni del viaggio, utili per la mappa aggregata.
-// Calcolo derivato, nessuna copia salvata: chiamare di nuovo dopo ogni
-// modifica del viaggio, mai persistere il risultato. Un punto senza lat/lng
-// ma con `address` va geocodificato da chi consuma questi dati (solo online,
-// mai salvando il risultato nel viaggio): vedi MapSection.jsx.
+// Calcolo derivato, nessuna copia salvata qui: chiamare di nuovo dopo ogni
+// modifica del viaggio. Un punto senza lat/lng ma con `address` va
+// geocodificato da chi consuma questi dati (solo online): MapSection.jsx lo
+// fa una volta sola e salva lat/lng sulla scheda/alloggio d'origine (se chi
+// guarda ha permesso di scrittura), così i visitatori successivi — su
+// qualunque device — leggono coordinate già pronte invece di rigeocodificare.
 export function collectExternalMapPoints(trip) {
   const fromCards = trip.sections
     .filter((s) => s.type === 'cards')

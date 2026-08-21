@@ -504,7 +504,16 @@ const Section = forwardRef(function Section({ trip, section, onUpdate, activeDis
 
       {section.type === 'map' && (
         <Suspense fallback={<p className="text-base text-[var(--muted)]">Caricamento mappa…</p>}>
-          <MapSection ref={childRef} trip={trip} section={section} onUpdate={onUpdate} activeDisplayName={activeDisplayName} onNavigate={onNavigate} />
+          <MapSection
+            ref={childRef}
+            trip={trip}
+            section={section}
+            onUpdate={onUpdate}
+            activeDisplayName={activeDisplayName}
+            onNavigate={onNavigate}
+            remoteId={syncState?.remoteId ?? null}
+            role={syncState?.role ?? null}
+          />
         </Suspense>
       )}
 

@@ -126,15 +126,21 @@ function writeGeocodeCache(address, coords) {
 }
 
 // Traduce l'indirizzo di un Pernottamento o di una scheda senza lat/lng in
-// coordinate, solo quando c'è rete e solo per mostrarlo sulla mappa: nessun
-// risultato viene mai scritto nel viaggio (calcolo derivato). Prima cerca
-// nella cache locale (istantaneo); solo per gli indirizzi mai visti prima
-// chiama Nominatim, in sequenza, rispettandone il limite (max 1 al secondo).
-// Se la geocodifica fallisce il punto resta senza pin, in silenzio: non è un
-// errore da mostrare.
-function useGeocodedAddresses(points, online) {
+// coordinate, solo quando c'è rete e solo per mostrarlo sulla mappa. Prima
+// cerca nella cache locale (istantaneo); solo per gli indirizzi mai visti
+// prima chiama Nominatim, in sequenza, rispettandone il limite (max 1 al
+// secondo). Se la geocodifica fallisce il punto resta senza pin, in
+// silenzio: non è un errore da mostrare. Ogni volta che risolve un punto
+// chiama `onResolved`, così chi lo usa può salvare il risultato una volta
+// sola invece di rifare la stessa chiamata a ogni apertura della Mappa.
+function useGeocodedAddresses(points, online, onResolved) {
   const [geocoded, setGeocoded] = useState({})
   const attempted = useRef(new Set())
+  // In un ref, non nelle dipendenze dell'effetto: `onResolved` cambia identità
+  // a ogni render di MapSection, ma non deve far ripartire il ciclo di
+  // geocodifica, solo restare aggiornato per quando viene chiamato.
+  const onResolvedRef = useRef(onResolved)
+  onResolvedRef.current = onResolved
 
   useEffect(() => {
     if (!online) return
@@ -148,6 +154,7 @@ function useGeocodedAddresses(points, online) {
         if (cached) {
           attempted.current.add(p.id)
           setGeocoded((prev) => ({ ...prev, [p.id]: cached }))
+          onResolvedRef.current?.(p, cached)
           continue
         }
         try {
@@ -164,6 +171,7 @@ function useGeocodedAddresses(points, online) {
             const coords = { lat: Number(hit.lat), lng: Number(hit.lon) }
             writeGeocodeCache(p.address, coords)
             setGeocoded((prev) => ({ ...prev, [p.id]: coords }))
+            onResolvedRef.current?.(p, coords)
           }
         } catch {
           if (!cancelled) attempted.current.add(p.id)
@@ -181,7 +189,7 @@ function useGeocodedAddresses(points, online) {
 // forwardRef solo perché Section.jsx passa un ref generico a ogni tipo di
 // sezione (childRef.openAdd()): la Mappa non espone più nulla da aggiungere,
 // quindi il ref resta inutilizzato.
-const MapSection = forwardRef(function MapSection({ trip, onNavigate }, _ref) {
+const MapSection = forwardRef(function MapSection({ trip, onUpdate, remoteId, role, onNavigate }, _ref) {
   const online = useOnlineStatus()
   const [myPosition, setMyPosition] = useState(null)
   const [locating, setLocating] = useState(false)
@@ -218,10 +226,33 @@ const MapSection = forwardRef(function MapSection({ trip, onNavigate }, _ref) {
     )
   }
 
+  // Solo owner/editor scrivono la coordinata risolta sulla scheda d'origine:
+  // un viewer può comunque vedere la mappa, ma la sua geocodifica resta
+  // locale (stessa cache di sempre), niente scritture che le RLS di Supabase
+  // rifiuterebbero comunque. Nessun `remoteId` vuol dire viaggio non ancora
+  // sincronizzato: è sempre modificabile in locale, come l'owner.
+  const canPersist = !remoteId || role === 'editor'
+
+  // Scrive lat/lng una volta sola sulla scheda o sull'alloggio d'origine
+  // (identificati da origin.tab = id sezione e point.id = id voce): da quel
+  // momento in poi collectExternalMapPoints la trova già risolta, per
+  // chiunque apra la Mappa, senza ripetere la chiamata a Nominatim.
+  function persistGeocodedCoords(point, coords) {
+    if (!canPersist) return
+    onUpdate((t) => ({
+      ...t,
+      sections: t.sections.map((s) => (
+        s.id === point.origin.tab
+          ? { ...s, items: s.items.map((i) => (i.id === point.id ? { ...i, lat: coords.lat, lng: coords.lng } : i)) }
+          : s
+      ))
+    }))
+  }
+
   // I punti arrivano solo da Ristoranti, Pernottamento e Itinerario: la
   // sezione Mappa non ha più punti propri modificabili.
   const points = useMemo(() => collectExternalMapPoints(trip), [trip])
-  const geocoded = useGeocodedAddresses(points, online)
+  const geocoded = useGeocodedAddresses(points, online, persistGeocodedCoords)
 
   const resolvedPoints = useMemo(() => points.map((p) => {
     if (p.lat !== null && p.lng !== null) return p
@@ -234,7 +265,10 @@ const MapSection = forwardRef(function MapSection({ trip, onNavigate }, _ref) {
     ? [withCoords.reduce((sum, p) => sum + p.lat, 0) / withCoords.length, withCoords.reduce((sum, p) => sum + p.lng, 0) / withCoords.length]
     : null
 
-  const availableCategories = CATEGORY_ORDER.filter((cat) => withCoords.some((p) => p.categoryGroup === cat))
+  // Da tutti i punti conosciuti, non solo da quelli già geocodificati: la
+  // categoria di un punto si conosce subito, senza aspettare le coordinate,
+  // quindi le chip non devono restare vuote in attesa della rete.
+  const availableCategories = CATEGORY_ORDER.filter((cat) => points.some((p) => p.categoryGroup === cat))
   const [hiddenCategories, setHiddenCategories] = useState(new Set())
   function toggleCategory(cat) {
     setHiddenCategories((prev) => {
@@ -248,7 +282,7 @@ const MapSection = forwardRef(function MapSection({ trip, onNavigate }, _ref) {
 
   return (
     <div className="flex flex-col gap-4">
-      {online && center && (
+      {online && points.length > 0 && (
         <div className="flex flex-col gap-3">
           {availableCategories.length > 1 && (
             <div className="flex flex-wrap gap-2">
@@ -268,6 +302,12 @@ const MapSection = forwardRef(function MapSection({ trip, onNavigate }, _ref) {
               ))}
             </div>
           )}
+          {!center && (
+            <div className="relative rounded-[24px] overflow-hidden h-64 border border-[var(--line)] flex items-center justify-center">
+              <p className="text-sm text-[var(--muted)]">Sto individuando le posizioni…</p>
+            </div>
+          )}
+          {center && (
           <div className={fullscreen ? 'fixed inset-0 z-[1100] bg-[var(--paper)]' : 'relative rounded-[24px] overflow-hidden h-64 border border-[var(--line)]'}>
             <div
               className={`absolute right-3 z-[1000] flex flex-col gap-2 ${fullscreen ? '' : 'top-3'}`}
@@ -349,6 +389,7 @@ const MapSection = forwardRef(function MapSection({ trip, onNavigate }, _ref) {
               ))}
             </MapContainer>
           </div>
+          )}
           {locateError && <p className="text-sm text-[var(--muted)]">{locateError}</p>}
         </div>
       )}
