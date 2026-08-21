@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Plus, Upload, Trash2 } from 'lucide-react'
 import { TerrainSeal } from '../theme/Terrain.jsx'
 import { themeStyle } from '../theme/themes.js'
@@ -32,6 +32,41 @@ function tripStatus(trip) {
   }
   if (today <= end) return { kind: 'label', text: 'in corso' }
   return { kind: 'label', text: 'concluso' }
+}
+
+// Millisecondi tra `now` e la mezzanotte locale della data di partenza,
+// niente toISOString(): con l'Italia avanti su UTC in estate sballerebbe di
+// un paio d'ore, visibili su un countdown che scorre ogni secondo.
+export function msUntilStart(trip, now = new Date()) {
+  const target = new Date(`${trip.start}T00:00:00`)
+  return Math.max(0, target - now)
+}
+
+export function formatCountdown(ms) {
+  const totalSeconds = Math.floor(ms / 1000)
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
+}
+
+// Countdown live per l'ultimo giorno prima della partenza: aggiorna ogni
+// secondo finché il componente resta montato (la card è visibile in Home).
+function DepartureCountdown({ trip }) {
+  const [now, setNow] = useState(() => new Date())
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(id)
+  }, [])
+
+  return (
+    <span className="flex items-baseline gap-1.5 text-[var(--accent)]">
+      <span className="font-mono text-[11px] tracking-widest uppercase">tra</span>
+      <span className="font-mono text-2xl leading-none font-semibold tabular-nums">{formatCountdown(msUntilStart(trip, now))}</span>
+    </span>
+  )
 }
 
 const EMPTY_FORM = { name: '', emoji: '', place: '', start: '', end: '', palette: 'mountain', people: '' }
@@ -95,10 +130,12 @@ export default function Home({ trips, onOpen, onCreate, onImport, onDelete }) {
                   {trip.place && <p className="text-base text-[var(--muted)] mt-1.5">{trip.place}</p>}
                   <div className="flex items-end justify-between mt-4">
                     <span className="font-mono text-sm text-[var(--muted)]">{formatRange(trip.start, trip.end)}</span>
-                    {status?.kind === 'countdown' && (
+                    {status?.kind === 'countdown' && status.days === 1 && <DepartureCountdown trip={trip} />}
+                    {status?.kind === 'countdown' && status.days > 1 && (
                       <span className="flex items-baseline gap-1.5 text-[var(--accent)]">
+                        <span className="font-mono text-[11px] tracking-widest uppercase">tra</span>
                         <span className="font-mono text-3xl leading-none font-semibold">{status.days}</span>
-                        <span className="font-mono text-[11px] tracking-widest uppercase">{status.days === 1 ? 'giorno' : 'giorni'}</span>
+                        <span className="font-mono text-[11px] tracking-widest uppercase">giorni</span>
                       </span>
                     )}
                     {status?.kind === 'label' && (
