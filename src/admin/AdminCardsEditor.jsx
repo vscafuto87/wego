@@ -3,7 +3,8 @@ import { Plus, Pencil, Trash2, GripVertical } from 'lucide-react'
 import { stampModified } from '../data/schema.js'
 
 const inputClass = 'border border-[var(--line)] bg-[var(--paper)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
-const EMPTY_FORM = { title: '', meta: '', detail: '', link: '', tags: '' }
+const EMPTY_FORM = { title: '', meta: '', detail: '', link: '', tags: '', date: '', time: '' }
+const isRistoranti = (section) => section.type === 'cards' && section.title === 'Ristoranti'
 
 export default function AdminCardsEditor({ section, onUpdate, activeDisplayName }) {
   const [form, setForm] = useState(null)
@@ -75,7 +76,7 @@ export default function AdminCardsEditor({ section, onUpdate, activeDisplayName 
                 <p className="font-display font-semibold text-xl">{item.title || 'Senza titolo'}</p>
               </div>
               <div className="flex gap-1">
-                <button onClick={() => setForm({ id: item.id, title: item.title, meta: item.meta, detail: item.detail, link: item.link, tags: item.tags.join(', ') })} aria-label="Modifica scheda" className="p-2 text-[var(--muted)]">
+                <button onClick={() => setForm({ id: item.id, title: item.title, meta: item.meta, detail: item.detail, link: item.link, tags: item.tags.join(', '), date: item.date, time: item.time })} aria-label="Modifica scheda" className="p-2 text-[var(--muted)]">
                   <Pencil size={15} />
                 </button>
                 <button onClick={() => removeItem(item)} aria-label="Elimina scheda" className="p-2 text-[var(--muted)]">
@@ -84,6 +85,7 @@ export default function AdminCardsEditor({ section, onUpdate, activeDisplayName 
               </div>
             </div>
             {item.meta && <p className="font-mono text-sm text-[var(--muted)] mt-1">{item.meta}</p>}
+            {isRistoranti(section) && item.date && <p className="text-sm text-[var(--accent)] mt-1">Prenotato · {item.date}{item.time ? ` · ${item.time}` : ''}</p>}
             {item.detail && <p className="text-base mt-2">{item.detail}</p>}
             {item.tags.length > 0 && <p className="text-sm text-[var(--muted)] mt-2">{item.tags.join(' · ')}</p>}
           </div>
@@ -104,6 +106,12 @@ export default function AdminCardsEditor({ section, onUpdate, activeDisplayName 
             <textarea placeholder="Dettaglio" value={form.detail} onChange={(e) => setForm({ ...form, detail: e.target.value })} className={inputClass} rows={2} />
             <input placeholder="Link" value={form.link} onChange={(e) => setForm({ ...form, link: e.target.value })} className={inputClass} />
             <input placeholder="Tag (separati da virgola)" value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} className={inputClass} />
+            {isRistoranti(section) && (
+              <div className="flex gap-2">
+                <input type="date" aria-label="Data della prenotazione" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className={`flex-1 min-w-0 ${inputClass}`} />
+                <input type="time" aria-label="Ora della prenotazione" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} className={`flex-1 min-w-0 ${inputClass}`} />
+              </div>
+            )}
             <div className="flex gap-2">
               <button type="submit" className="inline-flex items-center justify-center rounded-full font-sans font-medium text-base h-11 px-5 text-[var(--paper)] bg-[var(--accent)]">Salva</button>
               <button type="button" onClick={() => setForm(null)} className="inline-flex items-center justify-center rounded-full font-sans font-medium text-base h-11 px-5 bg-[var(--tint)]">Annulla</button>

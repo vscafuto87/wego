@@ -121,7 +121,7 @@ possibile, quindi non introdurre un formato interno diverso.
   ],
   "sections": [
     { "title": "Ristoranti", "icon": "food", "type": "cards",
-      "items": [ { "title": "", "meta": "", "detail": "", "link": "", "tags": [], "lat": null, "lng": null } ] },
+      "items": [ { "title": "", "meta": "", "detail": "", "link": "", "tags": [], "lat": null, "lng": null, "date": null, "time": null } ] },
     { "title": "Da prenotare", "icon": "check", "type": "checklist",
       "items": [ { "text": "", "done": false } ] },
     { "title": "Note", "icon": "note", "type": "notes", "text": "" },
@@ -149,7 +149,10 @@ indirizzo, link prenotazione); `map` gestisce punti d'interesse con coordinate m
 su una mappa Leaflet (nome, categoria, link maps, lat/lng, nota). Anche gli item `cards`
 e le voci giorno di kind `sentiero`/`spiaggia`/`pasto` possono avere `lat`/`lng`
 opzionali (numero o null): se presenti, confluiscono nella mappa aggregata della tab
-Mappa insieme ai punti propri della sezione.
+Mappa insieme ai punti propri della sezione. Le schede `cards` di Ristoranti possono
+avere anche `date`/`time` opzionali (AAAA-MM-GG / HH:MM, o vuoti) per segnare una
+prenotazione confermata: quando presenti, la scheda compare anche nell'itinerario del
+giorno corrispondente.
 
 `icon` ∈ `map, check, note, ticket, food, bed, bus, star, people`.
 Gli `id` sono generati al caricamento e non vengono mai esportati.

@@ -66,12 +66,12 @@ function normalizeDay(raw) {
     modifiedBy: str(day.modifiedBy),
     modifiedAt: str(day.modifiedAt),
     items: arr(day.items).map(normalizeDayItem),
-    // Ordine combinato di voci giorno e trasporti (vedi buildDayTimeline):
-    // sequenza di tag "item"/"transport" da consumare nell'ordine già salvato
-    // di day.items e dei trasporti di quella data. Non referenzia id (che
-    // vengono rigenerati a ogni caricamento), quindi resta valido tra un
-    // caricamento e l'altro; se mancante o disallineato si ricade su
-    // "voci poi trasporti".
+    // Ordine combinato di voci giorno, trasporti e ristoranti prenotati (vedi
+    // buildDayTimeline): sequenza di tag "item"/"transport"/"card" da consumare
+    // nell'ordine già salvato di day.items, dei trasporti e delle schede
+    // Ristoranti di quella data. Non referenzia id (che vengono rigenerati a
+    // ogni caricamento), quindi resta valido tra un caricamento e l'altro; se
+    // mancante o disallineato si ricade su "voci poi trasporti poi ristoranti".
     order: arr(day.order).filter((tag) => DAY_ORDER_TAGS.includes(tag))
   }
 }

@@ -21,7 +21,7 @@ const PROMPT = `Trasforma questi appunti di viaggio grezzi in un JSON con questo
   ],
   "sections": [
     { "title": "Ristoranti", "icon": "food", "type": "cards",
-      "items": [ { "title": "string", "meta": "string", "detail": "string", "link": "string", "tags": ["string"] } ] },
+      "items": [ { "title": "string", "meta": "string", "detail": "string", "link": "string", "tags": ["string"], "date": "AAAA-MM-GG o vuoto", "time": "HH:MM o vuoto" } ] },
     { "title": "Trasporti", "icon": "bus", "type": "transport",
       "items": [ { "mode": "auto | treno | aereo | bus | traghetto", "from": "string", "to": "string", "date": "AAAA-MM-GG", "time": "HH:MM o vuoto", "ticketLink": "string", "note": "string" } ] },
     { "title": "Pernottamento", "icon": "bed", "type": "lodging",
@@ -38,6 +38,11 @@ Ogni item "cards" (es. Ristoranti) può avere anche "lat": numero o null, "lng":
 o null, ma solo se le coordinate sono note per certo dagli appunti (es. un link Maps
 incollato nel testo): non indovinarle mai da un nome di luogo, in quel caso lascia
 entrambi null.
+
+Per gli item "cards" della sezione Ristoranti, "date" e "time" indicano che il
+ristorante è prenotato: lasciali entrambi vuoti se è solo un suggerimento e non una
+prenotazione. Se "date" cade in uno dei giorni del viaggio, la prenotazione compare
+anche nell'itinerario di quel giorno.
 
 Ogni voce di "days[].items[]" può avere anche un campo "kind" opzionale, che determina
 quali campi in più aggiungere alla voce (solo quelli del kind scelto, nessun altro):

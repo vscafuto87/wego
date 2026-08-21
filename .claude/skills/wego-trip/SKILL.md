@@ -23,7 +23,7 @@ dell'app (`src/views/ImportView.jsx`) — stesso schema, zero divergenza.
       "items": [ { "time": "HH:MM o vuoto", "title": "string", "detail": "string", "link": "string" } ] }
   ],
   "sections": [
-    { "title": "Ristoranti", "icon": "food", "type": "cards", "items": [ { "title": "", "meta": "", "detail": "", "link": "", "tags": [], "lat": null, "lng": null } ] },
+    { "title": "Ristoranti", "icon": "food", "type": "cards", "items": [ { "title": "", "meta": "", "detail": "", "link": "", "tags": [], "lat": null, "lng": null, "date": "", "time": "" } ] },
     { "title": "Trasporti", "icon": "bus", "type": "transport", "items": [ { "mode": "auto | treno | aereo | bus | traghetto", "from": "", "to": "", "date": "AAAA-MM-GG", "time": "", "ticketLink": "", "note": "" } ] },
     { "title": "Pernottamento", "icon": "bed", "type": "lodging", "items": [ { "name": "", "checkIn": "AAAA-MM-GG", "checkOut": "AAAA-MM-GG", "address": "", "bookingLink": "", "note": "" } ] },
     { "title": "Mappa", "icon": "map", "type": "map", "items": [ { "name": "", "category": "", "mapsLink": "", "lat": null, "lng": null, "note": "" } ] },
@@ -42,7 +42,10 @@ Voci giorno con `kind` opzionale (aggiunge solo i campi elencati, nessun altro):
 **Mai inventare o calcolare `lat`/`lng`** da un nome di luogo: solo se l'utente
 fornisce un link Maps o coordinate numeriche esplicite, altrimenti `null`. Le
 quattro sezioni Trasporti/Pernottamento/Ristoranti/Mappa sono sempre presenti,
-anche vuote (`items: []`), sono fisse in ogni viaggio.
+anche vuote (`items: []`), sono fisse in ogni viaggio. Su un item `cards` di
+Ristoranti, `date`/`time` segnano una prenotazione confermata (vuoti se è solo
+un consiglio) e, quando `date` cade in un giorno del viaggio, fanno comparire
+la scheda anche nell'itinerario di quel giorno.
 
 ## Flusso "viaggio nuovo"
 
