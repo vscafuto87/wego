@@ -1,16 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { existsSync, readFileSync } from 'node:fs'
 
-const { mockCmdList, mockCmdPull } = vi.hoisted(() => ({
+const { mockCmdList, mockCmdPull, mockCmdPush, mockCmdCreate } = vi.hoisted(() => ({
   mockCmdList: vi.fn(),
-  mockCmdPull: vi.fn()
+  mockCmdPull: vi.fn(),
+  mockCmdPush: vi.fn(),
+  mockCmdCreate: vi.fn()
 }))
 
 vi.mock('./wego-trip-sync.mjs', () => ({
   createAuthenticatedClient: vi.fn(),
   cmdList: mockCmdList,
   cmdPull: mockCmdPull,
-  cmdPush: vi.fn(),
-  cmdCreate: vi.fn(),
+  cmdPush: mockCmdPush,
+  cmdCreate: mockCmdCreate,
   cmdItems: vi.fn(),
   cmdAttach: vi.fn()
 }))
@@ -20,6 +23,8 @@ const { createTools } = await import('./wego-trip-mcp-server.mjs')
 beforeEach(() => {
   mockCmdList.mockReset()
   mockCmdPull.mockReset()
+  mockCmdPush.mockReset()
+  mockCmdCreate.mockReset()
 })
 
 describe('wego_list', () => {
@@ -63,5 +68,51 @@ describe('wego_pull', () => {
     const tools = createTools('fake-supabase', 'fake-session')
     const result = await tools.wego_pull({ identifier: 'X' })
     expect(result).toEqual({ isError: true, content: [{ type: 'text', text: 'Nessun viaggio "X"...' }] })
+  })
+})
+
+describe('wego_push', () => {
+  it('scrive un file temporaneo con tripJson e chiama cmdPush con quel percorso; il file si elimina dopo', async () => {
+    let capturedPath
+    mockCmdPush.mockImplementation(async (supabase, session, identifier, filePath, { yes }) => {
+      capturedPath = filePath
+      expect(JSON.parse(readFileSync(filePath, 'utf8'))).toEqual({ name: 'Ponza' })
+      console.log('Riepilogo finto')
+      return { written: false }
+    })
+    const tools = createTools('fake-supabase', 'fake-session')
+    const result = await tools.wego_push({ identifier: 'Ponza', tripJson: { name: 'Ponza' }, yes: false })
+    expect(mockCmdPush).toHaveBeenCalledWith('fake-supabase', 'fake-session', 'Ponza', capturedPath, { yes: false })
+    expect(result).toEqual({ content: [{ type: 'text', text: 'Riepilogo finto' }] })
+    expect(existsSync(capturedPath)).toBe(false)
+  })
+
+  it('elimina il file temporaneo anche se cmdPush lancia, e torna un errore di strumento', async () => {
+    let capturedPath
+    mockCmdPush.mockImplementation(async (supabase, session, identifier, filePath) => {
+      capturedPath = filePath
+      throw new Error('Sei solo viewer su "Ponza", non puoi modificarlo.')
+    })
+    const tools = createTools('fake-supabase', 'fake-session')
+    const result = await tools.wego_push({ identifier: 'Ponza', tripJson: { name: 'Ponza' }, yes: true })
+    expect(result).toEqual({ isError: true, content: [{ type: 'text', text: 'Sei solo viewer su "Ponza", non puoi modificarlo.' }] })
+    expect(existsSync(capturedPath)).toBe(false)
+  })
+})
+
+describe('wego_create', () => {
+  it('scrive un file temporaneo con tripJson e chiama cmdCreate con quel percorso; il file si elimina dopo', async () => {
+    let capturedPath
+    mockCmdCreate.mockImplementation(async (supabase, session, filePath, { yes }) => {
+      capturedPath = filePath
+      expect(JSON.parse(readFileSync(filePath, 'utf8'))).toEqual({ name: 'Ponza nuova' })
+      console.log('Nuovo viaggio: Ponza nuova\n\nNessuna scrittura eseguita (dry-run).')
+      return { written: false }
+    })
+    const tools = createTools('fake-supabase', 'fake-session')
+    const result = await tools.wego_create({ tripJson: { name: 'Ponza nuova' }, yes: false })
+    expect(mockCmdCreate).toHaveBeenCalledWith('fake-supabase', 'fake-session', capturedPath, { yes: false })
+    expect(result.content[0].text).toContain('Nuovo viaggio: Ponza nuova')
+    expect(existsSync(capturedPath)).toBe(false)
   })
 })

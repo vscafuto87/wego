@@ -1,11 +1,37 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { pathToFileURL } from 'node:url'
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { z } from 'zod'
 import { createAuthenticatedClient, cmdList, cmdPull, cmdPush, cmdCreate, cmdItems, cmdAttach } from './wego-trip-sync.mjs'
 
 function toolError(err) {
   return { isError: true, content: [{ type: 'text', text: err.message }] }
+}
+
+async function withTempFile(fileName, content, fn) {
+  const dir = mkdtempSync(join(tmpdir(), 'wego-mcp-'))
+  const filePath = join(dir, fileName)
+  writeFileSync(filePath, content)
+  try {
+    return await fn(filePath)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+}
+
+async function captureLog(fn) {
+  const lines = []
+  const original = console.log
+  console.log = (...args) => { lines.push(args.map(String).join(' ')) }
+  try {
+    const result = await fn()
+    return { result, text: lines.join('\n') }
+  } finally {
+    console.log = original
+  }
 }
 
 export function createTools(supabase, session) {
@@ -25,6 +51,30 @@ export function createTools(supabase, session) {
       try {
         const data = await cmdPull(supabase, session, identifier)
         return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] }
+      } catch (err) {
+        return toolError(err)
+      }
+    },
+
+    async wego_push({ identifier, tripJson, yes }) {
+      try {
+        const text = await withTempFile('trip.json', JSON.stringify(tripJson), async (filePath) => {
+          const { text } = await captureLog(() => cmdPush(supabase, session, identifier, filePath, { yes }))
+          return text
+        })
+        return { content: [{ type: 'text', text }] }
+      } catch (err) {
+        return toolError(err)
+      }
+    },
+
+    async wego_create({ tripJson, yes }) {
+      try {
+        const text = await withTempFile('trip.json', JSON.stringify(tripJson), async (filePath) => {
+          const { text } = await captureLog(() => cmdCreate(supabase, session, filePath, { yes }))
+          return text
+        })
+        return { content: [{ type: 'text', text }] }
       } catch (err) {
         return toolError(err)
       }
@@ -54,6 +104,31 @@ export async function main() {
       inputSchema: z.object({ identifier: z.string().describe('Nome del viaggio o share_code a 6 caratteri') })
     },
     tools.wego_pull
+  )
+
+  server.registerTool(
+    'wego_push',
+    {
+      description: 'Aggiorna un viaggio WeGo esistente. Chiama SEMPRE prima con yes:false, riporta il riepilogo in chat, aspetta un sì esplicito dell\'utente, poi richiama con yes:true. Mai chiamare con yes:true senza conferma.',
+      inputSchema: z.object({
+        identifier: z.string().describe('Nome del viaggio o share_code'),
+        tripJson: z.record(z.string(), z.any()).describe('Documento completo del viaggio, stesso schema del caricamento rapido'),
+        yes: z.boolean().default(false)
+      })
+    },
+    tools.wego_push
+  )
+
+  server.registerTool(
+    'wego_create',
+    {
+      description: 'Crea un nuovo viaggio WeGo. Chiama SEMPRE prima con yes:false, riporta il riepilogo in chat, aspetta un sì esplicito dell\'utente, poi richiama con yes:true. Mai chiamare con yes:true senza conferma.',
+      inputSchema: z.object({
+        tripJson: z.record(z.string(), z.any()).describe('Documento completo del nuovo viaggio, stesso schema del caricamento rapido'),
+        yes: z.boolean().default(false)
+      })
+    },
+    tools.wego_create
   )
 
   const transport = new StdioServerTransport()
