@@ -20,7 +20,8 @@ dell'app (`src/views/ImportView.jsx`) — stesso schema, zero divergenza.
   "people": ["string"],
   "days": [
     { "date": "AAAA-MM-GG", "title": "string", "note": "string",
-      "items": [ { "time": "HH:MM o vuoto", "title": "string", "detail": "string", "link": "string" } ] }
+      "items": [ { "time": "HH:MM o vuoto", "title": "string", "detail": "string", "link": "string" } ],
+      "order": ["item", "transport"] }
   ],
   "sections": [
     { "title": "Ristoranti", "icon": "food", "type": "cards", "items": [ { "title": "", "meta": "", "detail": "", "link": "", "tags": [], "lat": null, "lng": null } ] },
@@ -44,6 +45,16 @@ fornisce un link Maps o coordinate numeriche esplicite, altrimenti `null`. Le
 quattro sezioni Trasporti/Pernottamento/Ristoranti/Mappa sono sempre presenti,
 anche vuote (`items: []`), sono fisse in ogni viaggio.
 
+`day.order` (opzionale) salva l'ordine di trascinamento combinato di
+itinerario e trasporti per quel giorno, mostrato nell'app come un'unica lista
+(vedi `buildDayTimeline` in `src/data/schema.js`). Se un giorno pullato ha già
+`order`, **riportalo invariato** quando riscrivi quel giorno, anche se stai
+modificando solo `items` o il resto del giorno: ometterlo non rompe nulla
+(l'app ricade su "voci poi trasporti"), ma cancella silenziosamente l'ordine
+personalizzato che l'utente aveva impostato trascinando le voci nell'app. Per
+un giorno nuovo che stai creando da zero, ometti `order` (o lascialo `[]`):
+l'app userà l'ordine di default finché l'utente non lo trascina lui stesso.
+
 ## Flusso "viaggio nuovo"
 
 1. Raccogli nome, date, palette (`mountain | sea | city | wild`), persone.
@@ -64,7 +75,7 @@ anche vuote (`items: []`), sono fisse in ogni viaggio.
    ritorno al 5 settembre").
 3. Applica le modifiche allo stesso JSON scaricato — la colonna `data` è
    sempre il documento intero, non una patch: non omettere le parti
-   invariate.
+   invariate, incluso `day.order` quando presente (vedi sopra).
 4. Esegui il dry-run e chiedi conferma, poi applica la modifica.
 
 ## Comandi (da lanciare via Bash, dalla root del repo)
