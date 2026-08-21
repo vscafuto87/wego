@@ -240,6 +240,15 @@ const MapSection = forwardRef(function MapSection({ trip, section, onUpdate, act
             </div>
             <MapContainer center={center} zoom={12} style={{ height: '100%', width: '100%' }}>
               <TileLayer url={tileUrl} attribution={tileAttribution} />
+              {topo && (
+                // Overlay dei sentieri mappati su OpenStreetMap (CAI compresi):
+                // Waymarked Trails li disegna colorati per rete, i locali (i CAI
+                // numerati, in genere "lwn") in rosso.
+                <TileLayer
+                  url="https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png"
+                  attribution='Sentieri &copy; <a href="https://waymarkedtrails.org">Waymarked Trails</a>'
+                />
+              )}
               <ResizeOnFullscreenChange fullscreen={fullscreen} />
               <FlyToPosition position={myPosition} />
               {myPosition && (
