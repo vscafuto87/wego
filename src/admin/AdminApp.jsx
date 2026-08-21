@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { loadTrips, saveTrips } from '../data/storage.js'
+import { bootstrapSyncedTrips } from '../data/sync.js'
 import { normalizeTrip } from '../data/schema.js'
-import { getSession, subscribeAuth, signOut } from '../data/supabase.js'
+import { getSession, subscribeAuth, signOut, isCloudConfigured } from '../data/supabase.js'
 import { themeStyle } from '../theme/themes.js'
 import LoginForm from '../components/LoginForm.jsx'
 import AdminTripList from './AdminTripList.jsx'
@@ -19,7 +20,18 @@ export default function AdminApp() {
   const [tab, setTab] = useState('trips')
 
   useEffect(() => {
-    loadTrips().then(setTrips)
+    let cancelled = false
+    async function bootstrap() {
+      if (!isCloudConfigured) {
+        const local = await loadTrips()
+        if (!cancelled) setTrips(local)
+        return
+      }
+      const finalTrips = await bootstrapSyncedTrips()
+      if (!cancelled) setTrips(finalTrips)
+    }
+    bootstrap()
+    return () => { cancelled = true }
   }, [])
 
   useEffect(() => {

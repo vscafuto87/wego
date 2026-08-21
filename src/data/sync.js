@@ -1,5 +1,6 @@
 import { supabase, getSession } from './supabase.js'
 import { exportTrip, normalizeTrip } from './schema.js'
+import { loadTrips, saveTrips, getSyncState, setSyncState, getDisplayNamePreference, markSeeded } from './storage.js'
 
 export function decideSyncAction({ dirty, lastSyncedAt, remoteUpdatedAt }) {
   const remoteIsNewer = Boolean(remoteUpdatedAt) && (!lastSyncedAt || remoteUpdatedAt > lastSyncedAt)
@@ -245,6 +246,63 @@ export async function leaveTripAsMember(remoteId) {
   if (!data || data.length === 0) {
     throw new Error('Non risulti più iscritto a questo viaggio.')
   }
+}
+
+// Collega i viaggi locali di questo device a quelli dell'account su Supabase:
+// pesca i viaggi remoti, attiva la sincronizzazione per chi non ce l'ha ancora
+// e riconcilia la lista. Sia l'app che la dashboard admin partono dallo stesso
+// storage locale ma girano su device diversi, quindi entrambe devono passare
+// da qui prima di mostrare i viaggi, altrimenti restano due copie scollegate.
+export async function bootstrapSyncedTrips() {
+  let remoteTrips = null
+  if (navigator.onLine) {
+    try {
+      remoteTrips = await listMyTrips()
+    } catch {
+      remoteTrips = null
+    }
+  }
+
+  if (remoteTrips && remoteTrips.length > 0) {
+    await markSeeded()
+  }
+
+  const local = await loadTrips()
+
+  const displayName = await getDisplayNamePreference()
+  const syncStates = []
+  for (const trip of local) {
+    let state = await getSyncState(trip.id)
+    if (!state) {
+      try {
+        state = await activateTripSync(trip, displayName)
+        await setSyncState(trip.id, state)
+      } catch {
+        state = null
+      }
+    }
+    syncStates.push({ localId: trip.id, syncState: state })
+  }
+
+  let finalTrips = local
+  if (navigator.onLine) {
+    try {
+      // Si richiede di nuovo la lista remota (invece di riusare quella sopra):
+      // i viaggi appena adottati nel loop qui sopra non esistevano ancora sul
+      // server quando abbiamo chiesto `remoteTrips` la prima volta, quindi
+      // riconciliare con quella lista li farebbe risultare erroneamente
+      // "non più visibili" e li rimuoverebbe.
+      const freshRemoteTrips = await listMyTrips()
+      const { trips: reconciled, additions } = reconcileTripList({ localTrips: local, syncStates, remoteTrips: freshRemoteTrips })
+      for (const { trip, syncState } of additions) await setSyncState(trip.id, syncState)
+      finalTrips = reconciled
+    } catch {
+      // offline durante il pull, o errore di rete: resta la lista locale
+    }
+  }
+
+  await saveTrips(finalTrips)
+  return finalTrips
 }
 
 export function reconcileTripList({ localTrips, syncStates, remoteTrips }) {

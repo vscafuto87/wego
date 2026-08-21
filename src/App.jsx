@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { loadTrips, saveTrips, getSyncState, setSyncState, getDisplayNamePreference, markSeeded } from './data/storage.js'
-import { activateTripSync, listMyTrips, reconcileTripList, deleteTripAsOwner, leaveTripAsMember } from './data/sync.js'
+import { loadTrips, saveTrips, getSyncState, setSyncState, getDisplayNamePreference } from './data/storage.js'
+import { activateTripSync, bootstrapSyncedTrips, deleteTripAsOwner, leaveTripAsMember } from './data/sync.js'
 import { normalizeTrip } from './data/schema.js'
 import { isCloudConfigured } from './data/supabase.js'
 import Home from './views/Home.jsx'
@@ -35,63 +35,7 @@ export default function App() {
         return
       }
 
-      // Recuperiamo i viaggi dell'account PRIMA di caricare lo storage locale:
-      // se l'account ha già viaggi sul server, questo device non deve iniettare
-      // i seed come se fosse la primissima apertura, altrimenti si duplicano ad
-      // ogni nuovo device collegato allo stesso account. `remoteTrips` resta
-      // `null` se non riusciamo proprio a chiedere al server (offline o errore
-      // di rete): in quel caso non tocchiamo la lista locale più avanti.
-      let remoteTrips = null
-      if (navigator.onLine) {
-        try {
-          remoteTrips = await listMyTrips()
-        } catch {
-          remoteTrips = null
-        }
-      }
-      if (cancelled) return
-
-      if (remoteTrips && remoteTrips.length > 0) {
-        await markSeeded()
-      }
-
-      const local = await loadTrips()
-      if (cancelled) return
-
-      const displayName = await getDisplayNamePreference()
-      const syncStates = []
-      for (const trip of local) {
-        let state = await getSyncState(trip.id)
-        if (!state) {
-          try {
-            state = await activateTripSync(trip, displayName)
-            await setSyncState(trip.id, state)
-          } catch {
-            state = null
-          }
-        }
-        syncStates.push({ localId: trip.id, syncState: state })
-      }
-      if (cancelled) return
-
-      let finalTrips = local
-      if (navigator.onLine) {
-        try {
-          // Si richiede di nuovo la lista remota (invece di riusare quella sopra):
-          // i viaggi appena adottati nel loop qui sopra non esistevano ancora sul
-          // server quando abbiamo chiesto `remoteTrips` la prima volta, quindi
-          // riconciliare con quella lista li farebbe risultare erroneamente
-          // "non più visibili" e li rimuoverebbe.
-          const freshRemoteTrips = await listMyTrips()
-          const { trips: reconciled, additions } = reconcileTripList({ localTrips: local, syncStates, remoteTrips: freshRemoteTrips })
-          for (const { trip, syncState } of additions) await setSyncState(trip.id, syncState)
-          finalTrips = reconciled
-        } catch {
-          // offline durante il pull, o errore di rete: resta la lista locale
-        }
-      }
-
-      await saveTrips(finalTrips)
+      const finalTrips = await bootstrapSyncedTrips()
       if (!cancelled) setTrips(finalTrips)
     }
 
