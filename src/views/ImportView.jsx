@@ -22,6 +22,12 @@ const PROMPT = `Trasforma questi appunti di viaggio grezzi in un JSON con questo
   "sections": [
     { "title": "Ristoranti", "icon": "food", "type": "cards",
       "items": [ { "title": "string", "meta": "string", "detail": "string", "link": "string", "tags": ["string"] } ] },
+    { "title": "Trasporti", "icon": "bus", "type": "transport",
+      "items": [ { "mode": "auto | treno | aereo | bus | traghetto", "from": "string", "to": "string", "date": "AAAA-MM-GG", "time": "HH:MM o vuoto", "ticketLink": "string", "note": "string" } ] },
+    { "title": "Pernottamento", "icon": "bed", "type": "lodging",
+      "items": [ { "name": "string", "checkIn": "AAAA-MM-GG", "checkOut": "AAAA-MM-GG", "address": "string", "bookingLink": "string", "note": "string" } ] },
+    { "title": "Mappa", "icon": "map", "type": "map",
+      "items": [ { "name": "string", "category": "string", "mapsLink": "string", "lat": "numero o null", "lng": "numero o null", "note": "string" } ] },
     { "title": "string", "icon": "check", "type": "checklist",
       "items": [ { "text": "string", "done": false } ] },
     { "title": "string", "icon": "note", "type": "notes", "text": "string" }
@@ -48,15 +54,11 @@ quali campi in più aggiungere alla voce (solo quelli del kind scelto, nessun al
   Es: { "time": "20:00", "title": "Cena", "kind": "pasto", "luogo": "Trattoria da Mario", "prenotato": true, "lat": null, "lng": null, "detail": "", "link": "" }
 
 Non inventare né calcolare "lat"/"lng" da un nome di luogo o da una ricerca: usali solo
-se gli appunti grezzi contengono un link Maps o coordinate numeriche esplicite.
+se gli appunti grezzi contengono un link Maps o coordinate numeriche esplicite. Vale anche
+per gli item "map": se le coordinate non sono note per certo, lascia "lat" e "lng" a null.
 
-Oltre a cards/checklist/notes, "sections[].type" può valere anche "transport", "lodging"
-o "map": in quel caso gli "items" hanno la forma specifica del tipo (nessun campo delle
-altre forme):
-
-- "type": "transport" → items: { "mode": "auto | treno | aereo | bus | traghetto", "from": "string", "to": "string", "date": "AAAA-MM-GG", "time": "HH:MM o vuoto", "ticketLink": "string", "note": "string" }
-- "type": "lodging" → items: { "name": "string", "checkIn": "AAAA-MM-GG", "checkOut": "AAAA-MM-GG", "address": "string", "bookingLink": "string", "note": "string" }
-- "type": "map" → items: { "name": "string", "category": "string", "mapsLink": "string", "lat": numero o null, "lng": numero o null, "note": "string" }
+Se dagli appunti non risultano trasporti, pernottamenti o punti mappa, includi comunque
+le rispettive sezioni con "items": [] (sono sezioni fisse del viaggio), non ometterle.
 
 Regole: i tipi di sezione validi sono cards, checklist, notes, transport, lodging, map
 (sei in tutto, non inventarne altri). I campi extra di "kind" e i campi degli items delle
