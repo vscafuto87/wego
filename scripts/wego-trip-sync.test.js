@@ -1,7 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { writeFileSync, mkdtempSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
 const { mockCreateClient } = vi.hoisted(() => ({ mockCreateClient: vi.fn() }))
 vi.mock('@supabase/supabase-js', () => ({ createClient: mockCreateClient }))
+
+function writeTempTripFile(data) {
+  const dir = mkdtempSync(join(tmpdir(), 'wego-trip-'))
+  const filePath = join(dir, 'trip.json')
+  writeFileSync(filePath, JSON.stringify(data))
+  return filePath
+}
 
 const { parseArgs, requireEnv, createAuthenticatedClient, cmdList } = await import('./wego-trip-sync.mjs')
 
@@ -157,5 +167,66 @@ describe('cmdPull', () => {
     }
     const data = await cmdPull(supabase, { user: { id: 'user-1' } }, 'AB23CD')
     expect(data).toEqual({ name: 'Ponza', days: [] })
+  })
+})
+
+const { cmdPush } = await import('./wego-trip-sync.mjs')
+
+describe('cmdPush', () => {
+  function supabaseFor(row, { updateOk = true } = {}) {
+    // L'identifier usato in questi test è sempre un nome ("Ponza"), non uno
+    // share_code: findTrip prende quindi il ramo .ilike(...), non .eq(...).
+    const update = vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ data: null, error: updateOk ? null : { message: 'update fallito' } }) })
+    const supabase = {
+      from: vi.fn((table) => {
+        if (table === 'tv_trips') return { select: () => ({ ilike: async () => ({ data: [row], error: null }) }), update }
+        if (table === 'tv_trip_members') return { select: () => ({ eq: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { role: row.__role ?? 'editor' }, error: null }) }) }) }) }
+        throw new Error(`tabella inattesa: ${table}`)
+      })
+    }
+    return { supabase, update }
+  }
+
+  it('in dry-run stampa il riepilogo e non scrive', async () => {
+    const row = tripRow({ data: { name: 'Ponza', days: [], sections: [] } })
+    const { supabase, update } = supabaseFor(row)
+    const filePath = writeTempTripFile({ name: 'Ponza', days: [], sections: [] })
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const result = await cmdPush(supabase, { user: { id: 'user-1' } }, 'Ponza', filePath, { yes: false })
+    logSpy.mockRestore()
+
+    expect(result).toEqual({ written: false })
+    expect(update).not.toHaveBeenCalled()
+  })
+
+  it('con --yes scrive data, sposta il vecchio valore in previous_data', async () => {
+    const row = tripRow({ data: { name: 'Ponza vecchia', days: [], sections: [] } })
+    const { supabase, update } = supabaseFor(row)
+    const proposed = { name: 'Ponza aggiornata', days: [], sections: [] }
+    const filePath = writeTempTripFile(proposed)
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const result = await cmdPush(supabase, { user: { id: 'user-1' } }, 'Ponza', filePath, { yes: true })
+    logSpy.mockRestore()
+
+    expect(result).toEqual({ written: true })
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({ data: proposed, previous_data: row.data }))
+  })
+
+  it('rifiuta se il ruolo è viewer', async () => {
+    const row = tripRow({ __role: 'viewer', data: { name: 'Ponza', days: [], sections: [] } })
+    const { supabase } = supabaseFor(row)
+    const filePath = writeTempTripFile({ name: 'Ponza', days: [], sections: [] })
+
+    await expect(cmdPush(supabase, { user: { id: 'user-2' } }, 'Ponza', filePath, { yes: false })).rejects.toThrow(/viewer/)
+  })
+
+  it('rifiuta un file con un tipo di sezione non valido, prima di interrogare Supabase', async () => {
+    const supabase = { from: vi.fn() }
+    const filePath = writeTempTripFile({ name: 'Ponza', sections: [{ title: 'X', type: 'gallery', items: [] }] })
+
+    await expect(cmdPush(supabase, { user: { id: 'user-1' } }, 'Ponza', filePath, { yes: false })).rejects.toThrow(/gallery/)
+    expect(supabase.from).not.toHaveBeenCalled()
   })
 })

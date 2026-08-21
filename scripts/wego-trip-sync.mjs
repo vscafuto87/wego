@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { createClient } from '@supabase/supabase-js'
 import { isShareCode, generateShareCode, validateTripPayload, diffTrip, formatDiffSummary } from './wego-trip-lib.mjs'
 
@@ -68,6 +69,33 @@ export async function cmdPull(supabase, session, identifier) {
   return trip.data
 }
 
+export async function cmdPush(supabase, session, identifier, filePath, { yes }) {
+  const proposed = JSON.parse(readFileSync(filePath, 'utf8'))
+  validateTripPayload(proposed)
+
+  const trip = await findTrip(supabase, session, identifier)
+  if (trip.role === 'viewer') {
+    throw new Error(`Sei solo viewer su "${trip.data.name}", non puoi modificarlo.`)
+  }
+
+  const diff = diffTrip(trip.data, proposed)
+  const summary = formatDiffSummary({ tripName: trip.data.name, shareCode: trip.shareCode, diff, isCreate: false })
+
+  if (!yes) {
+    console.log(summary)
+    return { written: false }
+  }
+
+  const { error } = await supabase
+    .from('tv_trips')
+    .update({ data: proposed, previous_data: trip.data, updated_at: new Date().toISOString() })
+    .eq('id', trip.id)
+  if (error) throw new Error(error.message)
+
+  console.log(`Viaggio "${proposed.name}" aggiornato.`)
+  return { written: true }
+}
+
 export async function main() {
   const { command, positional, yes } = parseArgs(process.argv.slice(2))
   try {
@@ -90,6 +118,13 @@ export async function main() {
       if (!identifier) throw new Error('Uso: pull <nome|share_code>')
       const data = await cmdPull(supabase, session, identifier)
       console.log(JSON.stringify(data, null, 2))
+      return
+    }
+
+    if (command === 'push') {
+      const [identifier, filePath] = positional
+      if (!identifier || !filePath) throw new Error('Uso: push <nome|share_code> <file.json> [--yes]')
+      await cmdPush(supabase, session, identifier, filePath, { yes })
       return
     }
 
