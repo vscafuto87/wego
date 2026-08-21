@@ -126,31 +126,6 @@ function SortableCard({ item, onEdit, onRemove }) {
             <p className="font-display font-semibold text-xs uppercase tracking-wider text-[var(--accent)]">{kindLabel(item.kind)}</p>
           </div>
           <p className="font-display font-semibold text-xl mt-0.5">{item.title || 'Senza titolo'}</p>
-          {item.meta && <p className="font-mono text-sm text-[var(--muted)] mt-1.5">{item.meta}</p>}
-          {item.address && <p className="text-sm text-[var(--muted)] mt-1.5">{item.address}</p>}
-          {item.kind !== 'sentiero' && item.detail && <p className="text-base mt-2">{item.detail}</p>}
-          {item.kind === 'spiaggia' && (item.accesso || item.servizi) && (
-            <p className="text-base mt-2">{[item.accesso, item.servizi].filter(Boolean).join(' · ')}</p>
-          )}
-          {stats.length > 0 && (
-            <div className="flex items-center gap-2 mt-2 overflow-x-auto no-scrollbar">
-              {stats.map((s, i) => (
-                <span key={i} className="flex-none inline-flex items-center gap-1 font-mono text-xs bg-[var(--tint)] rounded-full px-2.5 py-1 whitespace-nowrap">
-                  <s.icon size={12} /> {s.value}
-                </span>
-              ))}
-            </div>
-          )}
-          {item.kind === 'pasto' && item.prenotato && !item.date && (
-            <span className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-[var(--accent2)] text-[var(--paper)] text-xs font-medium mt-3">
-              <Check size={12} /> Prenotato
-            </span>
-          )}
-          {item.date && (
-            <span className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-[var(--accent2)] text-[var(--paper)] text-xs font-medium mt-3">
-              <Check size={12} /> Prenotato · {formatCardDate(item.date)}{item.time ? ` · ${item.time}` : ''}
-            </span>
-          )}
         </div>
         <div className="flex gap-1 -mr-2 -mt-4 flex-none">
           <button
@@ -171,6 +146,31 @@ function SortableCard({ item, onEdit, onRemove }) {
           </button>
         </div>
       </div>
+      {item.meta && <p className="font-mono text-sm text-[var(--muted)] mt-1.5">{item.meta}</p>}
+      {item.address && <p className="text-sm text-[var(--muted)] mt-1.5">{item.address}</p>}
+      {item.kind !== 'sentiero' && item.detail && <p className="text-base mt-2">{item.detail}</p>}
+      {item.kind === 'spiaggia' && (item.accesso || item.servizi) && (
+        <p className="text-base mt-2">{[item.accesso, item.servizi].filter(Boolean).join(' · ')}</p>
+      )}
+      {stats.length > 0 && (
+        <div className="flex items-center gap-2 mt-2 overflow-x-auto no-scrollbar">
+          {stats.map((s, i) => (
+            <span key={i} className="flex-none inline-flex items-center gap-1 font-mono text-xs bg-[var(--tint)] rounded-full px-2.5 py-1 whitespace-nowrap">
+              <s.icon size={12} /> {s.value}
+            </span>
+          ))}
+        </div>
+      )}
+      {item.kind === 'pasto' && item.prenotato && !item.date && (
+        <span className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-[var(--accent2)] text-[var(--paper)] text-xs font-medium mt-3">
+          <Check size={12} /> Prenotato
+        </span>
+      )}
+      {item.date && (
+        <span className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-[var(--accent2)] text-[var(--paper)] text-xs font-medium mt-3">
+          <Check size={12} /> Prenotato · {formatCardDate(item.date)}{item.time ? ` · ${item.time}` : ''}
+        </span>
+      )}
 
       {(item.link || item.phone) && (
         <>
