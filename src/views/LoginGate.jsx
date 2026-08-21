@@ -4,7 +4,7 @@ import LoginForm from '../components/LoginForm.jsx'
 import DisplayNameForm from '../components/DisplayNameForm.jsx'
 import Terrain, { TerrainSeal } from '../theme/Terrain.jsx'
 import { themeStyle } from '../theme/themes.js'
-import { getSession, subscribeAuth } from '../data/supabase.js'
+import { getSession, subscribeAuth, setAccountDisplayName } from '../data/supabase.js'
 import { getDisplayNamePreference, setDisplayNamePreference } from '../data/storage.js'
 
 const HEADER_HEIGHT = { loading: 236, login: 236, name: 172 }
@@ -38,6 +38,17 @@ export default function LoginGate({ onReady }) {
         onReady()
         return
       }
+      // Reinstall o nuovo device sullo stesso account: il nome non è su questo
+      // device ma può già essere sull'account (salvato lì da un login
+      // precedente). Se c'è, lo riusiamo invece di richiederlo di nuovo.
+      const remoteName = session?.user?.user_metadata?.display_name
+      if (session && remoteName) {
+        await setDisplayNamePreference(remoteName)
+        if (cancelled) return
+        onReady()
+        return
+      }
+
       setNamePreference(name)
       setStep(session ? 'name' : 'login')
     }
@@ -49,6 +60,7 @@ export default function LoginGate({ onReady }) {
 
   async function handleName(name) {
     await setDisplayNamePreference(name)
+    setAccountDisplayName(name).catch(() => {})
     onReady()
   }
 

@@ -35,3 +35,12 @@ export async function signOut() {
   if (!isCloudConfigured) return
   await supabase.auth.signOut()
 }
+
+// Il nome mostrato accanto alle modifiche va oltre il singolo device: si salva
+// negli user_metadata dell'account Supabase, così un reinstall o un nuovo
+// device sullo stesso account lo ritrovano senza richiederlo di nuovo (vedi
+// LoginGate.jsx, che lo legge da session.user.user_metadata.display_name).
+export async function setAccountDisplayName(name) {
+  if (!isCloudConfigured) return
+  await supabase.auth.updateUser({ data: { display_name: name } })
+}
