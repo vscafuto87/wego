@@ -380,36 +380,37 @@ const Section = forwardRef(function Section({ trip, section, onUpdate, activeDis
 
       {section.type === 'cards' && isRistoranti(section) && (
         <>
-          {section.items.length === 0 && (
+          {section.items.length === 0 ? (
             <Empty
               title="Nessuna scheda ancora"
               detail="Aggiungine una per iniziare."
               action={<Btn onClick={() => setCardForm({ title: '', meta: '', detail: '', link: '', tags: '', lat: null, lng: null, date: '', time: '' })}>Aggiungi una scheda</Btn>}
             />
+          ) : (
+            <DndContext sensors={cardSensors} collisionDetection={closestCenter} onDragEnd={handleRistorantiDragEnd}>
+              {RISTORANTI_GROUPS.map(({ key, label }) => {
+                const groupItems = section.items.filter((it) => groupKeyFor(it) === key)
+                return (
+                  <div key={key} className="flex flex-col gap-3">
+                    <Label>{label}</Label>
+                    {groupItems.length === 0 && <p className="text-sm text-[var(--muted)]">Nessuna scheda qui.</p>}
+                    <SortableContext items={groupItems.map((it) => it.id)} strategy={verticalListSortingStrategy}>
+                      <DroppableGroup groupKey={key} disabled={groupItems.length > 0}>
+                        {groupItems.map((item) => (
+                          <SortableCard
+                            key={item.id}
+                            item={item}
+                            onEdit={() => setCardForm({ id: item.id, title: item.title, meta: item.meta, detail: item.detail, link: item.link, tags: item.tags.join(', '), lat: item.lat, lng: item.lng, date: item.date, time: item.time })}
+                            onRemove={() => removeCard(item)}
+                          />
+                        ))}
+                      </DroppableGroup>
+                    </SortableContext>
+                  </div>
+                )
+              })}
+            </DndContext>
           )}
-          <DndContext sensors={cardSensors} collisionDetection={closestCenter} onDragEnd={handleRistorantiDragEnd}>
-            {RISTORANTI_GROUPS.map(({ key, label }) => {
-              const groupItems = section.items.filter((it) => groupKeyFor(it) === key)
-              return (
-                <div key={key} className="flex flex-col gap-3">
-                  <Label>{label}</Label>
-                  {groupItems.length === 0 && <p className="text-sm text-[var(--muted)]">Nessuna scheda qui.</p>}
-                  <SortableContext items={groupItems.map((it) => it.id)} strategy={verticalListSortingStrategy}>
-                    <DroppableGroup groupKey={key} disabled={groupItems.length > 0}>
-                      {groupItems.map((item) => (
-                        <SortableCard
-                          key={item.id}
-                          item={item}
-                          onEdit={() => setCardForm({ id: item.id, title: item.title, meta: item.meta, detail: item.detail, link: item.link, tags: item.tags.join(', '), lat: item.lat, lng: item.lng, date: item.date, time: item.time })}
-                          onRemove={() => removeCard(item)}
-                        />
-                      ))}
-                    </DroppableGroup>
-                  </SortableContext>
-                </div>
-              )
-            })}
-          </DndContext>
         </>
       )}
 
