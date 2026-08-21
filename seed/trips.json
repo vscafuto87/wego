@@ -132,15 +132,15 @@
         "icon": "map",
         "type": "cards",
         "items": [
-          { "title": "Frontone", "meta": "", "detail": "", "link": "", "tags": ["programma spiagge"] },
-          { "title": "Santa Maria", "meta": "", "detail": "", "link": "", "tags": ["programma spiagge"] },
-          { "title": "Cala Feola", "meta": "", "detail": "", "link": "", "tags": ["programma spiagge"] },
-          { "title": "Piscine Naturali", "meta": "", "detail": "", "link": "", "tags": ["programma spiagge"] },
-          { "title": "La Caletta", "meta": "", "detail": "", "link": "", "tags": ["programma spiagge"] },
-          { "title": "Cala dell'Acqua", "meta": "", "detail": "", "link": "", "tags": ["programma spiagge"] },
-          { "title": "Cala Gaetano", "meta": "", "detail": "", "link": "", "tags": ["programma spiagge"] },
-          { "title": "Cala Cecata", "meta": "", "detail": "", "link": "", "tags": ["programma spiagge"] },
-          { "title": "La Parata", "meta": "", "detail": "", "link": "", "tags": ["programma spiagge"] }
+          { "title": "Frontone", "kind": "spiaggia", "meta": "", "detail": "", "link": "", "tags": ["programma spiagge"] },
+          { "title": "Santa Maria", "kind": "spiaggia", "meta": "", "detail": "", "link": "", "tags": ["programma spiagge"] },
+          { "title": "Cala Feola", "kind": "spiaggia", "meta": "", "detail": "", "link": "", "tags": ["programma spiagge"] },
+          { "title": "Piscine Naturali", "kind": "spiaggia", "meta": "", "detail": "", "link": "", "tags": ["programma spiagge"] },
+          { "title": "La Caletta", "kind": "spiaggia", "meta": "", "detail": "", "link": "", "tags": ["programma spiagge"] },
+          { "title": "Cala dell'Acqua", "kind": "spiaggia", "meta": "", "detail": "", "link": "", "tags": ["programma spiagge"] },
+          { "title": "Cala Gaetano", "kind": "spiaggia", "meta": "", "detail": "", "link": "", "tags": ["programma spiagge"] },
+          { "title": "Cala Cecata", "kind": "spiaggia", "meta": "", "detail": "", "link": "", "tags": ["programma spiagge"] },
+          { "title": "La Parata", "kind": "spiaggia", "meta": "", "detail": "", "link": "", "tags": ["programma spiagge"] }
         ]
       },
       {
