@@ -176,7 +176,8 @@ function normalizeSection(raw) {
   const section = raw && typeof raw === 'object' ? raw : {}
   const type = SECTION_TYPES.includes(section.type) ? section.type : 'cards'
   const icon = ICONS.includes(section.icon) ? section.icon : 'note'
-  const base = { id: makeId(), title: str(section.title), icon, type }
+  const title = str(section.title)
+  const base = { id: makeId(), title, icon, type }
 
   if (type === 'checklist') {
     return { ...base, items: arr(section.items).map(normalizeChecklistItem) }
@@ -192,6 +193,12 @@ function normalizeSection(raw) {
   }
   if (type === 'map') {
     return { ...base, items: arr(section.items).map(normalizeMapItem) }
+  }
+  if (type === 'cards' && title === 'Ristoranti') {
+    // Ogni scheda di Ristoranti è sempre kind "pasto": forzato qui, non solo
+    // nel form di modifica, così vale anche per dati arrivati da import,
+    // seed, wego-trip o storico che non l'hanno mai valorizzato.
+    return { ...base, items: arr(section.items).map((item) => normalizeCardItem({ ...item, kind: 'pasto' })) }
   }
   return { ...base, items: arr(section.items).map(normalizeCardItem) }
 }

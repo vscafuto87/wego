@@ -399,6 +399,45 @@ describe('normalizeTrip — prenotazione sulle schede (cards)', () => {
   })
 })
 
+describe('normalizeTrip — le schede di Ristoranti sono sempre kind "pasto"', () => {
+  it('forza kind "pasto" anche se il dato grezzo non lo valorizza (import, wego-trip, storico)', () => {
+    const trip = normalizeTrip({
+      name: 'X',
+      sections: [{ title: 'Ristoranti', type: 'cards', items: [{ title: 'Osteria Da Nice', kind: '' }] }]
+    })
+    const ristoranti = trip.sections.find((s) => s.title === 'Ristoranti')
+    expect(ristoranti.items[0].kind).toBe('pasto')
+  })
+
+  it('forza kind "pasto" anche se il dato grezzo porta un altro kind', () => {
+    const trip = normalizeTrip({
+      name: 'X',
+      sections: [{ title: 'Ristoranti', type: 'cards', items: [{ title: 'X', kind: 'sentiero' }] }]
+    })
+    const ristoranti = trip.sections.find((s) => s.title === 'Ristoranti')
+    expect(ristoranti.items[0].kind).toBe('pasto')
+  })
+
+  it('forzando kind "pasto" popola anche i campi luogo/prenotato del kind', () => {
+    const trip = normalizeTrip({
+      name: 'X',
+      sections: [{ title: 'Ristoranti', type: 'cards', items: [{ title: 'X', luogo: 'Porto', prenotato: true }] }]
+    })
+    const item = trip.sections.find((s) => s.title === 'Ristoranti').items[0]
+    expect(item.luogo).toBe('Porto')
+    expect(item.prenotato).toBe(true)
+  })
+
+  it('non tocca le altre sezioni cards: restano con il kind del dato grezzo', () => {
+    const trip = normalizeTrip({
+      name: 'X',
+      sections: [{ title: 'Riserve e alternative', type: 'cards', items: [{ title: 'Piano B' }] }]
+    })
+    const riserve = trip.sections.find((s) => s.title === 'Riserve e alternative')
+    expect(riserve.items[0].kind).toBe('')
+  })
+})
+
 describe('dayItemFieldsForKind — include lat/lng per sentiero/spiaggia/pasto', () => {
   it('sentiero', () => {
     expect(dayItemFieldsForKind('sentiero')).toEqual(['distanza', 'durata', 'dislivello', 'difficolta', 'lat', 'lng'])
@@ -523,7 +562,7 @@ describe('collectExternalMapPoints', () => {
         { title: 'Partenza', lat: 40.0, lng: 12.0 }
       ] }],
       sections: [
-        { title: 'Ristoranti', type: 'cards', items: [{ title: 'Da Assunta', lat: 40.897, lng: 12.958 }] },
+        { title: 'Consigli', type: 'cards', items: [{ title: 'Da Assunta', lat: 40.897, lng: 12.958 }] },
         { title: 'Bar consigliati', type: 'cards', items: [{ title: 'Senza coordinate' }] }
       ],
       ...overrides
@@ -535,13 +574,13 @@ describe('collectExternalMapPoints', () => {
     const schede = points.filter((p) => p.categoryGroup === 'schede')
     expect(schede).toHaveLength(1)
     expect(schede[0]).toMatchObject({ name: 'Da Assunta', lat: 40.897, lng: 12.958, link: '' })
-    expect(schede[0].origin.sectionTitle).toBe('Ristoranti')
+    expect(schede[0].origin.sectionTitle).toBe('Consigli')
   })
 
   it('include una scheda senza coordinate ma con indirizzo, da geocodificare', () => {
     const trip = normalizeTrip({
       name: 'X',
-      sections: [{ title: 'Ristoranti', type: 'cards', items: [
+      sections: [{ title: 'Consigli', type: 'cards', items: [
         { title: 'Osteria Da Nice', address: 'Via Venezia 14, Forni di Sopra (UD)' },
         { title: 'Senza nulla' }
       ] }]
@@ -555,16 +594,26 @@ describe('collectExternalMapPoints', () => {
   it('una scheda con coordinate non porta un address da geocodificare', () => {
     const trip = normalizeTrip({
       name: 'X',
-      sections: [{ title: 'Ristoranti', type: 'cards', items: [{ title: 'X', lat: 40.9, lng: 12.9, address: 'Via Roma 1' }] }]
+      sections: [{ title: 'Consigli', type: 'cards', items: [{ title: 'X', lat: 40.9, lng: 12.9, address: 'Via Roma 1' }] }]
     })
     const [point] = collectExternalMapPoints(trip)
     expect(point.address).toBe('')
   })
 
+  it('include una scheda Ristoranti con coordinate, come categoria pasto (kind forzato)', () => {
+    const trip = normalizeTrip({
+      name: 'X',
+      sections: [{ title: 'Ristoranti', type: 'cards', items: [{ title: 'Da Assunta', lat: 40.897, lng: 12.958 }] }]
+    })
+    const points = collectExternalMapPoints(trip)
+    expect(points.filter((p) => p.categoryGroup === 'schede')).toHaveLength(0)
+    expect(points.filter((p) => p.categoryGroup === 'pasto')).toHaveLength(1)
+  })
+
   it('conserva il link generico dell\'item, se presente', () => {
     const trip = normalizeTrip({
       name: 'X',
-      sections: [{ title: 'Ristoranti', type: 'cards', items: [{ title: 'Da Assunta', lat: 40.897, lng: 12.958, link: 'https://example.com' }] }]
+      sections: [{ title: 'Consigli', type: 'cards', items: [{ title: 'Da Assunta', lat: 40.897, lng: 12.958, link: 'https://example.com' }] }]
     })
     const [point] = collectExternalMapPoints(trip)
     expect(point.link).toBe('https://example.com')
@@ -601,8 +650,8 @@ describe('collectExternalMapPoints', () => {
     const trip = baseTrip()
     const points = collectExternalMapPoints(trip)
     const scheda = points.find((p) => p.categoryGroup === 'schede')
-    const ristoranti = trip.sections.find((s) => s.type === 'cards' && s.title === 'Ristoranti')
-    expect(scheda.origin.tab).toBe(ristoranti.id)
+    const consigli = trip.sections.find((s) => s.type === 'cards' && s.title === 'Consigli')
+    expect(scheda.origin.tab).toBe(consigli.id)
   })
 
   it('esclude un item con solo una delle due coordinate', () => {
