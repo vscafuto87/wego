@@ -87,6 +87,8 @@ function normalizeCardItem(raw) {
     tags: arr(item.tags).map(str),
     lat: toCoord(item.lat),
     lng: toCoord(item.lng),
+    date: str(item.date),
+    time: str(item.time),
     modifiedBy: str(item.modifiedBy),
     modifiedAt: str(item.modifiedAt)
   }

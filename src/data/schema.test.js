@@ -363,6 +363,28 @@ describe('normalizeTrip — coordinate opzionali sulle schede (cards)', () => {
   })
 })
 
+describe('normalizeTrip — prenotazione sulle schede (cards)', () => {
+  it('riempie date/time vuoti quando assenti', () => {
+    const trip = normalizeTrip({
+      name: 'Ponza',
+      sections: [{ title: 'Ristoranti', type: 'cards', items: [{ title: 'Da Assunta' }] }]
+    })
+    const ristoranti = trip.sections.find((s) => s.title === 'Ristoranti')
+    expect(ristoranti.items[0].date).toBe('')
+    expect(ristoranti.items[0].time).toBe('')
+  })
+
+  it('preserva date/time quando presenti', () => {
+    const trip = normalizeTrip({
+      name: 'Ponza',
+      sections: [{ title: 'Ristoranti', type: 'cards', items: [{ title: 'Da Assunta', date: '2026-08-31', time: '20:30' }] }]
+    })
+    const ristoranti = trip.sections.find((s) => s.title === 'Ristoranti')
+    expect(ristoranti.items[0].date).toBe('2026-08-31')
+    expect(ristoranti.items[0].time).toBe('20:30')
+  })
+})
+
 describe('dayItemFieldsForKind — include lat/lng per sentiero/spiaggia/pasto', () => {
   it('sentiero', () => {
     expect(dayItemFieldsForKind('sentiero')).toEqual(['distanza', 'durata', 'dislivello', 'difficolta', 'lat', 'lng'])
