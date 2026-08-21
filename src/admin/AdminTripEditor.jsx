@@ -258,7 +258,7 @@ export default function AdminTripEditor({ trip, onBack, onUpdate, onDelete }) {
 
           <div>
             {activeTab === 'info' && <AdminMetaForm trip={trip} onUpdate={handleUpdate} />}
-            {activeTab === 'days' && <AdminDaysEditor trip={trip} onUpdate={handleUpdate} activeDisplayName={displayName} />}
+            {activeTab === 'days' && <AdminDaysEditor trip={trip} onUpdate={handleUpdate} activeDisplayName={displayName} onNavigate={setActiveTab} />}
             {trip.sections.map((section) =>
               activeTab === section.id ? (
                 <AdminSectionEditor key={section.id} trip={trip} section={section} onUpdate={handleUpdate} activeDisplayName={displayName} />
