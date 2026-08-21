@@ -49,10 +49,18 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
   const [cloudDisplayName, setCloudDisplayName] = useState('')
   const [conflict, setConflict] = useState(null)
   const [tabOverflow, setTabOverflow] = useState({ left: false, right: false })
-  const [scrollY, setScrollY] = useState(0)
   const [extraSpace, setExtraSpace] = useState(0)
   const navScrollRef = useRef(null)
   const activeTabRef = useRef(null)
+  // Nodi la cui apparenza dipende dallo scroll (collasso dell'header): scritti
+  // direttamente via ref invece che tramite stato React, vedi il commento
+  // sull'effetto di scroll più sotto.
+  const headerRef = useRef(null)
+  const bgFadeRef = useRef(null)
+  const terrainFadeRef = useRef(null)
+  const headerPadRef = useRef(null)
+  const compactTitleRef = useRef(null)
+  const heroBlockRef = useRef(null)
   // La tab attiva (Itinerario o una sezione) espone openAdd() tramite questo
   // ref: il + in header richiama l'azione "nuovo elemento" già esistente lì,
   // non ne duplica una propria.
@@ -194,20 +202,41 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
   }, [activeTab, trip, extraSpace])
 
   // Il titolo grande dell'header si riduce scorrendo, come la nav bar di
-  // un'app nativa. L'evento scroll può sparare molte volte per frame: senza
-  // il throttle a requestAnimationFrame, ogni sparo forzava un re-render che
-  // ricalcolava padding/opacità dell'header, causando un flickering visibile
-  // prima che l'header si assestasse nella barra compatta.
+  // un'app nativa. Scrivere collapse in uno stato React (anche throttled a un
+  // frame) forzava un re-render dell'intero TripView a ogni tick di scroll,
+  // ricalcolando tabs, syncStatus() e soprattutto le polyline SVG di Terrain
+  // (rigenerate da zero pur essendo deterministiche): su Android, durante un
+  // flick veloce verso l'alto, il thread principale non teneva il passo con
+  // gli eventi di scroll nativi e l'header arrivava a scatti (sfarfallio).
+  // Aggiornando i nodi via ref, fuori da React, lo scroll non tocca più lo
+  // stato: nessun re-render, nessun ricalcolo del resto dell'albero.
   useEffect(() => {
     let ticking = false
+    function applyCollapse() {
+      const collapse = Math.max(0, Math.min(1, window.scrollY / COLLAPSE_DISTANCE))
+      if (headerRef.current) headerRef.current.style.boxShadow = `0 1px 0 rgb(var(--ink-rgb) / ${collapse * 0.08})`
+      if (bgFadeRef.current) bgFadeRef.current.style.opacity = collapse
+      if (terrainFadeRef.current) terrainFadeRef.current.style.opacity = 1 - collapse
+      if (headerPadRef.current) {
+        headerPadRef.current.style.paddingTop = `calc(env(safe-area-inset-top) + ${32 - collapse * 8}px)`
+        headerPadRef.current.style.paddingBottom = `${24 - collapse * 16}px`
+      }
+      if (compactTitleRef.current) {
+        compactTitleRef.current.style.opacity = collapse
+        compactTitleRef.current.style.maxWidth = collapse > 0.01 ? '280px' : '0px'
+      }
+      if (heroBlockRef.current) {
+        heroBlockRef.current.style.maxHeight = `${(1 - collapse) * 160}px`
+        heroBlockRef.current.style.opacity = 1 - collapse
+      }
+      ticking = false
+    }
     function onScroll() {
       if (ticking) return
       ticking = true
-      requestAnimationFrame(() => {
-        setScrollY(window.scrollY)
-        ticking = false
-      })
+      requestAnimationFrame(applyCollapse)
     }
+    applyCollapse()
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
@@ -305,8 +334,6 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
   // Un viewer non può scrivere sul server: non gli si offre di forzare la propria
   // versione, sarebbe un pulsante che la RLS rifiuta sempre.
   const canPush = !!syncState && syncState.role === 'editor'
-  // Quanto è "compresso" l'header: 0 = titolo grande, 1 = barra compatta.
-  const collapse = Math.max(0, Math.min(1, scrollY / COLLAPSE_DISTANCE))
 
   return (
     <div style={themeStyle(trip.palette)} className="min-h-screen bg-[var(--paper)] text-[var(--ink)] font-sans">
@@ -321,12 +348,12 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
         />
       ) : (
       <>
-      <header className="sticky top-0 z-30 overflow-hidden" style={{ boxShadow: `0 1px 0 rgb(var(--ink-rgb) / ${collapse * 0.08})` }}>
-        <div className="absolute inset-0" style={{ background: 'var(--paper)', opacity: collapse, willChange: 'opacity' }} />
-        <div className="absolute inset-0" style={{ opacity: 1 - collapse, willChange: 'opacity' }}>
+      <header ref={headerRef} className="sticky top-0 z-30 overflow-hidden" style={{ boxShadow: '0 1px 0 rgb(var(--ink-rgb) / 0)' }}>
+        <div ref={bgFadeRef} className="absolute inset-0" style={{ background: 'var(--paper)', opacity: 0, willChange: 'opacity' }} />
+        <div ref={terrainFadeRef} className="absolute inset-0" style={{ opacity: 1, willChange: 'opacity' }}>
           <Terrain seed={trip.id} palette={trip.palette} height={140} className="h-full w-full" />
         </div>
-        <div className="relative px-5 max-w-2xl mx-auto" style={{ paddingTop: `calc(env(safe-area-inset-top) + ${32 - collapse * 8}px)`, paddingBottom: 24 - collapse * 16 }}>
+        <div ref={headerPadRef} className="relative px-5 max-w-2xl mx-auto" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 32px)', paddingBottom: 24 }}>
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <button
@@ -337,8 +364,9 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
                 <ArrowLeft size={20} />
               </button>
               <div
+                ref={compactTitleRef}
                 className="flex items-center gap-2 whitespace-nowrap"
-                style={{ opacity: collapse, maxWidth: collapse > 0.01 ? 280 : 0, overflow: 'hidden' }}
+                style={{ opacity: 0, maxWidth: 0, overflow: 'hidden' }}
               >
                 <span className="text-xl">{trip.emoji}</span>
                 <span className="font-display font-semibold text-lg">{trip.name}</span>
@@ -355,7 +383,7 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
               </button>
             )}
           </div>
-          <div style={{ maxHeight: (1 - collapse) * 160, opacity: 1 - collapse, overflow: 'hidden' }}>
+          <div ref={heroBlockRef} style={{ maxHeight: 160, opacity: 1, overflow: 'hidden' }}>
             <div className="flex items-baseline gap-2 mt-3">
               <span className="text-4xl">{trip.emoji}</span>
               <h1 className="font-display font-semibold text-4xl">{trip.name}</h1>
