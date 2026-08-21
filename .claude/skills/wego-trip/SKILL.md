@@ -55,6 +55,18 @@ personalizzato che l'utente aveva impostato trascinando le voci nell'app. Per
 un giorno nuovo che stai creando da zero, ometti `order` (o lascialo `[]`):
 l'app userà l'ordine di default finché l'utente non lo trascina lui stesso.
 
+## Dati mancanti: chiedi, non lasciare vuoto
+
+Per i campi **sostanziali** — data/ora, indirizzi, link a biglietti/
+prenotazioni/mappa, coordinate quando rilevanti — non lasciarli vuoti per
+default: chiedi esplicitamente all'utente, una domanda alla volta. Se
+risponde "non lo so"/"non ce l'ho ancora", accetta la risposta, lascia il
+campo vuoto e vai avanti senza richiederlo di nuovo per quella voce.
+
+Per i campi **decorativi** — note, dettagli aggiuntivi, tag, `meta` delle
+schede Ristoranti — resta libero di lasciarli vuoti se l'utente non li
+menziona spontaneamente: non serve chiederli uno per uno.
+
 ## Flusso "viaggio nuovo"
 
 1. Raccogli nome, date, palette (`mountain | sea | city | wild`), persone.
@@ -62,7 +74,8 @@ l'app userà l'ordine di default finché l'utente non lo trascina lui stesso.
    `kind: "sentiero"` se pertinente), spostamenti (voce di sezione
    `transport`), pasti/prenotazioni (`kind: "pasto"` sul giorno, o sezione
    `cards` "Ristoranti" per consigli generali non legati a un giorno preciso),
-   alloggio (sezione `lodging`).
+   alloggio (sezione `lodging`). Per ciascuno, segui la regola sui dati
+   mancanti sopra: chiedi i campi sostanziali se non emergono dal discorso.
 3. Costruisci via via il JSON completo in un file nello scratchpad di sessione
    (es. `/tmp/.../trip-draft.json`), aggiornandolo dopo ogni giorno discusso.
 4. A conversazione conclusa, esegui il dry-run e chiedi conferma (vedi sotto),
@@ -72,7 +85,7 @@ l'app userà l'ordine di default finché l'utente non lo trascina lui stesso.
 
 1. Esegui `pull <nome>` per leggere lo stato attuale del viaggio.
 2. Discuti in chat solo le parti da cambiare (es. "aggiungi il traghetto di
-   ritorno al 5 settembre").
+   ritorno al 5 settembre"), chiedendo i campi sostanziali mancanti come sopra.
 3. Applica le modifiche allo stesso JSON scaricato — la colonna `data` è
    sempre il documento intero, non una patch: non omettere le parti
    invariate, incluso `day.order` quando presente (vedi sopra).
