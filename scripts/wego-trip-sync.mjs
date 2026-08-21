@@ -96,6 +96,41 @@ export async function cmdPush(supabase, session, identifier, filePath, { yes }) 
   return { written: true }
 }
 
+export async function cmdCreate(supabase, session, filePath, { yes }) {
+  const proposed = JSON.parse(readFileSync(filePath, 'utf8'))
+  validateTripPayload(proposed)
+
+  const diff = diffTrip(null, proposed)
+  const summary = formatDiffSummary({ tripName: proposed.name, shareCode: null, diff, isCreate: true })
+
+  if (!yes) {
+    console.log(summary)
+    return { written: false }
+  }
+
+  let lastError = null
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const shareCode = generateShareCode()
+    const { data, error } = await supabase
+      .from('tv_trips')
+      .insert({ owner_id: session.user.id, share_code: shareCode, data: proposed })
+      .select('id, share_code')
+      .single()
+
+    if (!error) {
+      const { error: memberError } = await supabase
+        .from('tv_trip_members')
+        .insert({ trip_id: data.id, user_id: session.user.id, role: 'editor' })
+      if (memberError) throw new Error(memberError.message)
+      console.log(`Viaggio "${proposed.name}" creato con share_code ${data.share_code}.`)
+      return { written: true, shareCode: data.share_code }
+    }
+    lastError = error
+    if (error.code !== '23505') break
+  }
+  throw new Error(lastError?.message || 'Impossibile creare il viaggio.')
+}
+
 export async function main() {
   const { command, positional, yes } = parseArgs(process.argv.slice(2))
   try {
@@ -125,6 +160,13 @@ export async function main() {
       const [identifier, filePath] = positional
       if (!identifier || !filePath) throw new Error('Uso: push <nome|share_code> <file.json> [--yes]')
       await cmdPush(supabase, session, identifier, filePath, { yes })
+      return
+    }
+
+    if (command === 'create') {
+      const [filePath] = positional
+      if (!filePath) throw new Error('Uso: create <file.json> [--yes]')
+      await cmdCreate(supabase, session, filePath, { yes })
       return
     }
 

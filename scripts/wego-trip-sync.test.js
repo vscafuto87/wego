@@ -230,3 +230,71 @@ describe('cmdPush', () => {
     expect(supabase.from).not.toHaveBeenCalled()
   })
 })
+
+const { cmdCreate } = await import('./wego-trip-sync.mjs')
+
+describe('cmdCreate', () => {
+  it('in dry-run stampa il riepilogo e non scrive', async () => {
+    const insert = vi.fn()
+    const supabase = { from: vi.fn().mockReturnValue({ insert }) }
+    const filePath = writeTempTripFile({ name: 'Ponza', days: [], sections: [] })
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const result = await cmdCreate(supabase, { user: { id: 'user-1' } }, filePath, { yes: false })
+    logSpy.mockRestore()
+
+    expect(result).toEqual({ written: false })
+    expect(insert).not.toHaveBeenCalled()
+  })
+
+  it('con --yes crea la riga tv_trips e la membership owner', async () => {
+    const insertTrip = vi.fn().mockReturnValue({ select: () => ({ single: async () => ({ data: { id: 'trip-1', share_code: 'AB23CD' }, error: null }) }) })
+    const insertMember = vi.fn().mockResolvedValue({ error: null })
+    const supabase = {
+      from: vi.fn((table) => {
+        if (table === 'tv_trips') return { insert: insertTrip }
+        if (table === 'tv_trip_members') return { insert: insertMember }
+        throw new Error(`tabella inattesa: ${table}`)
+      })
+    }
+    const filePath = writeTempTripFile({ name: 'Ponza', days: [], sections: [] })
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const result = await cmdCreate(supabase, { user: { id: 'user-1' } }, filePath, { yes: true })
+    logSpy.mockRestore()
+
+    expect(result).toEqual({ written: true, shareCode: 'AB23CD' })
+    expect(insertMember).toHaveBeenCalledWith({ trip_id: 'trip-1', user_id: 'user-1', role: 'editor' })
+  })
+
+  it('ritenta su collisione share_code (23505) e crea al secondo tentativo', async () => {
+    const single = vi.fn()
+      .mockResolvedValueOnce({ data: null, error: { code: '23505', message: 'duplicate' } })
+      .mockResolvedValueOnce({ data: { id: 'trip-1', share_code: 'ZZ99YY' }, error: null })
+    const insertTrip = vi.fn().mockReturnValue({ select: () => ({ single }) })
+    const insertMember = vi.fn().mockResolvedValue({ error: null })
+    const supabase = {
+      from: vi.fn((table) => {
+        if (table === 'tv_trips') return { insert: insertTrip }
+        if (table === 'tv_trip_members') return { insert: insertMember }
+        throw new Error(`tabella inattesa: ${table}`)
+      })
+    }
+    const filePath = writeTempTripFile({ name: 'Ponza', days: [], sections: [] })
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const result = await cmdCreate(supabase, { user: { id: 'user-1' } }, filePath, { yes: true })
+    logSpy.mockRestore()
+
+    expect(result).toEqual({ written: true, shareCode: 'ZZ99YY' })
+    expect(insertTrip).toHaveBeenCalledTimes(2)
+  })
+
+  it('rifiuta un file senza nome, prima di interrogare Supabase', async () => {
+    const supabase = { from: vi.fn() }
+    const filePath = writeTempTripFile({ days: [] })
+
+    await expect(cmdCreate(supabase, { user: { id: 'user-1' } }, filePath, { yes: false })).rejects.toThrow(/name/)
+    expect(supabase.from).not.toHaveBeenCalled()
+  })
+})
