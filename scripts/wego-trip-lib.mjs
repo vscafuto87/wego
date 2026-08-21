@@ -194,3 +194,37 @@ export function formatDiffSummary({ tripName, shareCode, diff, isCreate }) {
     'Nessuna scrittura eseguita (dry-run). Rilancia con --yes per confermare.'
   ].join('\n')
 }
+
+export const ATTACHMENT_SECTION_TYPES = ['transport', 'lodging']
+
+export function isPdfPath(filePath) {
+  return typeof filePath === 'string' && /\.pdf$/i.test(filePath)
+}
+
+export function attachmentFields(sectionType) {
+  return sectionType === 'transport'
+    ? { pathField: 'ticketFilePath', nameField: 'ticketFileName' }
+    : { pathField: 'bookingFilePath', nameField: 'bookingFileName' }
+}
+
+export function describeSectionItem(sectionType, item) {
+  if (sectionType === 'transport') {
+    const route = [item.from, item.to].filter(Boolean).join(' → ')
+    const base = [item.mode || 'trasporto', route].filter(Boolean).join(' ')
+    return item.date ? `${base}, ${item.date}` : base
+  }
+  const name = item.name || 'alloggio'
+  const dates = [item.checkIn, item.checkOut].filter(Boolean).join(' → ')
+  return dates ? `${name}, ${dates}` : name
+}
+
+function describeItemsListLine(sectionType, item, index) {
+  const { nameField } = attachmentFields(sectionType)
+  const status = item[nameField] ? `allegato: ${item[nameField]}` : 'nessun allegato'
+  return `${index}. ${describeSectionItem(sectionType, item)} (${status})`
+}
+
+export function formatItemsList(sectionType, sectionTitle, items) {
+  if (!items.length) return `Nessuna voce in ${sectionTitle}.`
+  return items.map((item, i) => describeItemsListLine(sectionType, item, i + 1)).join('\n')
+}

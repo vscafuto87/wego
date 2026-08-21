@@ -5,7 +5,12 @@ import {
   generateShareCode,
   validateTripPayload,
   diffTrip,
-  formatDiffSummary
+  formatDiffSummary,
+  ATTACHMENT_SECTION_TYPES,
+  isPdfPath,
+  attachmentFields,
+  describeSectionItem,
+  formatItemsList
 } from './wego-trip-lib.mjs'
 
 describe('isShareCode', () => {
@@ -154,5 +159,60 @@ describe('formatDiffSummary', () => {
     const diffMetaVuoto = { meta: [], days: [{ date: '2026-09-01', status: 'invariato' }], sections: [] }
     const summaryMetaVuoto = formatDiffSummary({ tripName: 'Ponza', shareCode: 'AB12CD', diff: diffMetaVuoto, isCreate: false })
     expect(summaryMetaVuoto).not.toContain('Dati generali:')
+  })
+})
+
+describe('isPdfPath', () => {
+  it('accetta un percorso che finisce in .pdf, case-insensitive', () => {
+    expect(isPdfPath('/tmp/biglietto.pdf')).toBe(true)
+    expect(isPdfPath('/tmp/BIGLIETTO.PDF')).toBe(true)
+  })
+  it('rifiuta un percorso senza estensione .pdf', () => {
+    expect(isPdfPath('/tmp/biglietto.txt')).toBe(false)
+    expect(isPdfPath('/tmp/biglietto')).toBe(false)
+  })
+})
+
+describe('attachmentFields', () => {
+  it('torna i campi ticketFilePath/ticketFileName per transport', () => {
+    expect(attachmentFields('transport')).toEqual({ pathField: 'ticketFilePath', nameField: 'ticketFileName' })
+  })
+  it('torna i campi bookingFilePath/bookingFileName per lodging', () => {
+    expect(attachmentFields('lodging')).toEqual({ pathField: 'bookingFilePath', nameField: 'bookingFileName' })
+  })
+})
+
+describe('describeSectionItem', () => {
+  it('descrive un trasporto con modo, tratta e data', () => {
+    expect(describeSectionItem('transport', { mode: 'traghetto', from: 'Formia', to: 'Ponza', date: '2026-08-30' }))
+      .toBe('traghetto Formia → Ponza, 2026-08-30')
+  })
+  it('descrive un trasporto senza data', () => {
+    expect(describeSectionItem('transport', { mode: 'treno', from: 'Bologna', to: 'Roma', date: '' }))
+      .toBe('treno Bologna → Roma')
+  })
+  it('descrive un alloggio con nome e date', () => {
+    expect(describeSectionItem('lodging', { name: 'Hotel Roma', checkIn: '2026-09-12', checkOut: '2026-09-15' }))
+      .toBe('Hotel Roma, 2026-09-12 → 2026-09-15')
+  })
+  it('descrive un alloggio senza date', () => {
+    expect(describeSectionItem('lodging', { name: 'Hotel Roma', checkIn: '', checkOut: '' })).toBe('Hotel Roma')
+  })
+})
+
+describe('formatItemsList', () => {
+  it('elenca le voci numerate con lo stato allegato', () => {
+    const items = [
+      { mode: 'traghetto', from: 'Formia', to: 'Ponza', date: '2026-08-30', ticketFileName: '' },
+      { mode: 'aereo', from: 'Bologna', to: 'Roma', date: '2026-08-28', ticketFileName: 'biglietto-aereo.pdf' }
+    ]
+    const text = formatItemsList('transport', 'Trasporti', items)
+    expect(text).toBe(
+      '1. traghetto Formia → Ponza, 2026-08-30 (nessun allegato)\n' +
+      '2. aereo Bologna → Roma, 2026-08-28 (allegato: biglietto-aereo.pdf)'
+    )
+  })
+  it('segnala una sezione vuota', () => {
+    expect(formatItemsList('lodging', 'Pernottamento', [])).toBe('Nessuna voce in Pernottamento.')
   })
 })
