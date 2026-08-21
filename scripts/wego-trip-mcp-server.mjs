@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { z } from 'zod'
 import { createAuthenticatedClient, cmdList, cmdPull, cmdPush, cmdCreate, cmdItems, cmdAttach } from './wego-trip-sync.mjs'
+import { formatItemsList } from './wego-trip-lib.mjs'
 
 function toolError(err) {
   return { isError: true, content: [{ type: 'text', text: err.message }] }
@@ -78,6 +79,28 @@ export function createTools(supabase, session) {
       } catch (err) {
         return toolError(err)
       }
+    },
+
+    async wego_items({ identifier, sectionType }) {
+      try {
+        const { sectionTitle, items } = await cmdItems(supabase, session, identifier, sectionType)
+        return { content: [{ type: 'text', text: formatItemsList(sectionType, sectionTitle, items) }] }
+      } catch (err) {
+        return toolError(err)
+      }
+    },
+
+    async wego_attach({ identifier, sectionType, index, pdfBase64, yes }) {
+      try {
+        const buffer = Buffer.from(pdfBase64, 'base64')
+        const text = await withTempFile('attachment.pdf', buffer, async (filePath) => {
+          const { text } = await captureLog(() => cmdAttach(supabase, session, identifier, sectionType, index, filePath, { yes }))
+          return text
+        })
+        return { content: [{ type: 'text', text }] }
+      } catch (err) {
+        return toolError(err)
+      }
     }
   }
 }
@@ -129,6 +152,33 @@ export async function main() {
       })
     },
     tools.wego_create
+  )
+
+  server.registerTool(
+    'wego_items',
+    {
+      description: 'Elenca le voci (trasporti o alloggi) di un viaggio WeGo con indice numerico e stato allegato, prima di usare wego_attach.',
+      inputSchema: z.object({
+        identifier: z.string().describe('Nome del viaggio o share_code'),
+        sectionType: z.enum(['transport', 'lodging'])
+      })
+    },
+    tools.wego_items
+  )
+
+  server.registerTool(
+    'wego_attach',
+    {
+      description: 'Allega un PDF (biglietto o prenotazione) a una voce trasporti/alloggi, individuata per indice (vedi wego_items). Chiama SEMPRE prima con yes:false, riporta il riepilogo in chat, aspetta un sì esplicito dell\'utente, poi richiama con yes:true.',
+      inputSchema: z.object({
+        identifier: z.string().describe('Nome del viaggio o share_code'),
+        sectionType: z.enum(['transport', 'lodging']),
+        index: z.number().int().min(1).describe('Indice 1-based, come mostrato da wego_items'),
+        pdfBase64: z.string().describe('Contenuto del PDF codificato in base64'),
+        yes: z.boolean().default(false)
+      })
+    },
+    tools.wego_attach
   )
 
   const transport = new StdioServerTransport()

@@ -1,11 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { existsSync, readFileSync } from 'node:fs'
 
-const { mockCmdList, mockCmdPull, mockCmdPush, mockCmdCreate } = vi.hoisted(() => ({
+const { mockCmdList, mockCmdPull, mockCmdPush, mockCmdCreate, mockCmdItems, mockCmdAttach } = vi.hoisted(() => ({
   mockCmdList: vi.fn(),
   mockCmdPull: vi.fn(),
   mockCmdPush: vi.fn(),
-  mockCmdCreate: vi.fn()
+  mockCmdCreate: vi.fn(),
+  mockCmdItems: vi.fn(),
+  mockCmdAttach: vi.fn()
 }))
 
 vi.mock('./wego-trip-sync.mjs', () => ({
@@ -14,8 +16,8 @@ vi.mock('./wego-trip-sync.mjs', () => ({
   cmdPull: mockCmdPull,
   cmdPush: mockCmdPush,
   cmdCreate: mockCmdCreate,
-  cmdItems: vi.fn(),
-  cmdAttach: vi.fn()
+  cmdItems: mockCmdItems,
+  cmdAttach: mockCmdAttach
 }))
 
 const { createTools } = await import('./wego-trip-mcp-server.mjs')
@@ -25,6 +27,8 @@ beforeEach(() => {
   mockCmdPull.mockReset()
   mockCmdPush.mockReset()
   mockCmdCreate.mockReset()
+  mockCmdItems.mockReset()
+  mockCmdAttach.mockReset()
 })
 
 describe('wego_list', () => {
@@ -113,6 +117,51 @@ describe('wego_create', () => {
     const result = await tools.wego_create({ tripJson: { name: 'Ponza nuova' }, yes: false })
     expect(mockCmdCreate).toHaveBeenCalledWith('fake-supabase', 'fake-session', capturedPath, { yes: false })
     expect(result.content[0].text).toContain('Nuovo viaggio: Ponza nuova')
+    expect(existsSync(capturedPath)).toBe(false)
+  })
+})
+
+describe('wego_items', () => {
+  it('elenca le voci della sezione con lo stato allegato, riusando formatItemsList', async () => {
+    mockCmdItems.mockResolvedValue({
+      sectionTitle: 'Trasporti',
+      items: [{ mode: 'traghetto', from: 'Formia', to: 'Ponza', date: '2026-08-30', ticketFileName: '' }]
+    })
+    const tools = createTools('fake-supabase', 'fake-session')
+    const result = await tools.wego_items({ identifier: 'Ponza', sectionType: 'transport' })
+    expect(mockCmdItems).toHaveBeenCalledWith('fake-supabase', 'fake-session', 'Ponza', 'transport')
+    expect(result.content[0].text).toBe('1. traghetto Formia → Ponza, 2026-08-30 (nessun allegato)')
+  })
+})
+
+describe('wego_attach', () => {
+  it('decodifica pdfBase64 in un file temporaneo .pdf e chiama cmdAttach con quel percorso; il file si elimina dopo', async () => {
+    let capturedPath
+    mockCmdAttach.mockImplementation(async (supabase, session, identifier, sectionType, index, filePath, { yes }) => {
+      capturedPath = filePath
+      expect(filePath.endsWith('.pdf')).toBe(true)
+      expect(readFileSync(filePath).toString('utf8')).toBe('contenuto pdf finto')
+      console.log('Allegato "biglietto.pdf" collegato a traghetto Formia → Ponza.')
+      return { written: true }
+    })
+    const tools = createTools('fake-supabase', 'fake-session')
+    const pdfBase64 = Buffer.from('contenuto pdf finto', 'utf8').toString('base64')
+    const result = await tools.wego_attach({ identifier: 'Ponza', sectionType: 'transport', index: 1, pdfBase64, yes: true })
+    expect(mockCmdAttach).toHaveBeenCalledWith('fake-supabase', 'fake-session', 'Ponza', 'transport', 1, capturedPath, { yes: true })
+    expect(result.content[0].text).toContain('collegato a traghetto')
+    expect(existsSync(capturedPath)).toBe(false)
+  })
+
+  it('elimina il file temporaneo anche se cmdAttach lancia', async () => {
+    let capturedPath
+    mockCmdAttach.mockImplementation(async (supabase, session, identifier, sectionType, index, filePath) => {
+      capturedPath = filePath
+      throw new Error('Indice non valido: Trasporti ha 1 voci. Usa "items" per vedere l\'elenco aggiornato.')
+    })
+    const tools = createTools('fake-supabase', 'fake-session')
+    const pdfBase64 = Buffer.from('x', 'utf8').toString('base64')
+    const result = await tools.wego_attach({ identifier: 'Ponza', sectionType: 'transport', index: 5, pdfBase64, yes: true })
+    expect(result.isError).toBe(true)
     expect(existsSync(capturedPath)).toBe(false)
   })
 })
