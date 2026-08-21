@@ -263,7 +263,10 @@ const Lodging = forwardRef(function Lodging({ trip, section, onUpdate, activeDis
             <div key={item.id} className="rounded-[24px] p-5 bg-[var(--card)] shadow-[0_1px_2px_rgb(var(--ink-rgb)/0.05),0_10px_24px_-14px_rgb(var(--ink-rgb)/0.25)]">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="font-display font-semibold text-xs uppercase tracking-wider text-[var(--accent)]">Alloggio</p>
+                  <div className="flex items-center gap-1.5">
+                    <Bed size={13} className="text-[var(--accent)]" />
+                    <p className="font-display font-semibold text-xs uppercase tracking-wider text-[var(--accent)]">Alloggio</p>
+                  </div>
                   <p className="font-display font-semibold text-xl mt-0.5">{item.name || 'Senza nome'}</p>
                   {(item.checkIn || item.checkOut) && (
                     <div className="flex items-center gap-2 mt-1.5 flex-wrap">
@@ -274,7 +277,7 @@ const Lodging = forwardRef(function Lodging({ trip, section, onUpdate, activeDis
                     </div>
                   )}
                 </div>
-                <div className="flex items-center gap-1 -mr-2 -mt-1 flex-none">
+                <div className="flex items-center gap-1 -mr-2 -mt-4 flex-none">
                   {current && (
                     <span className="font-mono text-xs font-semibold tracking-wide text-[var(--paper)] rounded-full px-2.5 py-1 mr-1" style={{ background: ACCENT_GRADIENT }}>
                       IN CORSO

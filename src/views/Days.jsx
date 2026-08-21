@@ -55,6 +55,10 @@ const KIND_OPTIONS = [
 
 export const KIND_ICONS = { '': MapPin, sentiero: Mountain, spiaggia: Waves, pasto: Utensils }
 
+function kindLabel(kind) {
+  return KIND_OPTIONS.find((k) => k.value === kind)?.label ?? kind
+}
+
 const ALL_KIND_FIELDS = ['distanza', 'durata', 'dislivello', 'difficolta', 'accesso', 'servizi', 'luogo', 'prenotato', 'lat', 'lng']
 
 function positiveDislivello(value) {
@@ -93,22 +97,32 @@ export function DayItemCard({ item, onEdit, onRemove, dragHandle }) {
   return (
     <div className="rounded-[24px] p-4 bg-[var(--card)] shadow-[0_1px_2px_rgb(var(--ink-rgb)/0.05),0_10px_24px_-14px_rgb(var(--ink-rgb)/0.25)]">
       <div className="flex items-start justify-between gap-2">
-        <div className="flex items-start gap-3 flex-1 min-w-0">
-          <div className="h-10 w-10 rounded-full bg-[var(--tint)] flex items-center justify-center flex-shrink-0">
-            {Icon && <Icon size={18} className="text-[var(--accent)]" />}
-          </div>
-          <div className="flex-1 min-w-0">
-            {item.time && <span className="font-mono text-sm text-[var(--muted)]">{item.time}</span>}
-            <p className="font-display font-semibold text-lg leading-snug">{item.title}</p>
-            {item.kind !== 'sentiero' && item.detail && <p className="text-sm text-[var(--muted)] mt-1">{item.detail}</p>}
-            {item.kind === 'pasto' && item.luogo && <p className="text-sm text-[var(--muted)] mt-1">{item.luogo}</p>}
-            {item.kind === 'spiaggia' && (item.accesso || item.servizi) && (
-              <p className="text-sm text-[var(--muted)] mt-1">{[item.accesso, item.servizi].filter(Boolean).join(' · ')}</p>
-            )}
-          </div>
+        <div className="min-w-0 flex-1">
+          {Icon && (
+            <div className="flex items-center gap-1.5">
+              <Icon size={13} className="text-[var(--accent)]" />
+              <p className="font-display font-semibold text-xs uppercase tracking-wider text-[var(--accent)]">{kindLabel(item.kind)}</p>
+            </div>
+          )}
+          {item.time && <span className="font-mono text-sm text-[var(--muted)] mt-0.5 block">{item.time}</span>}
+          <p className="font-display font-semibold text-xl mt-0.5 leading-snug">{item.title}</p>
+          {item.kind !== 'sentiero' && item.detail && <p className="text-sm text-[var(--muted)] mt-1">{item.detail}</p>}
+          {item.kind === 'pasto' && item.luogo && <p className="text-sm text-[var(--muted)] mt-1">{item.luogo}</p>}
+          {item.kind === 'spiaggia' && (item.accesso || item.servizi) && (
+            <p className="text-sm text-[var(--muted)] mt-1">{[item.accesso, item.servizi].filter(Boolean).join(' · ')}</p>
+          )}
+          {stats.length > 0 && (
+            <div className="flex items-center gap-2 mt-2 overflow-x-auto no-scrollbar">
+              {stats.map((s, i) => (
+                <span key={i} className="flex-none inline-flex items-center gap-1 font-mono text-xs bg-[var(--tint)] rounded-full px-2.5 py-1 whitespace-nowrap">
+                  <s.icon size={12} /> {s.value}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
         {(dragHandle || onEdit || onRemove) && (
-          <div className="flex gap-1 -mr-2 -mt-1 flex-shrink-0">
+          <div className="flex gap-1 -mr-2 -mt-4 flex-none">
             {dragHandle && (
               <button
                 type="button"
@@ -135,24 +149,22 @@ export function DayItemCard({ item, onEdit, onRemove, dragHandle }) {
         )}
       </div>
 
-      {stats.length > 0 && (
-        <div className="flex flex-wrap gap-4 mt-2 ml-[3.25rem]">
-          {stats.map((s, i) => (
-            <div key={i} className="flex items-center gap-1.5 text-[var(--muted)]">
-              <s.icon size={14} />
-              <span className="font-mono text-sm font-medium text-[var(--ink)] whitespace-nowrap">{s.value}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
       {item.kind === 'pasto' && item.prenotato && (
         <span className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-[var(--accent2)] text-[var(--paper)] text-xs font-medium mt-3">
           <Check size={12} /> Prenotato
         </span>
       )}
 
-      <LinkChip link={item.link} />
+      {item.link && (
+        <>
+          <div className="h-px bg-[var(--line)] mt-3 mb-3" />
+          <div className="flex gap-2 flex-wrap">
+            <a href={item.link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-[var(--tint)] text-[var(--accent)] text-sm font-medium">
+              <ExternalLink size={15} /> Apri il link
+            </a>
+          </div>
+        </>
+      )}
       <ModifiedBy modifiedBy={item.modifiedBy} modifiedAt={item.modifiedAt} />
     </div>
   )
