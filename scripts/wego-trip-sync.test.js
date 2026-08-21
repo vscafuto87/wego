@@ -88,3 +88,74 @@ describe('cmdList', () => {
     await expect(cmdList(supabase, { user: { id: 'user-1' } })).rejects.toThrow('boom')
   })
 })
+
+const { findTrip, cmdPull } = await import('./wego-trip-sync.mjs')
+
+function tripRow(overrides = {}) {
+  return { id: 'trip-1', share_code: 'AB23CD', data: { name: 'Ponza' }, updated_at: '2026-08-21T10:00:00Z', owner_id: 'user-1', ...overrides }
+}
+
+describe('findTrip', () => {
+  it('trova per nome (ilike su data->>name) e determina il ruolo da tv_trip_members', async () => {
+    const eqMembers = vi.fn().mockReturnValue({ maybeSingle: vi.fn().mockResolvedValue({ data: { role: 'editor' }, error: null }) })
+    const supabase = {
+      from: vi.fn((table) => {
+        if (table === 'tv_trips') return { select: () => ({ ilike: vi.fn().mockResolvedValue({ data: [tripRow()], error: null }) }) }
+        if (table === 'tv_trip_members') return { select: () => ({ eq: () => ({ eq: eqMembers }) }) }
+        throw new Error(`tabella inattesa: ${table}`)
+      })
+    }
+    const result = await findTrip(supabase, { user: { id: 'user-1' } }, 'Ponza')
+    expect(result).toEqual({ id: 'trip-1', shareCode: 'AB23CD', data: { name: 'Ponza' }, updatedAt: '2026-08-21T10:00:00Z', ownerId: 'user-1', role: 'editor' })
+  })
+
+  it('trova per share_code (eq su share_code)', async () => {
+    const eqShareCode = vi.fn().mockResolvedValue({ data: [tripRow()], error: null })
+    const supabase = {
+      from: vi.fn((table) => {
+        if (table === 'tv_trips') return { select: () => ({ eq: eqShareCode }) }
+        if (table === 'tv_trip_members') return { select: () => ({ eq: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) }) }) }
+        throw new Error(`tabella inattesa: ${table}`)
+      })
+    }
+    const result = await findTrip(supabase, { user: { id: 'user-2' } }, 'AB23CD')
+    expect(eqShareCode).toHaveBeenCalledWith('share_code', 'AB23CD')
+    expect(result.role).toBe('viewer')
+  })
+
+  it('deduce il ruolo editor per l\'owner anche senza riga in tv_trip_members', async () => {
+    const supabase = {
+      from: vi.fn((table) => {
+        if (table === 'tv_trips') return { select: () => ({ ilike: async () => ({ data: [tripRow({ owner_id: 'user-1' })], error: null }) }) }
+        if (table === 'tv_trip_members') return { select: () => ({ eq: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) }) }) }
+        throw new Error(`tabella inattesa: ${table}`)
+      })
+    }
+    const result = await findTrip(supabase, { user: { id: 'user-1' } }, 'Ponza')
+    expect(result.role).toBe('editor')
+  })
+
+  it('rifiuta se nessun viaggio corrisponde', async () => {
+    const supabase = { from: () => ({ select: () => ({ ilike: async () => ({ data: [], error: null }) }) }) }
+    await expect(findTrip(supabase, { user: { id: 'user-1' } }, 'Sconosciuto')).rejects.toThrow(/Nessun viaggio/)
+  })
+
+  it('rifiuta con l\'elenco degli share_code se il nome è ambiguo', async () => {
+    const supabase = { from: () => ({ select: () => ({ ilike: async () => ({ data: [tripRow({ share_code: 'AAA111' }), tripRow({ share_code: 'BBB222' })], error: null }) }) }) }
+    await expect(findTrip(supabase, { user: { id: 'user-1' } }, 'Ponza')).rejects.toThrow(/AAA111.*BBB222|BBB222.*AAA111/)
+  })
+})
+
+describe('cmdPull', () => {
+  it('torna il data del viaggio trovato', async () => {
+    const supabase = {
+      from: vi.fn((table) => {
+        if (table === 'tv_trips') return { select: () => ({ eq: async () => ({ data: [tripRow({ data: { name: 'Ponza', days: [] } })], error: null }) }) }
+        if (table === 'tv_trip_members') return { select: () => ({ eq: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { role: 'editor' }, error: null }) }) }) }) }
+        throw new Error(`tabella inattesa: ${table}`)
+      })
+    }
+    const data = await cmdPull(supabase, { user: { id: 'user-1' } }, 'AB23CD')
+    expect(data).toEqual({ name: 'Ponza', days: [] })
+  })
+})
