@@ -78,10 +78,12 @@ function normalizeDay(raw) {
 
 function normalizeCardItem(raw) {
   const item = raw && typeof raw === 'object' ? raw : {}
-  return {
+  const kind = DAY_ITEM_KINDS.includes(item.kind) ? item.kind : ''
+  const base = {
     id: makeId(),
     title: str(item.title),
     meta: str(item.meta),
+    kind,
     detail: str(item.detail),
     link: str(item.link),
     tags: arr(item.tags).map(str),
@@ -90,6 +92,16 @@ function normalizeCardItem(raw) {
     modifiedBy: str(item.modifiedBy),
     modifiedAt: str(item.modifiedAt)
   }
+  if (kind === 'sentiero') {
+    return { ...base, distanza: str(item.distanza), durata: str(item.durata), dislivello: str(item.dislivello), difficolta: str(item.difficolta) }
+  }
+  if (kind === 'spiaggia') {
+    return { ...base, accesso: str(item.accesso), servizi: str(item.servizi) }
+  }
+  if (kind === 'pasto') {
+    return { ...base, luogo: str(item.luogo), prenotato: item.prenotato === true }
+  }
+  return base
 }
 
 function normalizeChecklistItem(raw) {
@@ -363,7 +375,7 @@ export function collectExternalMapPoints(trip) {
         lat: i.lat,
         lng: i.lng,
         link: i.link,
-        categoryGroup: 'schede',
+        categoryGroup: i.kind || 'schede',
         origin: { tab: s.id, sectionTitle: s.title }
       })))
   const fromDays = trip.days.flatMap((d) => d.items

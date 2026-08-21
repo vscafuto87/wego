@@ -39,8 +39,9 @@ o null, ma solo se le coordinate sono note per certo dagli appunti (es. un link 
 incollato nel testo): non indovinarle mai da un nome di luogo, in quel caso lascia
 entrambi null.
 
-Ogni voce di "days[].items[]" può avere anche un campo "kind" opzionale, che determina
-quali campi in più aggiungere alla voce (solo quelli del kind scelto, nessun altro):
+Ogni voce di "days[].items[]" e ogni item "cards" possono avere anche un campo "kind"
+opzionale, che determina quali campi in più aggiungere alla voce (solo quelli del kind
+scelto, nessun altro). Vale la stessa regola per entrambi:
 
 - "kind": "" (o assente) → voce generica, nessun campo in più.
 - "kind": "sentiero" → aggiungi "distanza", "durata", "dislivello", "difficolta" (string),
@@ -52,6 +53,11 @@ quali campi in più aggiungere alla voce (solo quelli del kind scelto, nessun al
 - "kind": "pasto" → aggiungi "luogo" (string), "prenotato" (boolean), "lat" e "lng"
   (numero o null, solo se noti per certo dagli appunti, altrimenti null).
   Es: { "time": "20:00", "title": "Cena", "kind": "pasto", "luogo": "Trattoria da Mario", "prenotato": true, "lat": null, "lng": null, "detail": "", "link": "" }
+
+Un item "cards" con "kind" ha gli stessi campi extra di sopra (mai "time", che le schede
+non hanno) più i suoi campi normali (meta, tags): "lat"/"lng" ci sono sempre su una scheda,
+con o senza kind, non solo su quelle con kind.
+Es: { "title": "Cena da Mario", "meta": "", "kind": "pasto", "luogo": "Trattoria da Mario", "prenotato": true, "detail": "", "link": "", "tags": [], "lat": null, "lng": null }
 
 Non inventare né calcolare "lat"/"lng" da un nome di luogo o da una ricerca: usali solo
 se gli appunti grezzi contengono un link Maps o coordinate numeriche esplicite. Vale anche

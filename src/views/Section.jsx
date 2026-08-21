@@ -4,11 +4,12 @@ import Btn from '../components/Btn.jsx'
 import Label from '../components/Label.jsx'
 import Modal from '../components/Modal.jsx'
 import Empty from '../components/Empty.jsx'
-import { stampModified } from '../data/schema.js'
+import { stampModified, dayItemFieldsForKind } from '../data/schema.js'
 import ModifiedBy from '../components/ModifiedBy.jsx'
 import CoordsInput from '../components/CoordsInput.jsx'
 import Transport from './Transport.jsx'
 import Lodging from './Lodging.jsx'
+import { KIND_ICONS, sentieroStats } from './Days.jsx'
 import { DndContext, PointerSensor, KeyboardSensor, useSensor, useSensors, closestCenter } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy, sortableKeyboardCoordinates, arrayMove, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -21,6 +22,32 @@ function isFixedSection(section) {
 }
 
 const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
+const EMPTY_CARD = { title: '', meta: '', kind: '', detail: '', link: '', tags: '', lat: null, lng: null, distanza: '', durata: '', dislivello: '', difficolta: '', accesso: '', servizi: '', luogo: '', prenotato: false }
+
+const KIND_OPTIONS = [
+  { value: '', label: 'Generica' },
+  { value: 'sentiero', label: 'Sentiero' },
+  { value: 'spiaggia', label: 'Spiaggia' },
+  { value: 'pasto', label: 'Pasto' }
+]
+
+const ALL_KIND_FIELDS = ['distanza', 'durata', 'dislivello', 'difficolta', 'accesso', 'servizi', 'luogo', 'prenotato']
+
+function withoutKindFields(item) {
+  const clean = { ...item }
+  for (const field of ALL_KIND_FIELDS) delete clean[field]
+  return clean
+}
+
+function cardFieldsForForm(cardForm) {
+  const tags = cardForm.tags.split(',').map((x) => x.trim()).filter(Boolean)
+  const common = { title: cardForm.title, meta: cardForm.meta, kind: cardForm.kind, detail: cardForm.detail, link: cardForm.link, tags, lat: cardForm.lat, lng: cardForm.lng }
+  for (const field of dayItemFieldsForKind(cardForm.kind)) {
+    if (field === 'lat' || field === 'lng') continue
+    common[field] = cardForm[field]
+  }
+  return common
+}
 
 function updateSection(trip, sectionId, fn) {
   return { ...trip, sections: trip.sections.map((s) => (s.id === sectionId ? fn(s) : s)) }
@@ -36,10 +63,15 @@ function SortableCard({ item, onEdit, onRemove }) {
     opacity: isDragging ? 0.6 : 1,
     boxShadow: isDragging ? '0 12px 32px -10px rgb(var(--ink-rgb) / 0.4)' : undefined
   }
+  const KindIcon = KIND_ICONS[item.kind]
+  const stats = sentieroStats(item)
   return (
     <div ref={setNodeRef} style={style} className="rounded-[24px] p-5 bg-[var(--card)] shadow-[0_1px_2px_rgb(var(--ink-rgb)/0.05),0_10px_24px_-14px_rgb(var(--ink-rgb)/0.25)]">
       <div className="flex items-start justify-between gap-2">
-        <p className="font-display font-semibold text-xl">{item.title || 'Senza titolo'}</p>
+        <div className="flex items-center gap-1.5">
+          {item.kind && KindIcon && <KindIcon size={16} className="flex-shrink-0 text-[var(--accent)]" />}
+          <p className="font-display font-semibold text-xl">{item.title || 'Senza titolo'}</p>
+        </div>
         <div className="flex gap-1 -mr-2 -mt-1">
           <button
             type="button"
@@ -60,7 +92,26 @@ function SortableCard({ item, onEdit, onRemove }) {
         </div>
       </div>
       {item.meta && <p className="font-mono text-sm text-[var(--muted)] mt-1">{item.meta}</p>}
-      {item.detail && <p className="text-base mt-2">{item.detail}</p>}
+      {item.kind !== 'sentiero' && item.detail && <p className="text-base mt-2">{item.detail}</p>}
+      {item.kind === 'pasto' && item.luogo && <p className="text-base mt-2">{item.luogo}</p>}
+      {item.kind === 'spiaggia' && (item.accesso || item.servizi) && (
+        <p className="text-base mt-2">{[item.accesso, item.servizi].filter(Boolean).join(' · ')}</p>
+      )}
+      {stats.length > 0 && (
+        <div className="flex flex-wrap gap-4 mt-2">
+          {stats.map((s, i) => (
+            <div key={i} className="flex items-center gap-1.5 text-[var(--muted)]">
+              <s.icon size={14} />
+              <span className="font-mono text-sm font-medium text-[var(--ink)] whitespace-nowrap">{s.value}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {item.kind === 'pasto' && item.prenotato && (
+        <span className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-[var(--accent2)] text-[var(--paper)] text-xs font-medium mt-3">
+          <Check size={12} /> Prenotato
+        </span>
+      )}
       {item.link && (
         <a href={item.link} target="_blank" rel="noreferrer" className="text-base text-[var(--accent)] underline mt-2 inline-block">
           Apri il link
@@ -110,7 +161,7 @@ const Section = forwardRef(function Section({ trip, section, onUpdate, activeDis
 
   useImperativeHandle(ref, () => ({
     openAdd: () => {
-      if (section.type === 'cards') setCardForm({ title: '', meta: '', detail: '', link: '', tags: '', lat: null, lng: null })
+      if (section.type === 'cards') setCardForm({ ...EMPTY_CARD })
       else if (section.type === 'checklist') checklistInputRef.current?.focus()
       else childRef.current?.openAdd()
     }
@@ -124,13 +175,13 @@ const Section = forwardRef(function Section({ trip, section, onUpdate, activeDis
 
   function saveCard(e) {
     e.preventDefault()
-    const tags = cardForm.tags.split(',').map((x) => x.trim()).filter(Boolean)
+    const fields = cardFieldsForForm(cardForm)
     onUpdate((t) =>
       updateSection(t, section.id, (s) => {
         if (cardForm.id) {
-          return { ...s, items: s.items.map((it) => (it.id === cardForm.id ? stampModified({ ...it, ...cardForm, tags }, activeDisplayName) : it)) }
+          return { ...s, items: s.items.map((it) => (it.id === cardForm.id ? stampModified({ ...withoutKindFields(it), ...fields }, activeDisplayName) : it)) }
         }
-        return { ...s, items: [...s.items, stampModified({ id: crypto.randomUUID(), ...cardForm, tags }, activeDisplayName)] }
+        return { ...s, items: [...s.items, stampModified({ id: crypto.randomUUID(), ...fields }, activeDisplayName)] }
       })
     )
     setCardForm(null)
@@ -183,7 +234,7 @@ const Section = forwardRef(function Section({ trip, section, onUpdate, activeDis
             <Empty
               title="Nessuna scheda ancora"
               detail="Aggiungine una per iniziare."
-              action={<Btn onClick={() => setCardForm({ title: '', meta: '', detail: '', link: '', tags: '', lat: null, lng: null })}>Aggiungi una scheda</Btn>}
+              action={<Btn onClick={() => setCardForm({ ...EMPTY_CARD })}>Aggiungi una scheda</Btn>}
             />
           )}
           <DndContext sensors={cardSensors} collisionDetection={closestCenter} onDragEnd={handleCardDragEnd}>
@@ -193,7 +244,7 @@ const Section = forwardRef(function Section({ trip, section, onUpdate, activeDis
                   <SortableCard
                     key={item.id}
                     item={item}
-                    onEdit={() => setCardForm({ id: item.id, title: item.title, meta: item.meta, detail: item.detail, link: item.link, tags: item.tags.join(', '), lat: item.lat, lng: item.lng })}
+                    onEdit={() => setCardForm({ id: item.id, ...EMPTY_CARD, ...item, tags: item.tags.join(', ') })}
                     onRemove={() => removeCard(item)}
                   />
                 ))}
@@ -289,11 +340,37 @@ const Section = forwardRef(function Section({ trip, section, onUpdate, activeDis
       <Modal open={!!cardForm} title={cardForm?.id ? 'Modifica scheda' : 'Nuova scheda'} onClose={() => setCardForm(null)}>
         {cardForm && (
           <form onSubmit={saveCard} className="flex flex-col gap-3">
+            <select value={cardForm.kind} onChange={(e) => setCardForm({ ...cardForm, kind: e.target.value })} className={inputClass}>
+              {KIND_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+            </select>
             <input required placeholder="Titolo" value={cardForm.title} onChange={(e) => setCardForm({ ...cardForm, title: e.target.value })} className={inputClass} />
             <input placeholder="Info breve (es. km, orario)" value={cardForm.meta} onChange={(e) => setCardForm({ ...cardForm, meta: e.target.value })} className={inputClass} />
             <textarea placeholder="Dettaglio" value={cardForm.detail} onChange={(e) => setCardForm({ ...cardForm, detail: e.target.value })} className={inputClass} rows={2} />
             <input placeholder="Link" value={cardForm.link} onChange={(e) => setCardForm({ ...cardForm, link: e.target.value })} className={inputClass} />
             <input placeholder="Tag (separati da virgola)" value={cardForm.tags} onChange={(e) => setCardForm({ ...cardForm, tags: e.target.value })} className={inputClass} />
+            {cardForm.kind === 'sentiero' && (
+              <>
+                <input placeholder="Distanza (es. 14,2 km)" value={cardForm.distanza} onChange={(e) => setCardForm({ ...cardForm, distanza: e.target.value })} className={inputClass} />
+                <input placeholder="Durata (es. 5h14)" value={cardForm.durata} onChange={(e) => setCardForm({ ...cardForm, durata: e.target.value })} className={inputClass} />
+                <input placeholder="Dislivello (es. 480 m D+)" value={cardForm.dislivello} onChange={(e) => setCardForm({ ...cardForm, dislivello: e.target.value })} className={inputClass} />
+                <input placeholder="Difficoltà (es. media, EE)" value={cardForm.difficolta} onChange={(e) => setCardForm({ ...cardForm, difficolta: e.target.value })} className={inputClass} />
+              </>
+            )}
+            {cardForm.kind === 'spiaggia' && (
+              <>
+                <input placeholder="Come arrivarci" value={cardForm.accesso} onChange={(e) => setCardForm({ ...cardForm, accesso: e.target.value })} className={inputClass} />
+                <input placeholder="Servizi (bar, ombrelloni...)" value={cardForm.servizi} onChange={(e) => setCardForm({ ...cardForm, servizi: e.target.value })} className={inputClass} />
+              </>
+            )}
+            {cardForm.kind === 'pasto' && (
+              <>
+                <input placeholder="Nome del locale" value={cardForm.luogo} onChange={(e) => setCardForm({ ...cardForm, luogo: e.target.value })} className={inputClass} />
+                <label className="flex items-center gap-2 text-base">
+                  <input type="checkbox" checked={cardForm.prenotato} onChange={(e) => setCardForm({ ...cardForm, prenotato: e.target.checked })} />
+                  Prenotato
+                </label>
+              </>
+            )}
             <CoordsInput value={{ lat: cardForm.lat, lng: cardForm.lng }} onChange={(coords) => setCardForm({ ...cardForm, ...coords })} />
             <Btn type="submit">Salva</Btn>
           </form>

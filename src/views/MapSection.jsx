@@ -71,14 +71,17 @@ function formatDate(date) {
   return date ? DATE_FMT.format(new Date(date)) : ''
 }
 
+// Una scheda con kind (sentiero/spiaggia/pasto) condivide il categoryGroup
+// colorato con le voci giorno dello stesso kind: per distinguere le due forme
+// di origine si guarda la forma di `origin`, non più il categoryGroup.
 function originLabel(point) {
   if (point.categoryGroup === 'mappa') return point.category || null
-  if (point.categoryGroup === 'schede' || point.categoryGroup === 'lodging') return point.origin.sectionTitle
+  if (point.origin.sectionTitle) return point.origin.sectionTitle
   return `${formatDate(point.origin.dayDate)} · ${point.origin.itemTitle}`
 }
 
 function navigateLabel(point) {
-  return point.categoryGroup === 'schede' || point.categoryGroup === 'lodging' ? `Vai a ${point.origin.sectionTitle}` : "Vai all'Itinerario"
+  return point.origin.sectionTitle ? `Vai a ${point.origin.sectionTitle}` : "Vai all'Itinerario"
 }
 
 const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
