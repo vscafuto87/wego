@@ -22,12 +22,13 @@ const HEADER_SHRINK = 184
 // Etichetta del + in header per tipo di sezione: le Note non hanno un
 // concetto di "nuovo elemento" (è un unico blocco di testo), quindi non
 // compaiono in questa mappa e non ricevono il +.
+// Niente 'map': la sezione Mappa non ha più punti propri da aggiungere, solo
+// quelli aggregati dalle altre sezioni.
 const ADD_LABELS = {
   cards: 'Aggiungi una scheda',
   checklist: 'Aggiungi una voce',
   transport: 'Aggiungi un trasporto',
-  lodging: 'Aggiungi un alloggio',
-  map: 'Aggiungi un punto'
+  lodging: 'Aggiungi un alloggio'
 }
 
 export default function TripView({ trip, onBack, onUpdate, onDelete }) {

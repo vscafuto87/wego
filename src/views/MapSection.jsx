@@ -1,27 +1,16 @@
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from 'react'
+import { forwardRef, useEffect, useMemo, useRef, useState } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
+import { renderToStaticMarkup } from 'react-dom/server'
 import L from 'leaflet'
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
-import markerIcon from 'leaflet/dist/images/marker-icon.png'
-import markerShadow from 'leaflet/dist/images/marker-shadow.png'
 import 'leaflet/dist/leaflet.css'
-import { MapPin, LocateFixed, Layers, Maximize2, Minimize2 } from 'lucide-react'
-import EditIcon from '../components/EditIcon.jsx'
-import DeleteIcon from '../components/DeleteIcon.jsx'
-import Btn from '../components/Btn.jsx'
-import Modal from '../components/Modal.jsx'
+import { MapPin, LocateFixed, Layers, Maximize2, Minimize2, Mountain, Waves, Utensils, Bed, Star } from 'lucide-react'
 import Empty from '../components/Empty.jsx'
-import CoordsInput from '../components/CoordsInput.jsx'
-import { stampModified, collectExternalMapPoints } from '../data/schema.js'
-import ModifiedBy from '../components/ModifiedBy.jsx'
-
-// Senza questo fix i marker di Leaflet risultano invisibili sotto Vite: il
-// bundler non riesce a risolvere i path relativi che la libreria si aspetta.
-L.Icon.Default.mergeOptions({ iconRetinaUrl: markerIcon2x, iconUrl: markerIcon, shadowUrl: markerShadow })
+import { collectExternalMapPoints } from '../data/schema.js'
 
 export const CATEGORY_COLORS = { schede: '#f97316', lodging: '#a855f7', sentiero: '#16a34a', spiaggia: '#0ea5e9', pasto: '#eab308' }
-const CATEGORY_LABELS = { mappa: 'Mappa', schede: 'Schede', lodging: 'Pernottamento', sentiero: 'Sentieri', spiaggia: 'Spiagge', pasto: 'Pasti' }
-const CATEGORY_ORDER = ['mappa', 'schede', 'lodging', 'sentiero', 'spiaggia', 'pasto']
+const CATEGORY_LABELS = { schede: 'Schede', lodging: 'Pernottamento', sentiero: 'Sentieri', spiaggia: 'Spiagge', pasto: 'Pasti' }
+const CATEGORY_ORDER = ['schede', 'lodging', 'sentiero', 'spiaggia', 'pasto']
+const CATEGORY_MARKER_ICONS = { schede: Star, lodging: Bed, sentiero: Mountain, spiaggia: Waves, pasto: Utensils }
 
 // Esportata: la mini-mappa del giorno nell'Itinerario (DayMiniMap) riusa gli
 // stessi pallini colorati per sentiero/spiaggia/pasto, invece di un secondo
@@ -35,9 +24,21 @@ export function dotIcon(color) {
   })
 }
 
-// Nessuna icona per 'mappa': i punti propri restano col marker Leaflet
-// standard, editabile, per distinguerli a colpo d'occhio dagli altri.
-const CATEGORY_ICONS = Object.fromEntries(Object.entries(CATEGORY_COLORS).map(([key, color]) => [key, dotIcon(color)]))
+// Un'icona per categoria, non solo un colore: così un pin si riconosce a
+// colpo d'occhio anche senza aprire il popup o guardare i filtri.
+function categoryMarkerIcon(categoryGroup) {
+  const color = CATEGORY_COLORS[categoryGroup] ?? CATEGORY_COLORS.schede
+  const Icon = CATEGORY_MARKER_ICONS[categoryGroup] ?? Star
+  const svg = renderToStaticMarkup(<Icon size={14} color="white" strokeWidth={2.5} />)
+  return L.divIcon({
+    className: '',
+    html: `<span style="display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:9999px;background:${color};border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.4)">${svg}</span>`,
+    iconSize: [26, 26],
+    iconAnchor: [13, 13]
+  })
+}
+
+const CATEGORY_ICONS = Object.fromEntries(CATEGORY_ORDER.map((cat) => [cat, categoryMarkerIcon(cat)]))
 
 const MY_LOCATION_ICON = L.divIcon({
   className: '',
@@ -73,11 +74,8 @@ function formatDate(date) {
   return date ? DATE_FMT.format(new Date(date)) : ''
 }
 
-// Una scheda con kind (sentiero/spiaggia/pasto) condivide il categoryGroup
-// colorato con le voci giorno dello stesso kind: per distinguere le due forme
-// di origine si guarda la forma di `origin`, non più il categoryGroup.
 function originLabel(point) {
-  if (point.categoryGroup === 'mappa') return point.category || null
+  if (!point.origin) return null
   if (point.origin.sectionTitle) return point.origin.sectionTitle
   return `${formatDate(point.origin.dayDate)} · ${point.origin.itemTitle}`
 }
@@ -85,9 +83,6 @@ function originLabel(point) {
 function navigateLabel(point) {
   return point.origin.sectionTitle ? `Vai a ${point.origin.sectionTitle}` : "Vai all'Itinerario"
 }
-
-const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
-const EMPTY_ITEM = { name: '', category: '', mapsLink: '', lat: null, lng: null, note: '' }
 
 function useOnlineStatus() {
   const [online, setOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine))
@@ -104,10 +99,52 @@ function useOnlineStatus() {
   return online
 }
 
-const MapSection = forwardRef(function MapSection({ trip, section, onUpdate, activeDisplayName, onNavigate }, ref) {
-  const [form, setForm] = useState(null)
+// Traduce l'indirizzo di un Pernottamento senza lat/lng in coordinate, solo
+// quando c'è rete e solo per mostrarlo sulla mappa: nessun risultato viene
+// mai scritto nel viaggio (calcolo derivato, va rifatto a ogni apertura), e
+// le richieste sono sequenziali per rispettare il limite di Nominatim (max 1
+// al secondo). Se la geocodifica fallisce il punto resta senza pin, in
+// silenzio: non è un errore da mostrare.
+function useGeocodedAddresses(points, online) {
+  const [geocoded, setGeocoded] = useState({})
+  const attempted = useRef(new Set())
 
-  useImperativeHandle(ref, () => ({ openAdd: () => setForm(EMPTY_ITEM) }))
+  useEffect(() => {
+    if (!online) return
+    const toGeocode = points.filter((p) => p.lat === null && p.lng === null && p.address && !attempted.current.has(p.id))
+    if (toGeocode.length === 0) return
+    let cancelled = false
+    async function run() {
+      for (const p of toGeocode) {
+        if (cancelled) return
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(p.address)}`)
+          const data = await res.json()
+          const hit = Array.isArray(data) ? data[0] : null
+          if (cancelled) return
+          // Segnato "tentato" solo a richiesta conclusa e non annullata: se
+          // l'effetto viene rimontato (StrictMode in sviluppo, o un cambio
+          // legittimo di `points` a metà fetch) il tentativo va ripetuto, non
+          // scartato in silenzio per sempre.
+          attempted.current.add(p.id)
+          if (hit) setGeocoded((prev) => ({ ...prev, [p.id]: { lat: Number(hit.lat), lng: Number(hit.lon) } }))
+        } catch {
+          if (!cancelled) attempted.current.add(p.id)
+        }
+        if (!cancelled) await new Promise((resolve) => setTimeout(resolve, 1100))
+      }
+    }
+    run()
+    return () => { cancelled = true }
+  }, [points, online])
+
+  return geocoded
+}
+
+// forwardRef solo perché Section.jsx passa un ref generico a ogni tipo di
+// sezione (childRef.openAdd()): la Mappa non espone più nulla da aggiungere,
+// quindi il ref resta inutilizzato.
+const MapSection = forwardRef(function MapSection({ trip, onNavigate }, _ref) {
   const online = useOnlineStatus()
   const [myPosition, setMyPosition] = useState(null)
   const [locating, setLocating] = useState(false)
@@ -144,32 +181,18 @@ const MapSection = forwardRef(function MapSection({ trip, section, onUpdate, act
     )
   }
 
-  function updateItems(fn) {
-    onUpdate((t) => ({ ...t, sections: t.sections.map((s) => (s.id === section.id ? { ...s, items: fn(s.items) } : s)) }))
-  }
+  // I punti arrivano solo da Ristoranti, Pernottamento e Itinerario: la
+  // sezione Mappa non ha più punti propri modificabili.
+  const points = useMemo(() => collectExternalMapPoints(trip), [trip])
+  const geocoded = useGeocodedAddresses(points, online)
 
-  function saveItem(e) {
-    e.preventDefault()
-    const { id, ...fields } = form
-    updateItems((items) => {
-      if (id) return items.map((it) => (it.id === id ? stampModified({ ...it, ...fields }, activeDisplayName) : it))
-      return [...items, stampModified({ id: crypto.randomUUID(), ...fields }, activeDisplayName)]
-    })
-    setForm(null)
-  }
+  const resolvedPoints = useMemo(() => points.map((p) => {
+    if (p.lat !== null && p.lng !== null) return p
+    const g = geocoded[p.id]
+    return g ? { ...p, lat: g.lat, lng: g.lng } : p
+  }), [points, geocoded])
 
-  function removeItem(item) {
-    if (window.confirm(`Eliminare "${item.name}"? Non si può annullare.`)) {
-      updateItems((items) => items.filter((it) => it.id !== item.id))
-    }
-  }
-
-  const points = useMemo(() => [
-    ...section.items.map((p) => ({ ...p, categoryGroup: 'mappa', origin: null })),
-    ...collectExternalMapPoints(trip)
-  ], [trip, section.items])
-
-  const withCoords = points.filter((p) => p.lat !== null && p.lng !== null)
+  const withCoords = resolvedPoints.filter((p) => p.lat !== null && p.lng !== null)
   const center = withCoords.length > 0
     ? [withCoords.reduce((sum, p) => sum + p.lat, 0) / withCoords.length, withCoords.reduce((sum, p) => sum + p.lng, 0) / withCoords.length]
     : null
@@ -202,7 +225,7 @@ const MapSection = forwardRef(function MapSection({ trip, section, onUpdate, act
                     hiddenCategories.has(cat) ? 'border-[var(--line)] text-[var(--muted)]' : 'border-transparent bg-[var(--tint)] text-[var(--ink)]'
                   }`}
                 >
-                  {CATEGORY_COLORS[cat] && <span className="h-2.5 w-2.5 rounded-full" style={{ background: CATEGORY_COLORS[cat] }} />}
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: CATEGORY_COLORS[cat] }} />
                   {CATEGORY_LABELS[cat]}
                 </button>
               ))}
@@ -265,17 +288,12 @@ const MapSection = forwardRef(function MapSection({ trip, section, onUpdate, act
                 <Marker
                   key={`${point.categoryGroup}-${point.id}`}
                   position={[point.lat, point.lng]}
-                  {...(CATEGORY_ICONS[point.categoryGroup] ? { icon: CATEGORY_ICONS[point.categoryGroup] } : {})}
+                  icon={CATEGORY_ICONS[point.categoryGroup] ?? CATEGORY_ICONS.schede}
                 >
                   <Popup>
                     <p className="font-semibold">{point.name || 'Senza nome'}</p>
                     {originLabel(point) && <p className="text-sm text-[var(--muted)]">{originLabel(point)}</p>}
-                    {point.categoryGroup === 'mappa' && point.mapsLink && (
-                      <a href={point.mapsLink} target="_blank" rel="noreferrer" className="text-sm text-[var(--accent)] underline block mt-1">
-                        Apri in Maps
-                      </a>
-                    )}
-                    {point.categoryGroup !== 'mappa' && point.link && (
+                    {point.link && (
                       <a href={point.link} target="_blank" rel="noreferrer" className="text-sm text-[var(--accent)] underline block mt-1">
                         Apri il link
                       </a>
@@ -299,49 +317,12 @@ const MapSection = forwardRef(function MapSection({ trip, section, onUpdate, act
       )}
 
       {points.length === 0 && (
-        <Empty icon={MapPin} title="Nessun punto ancora" detail="Aggiungi i posti da non perdere." action={<Btn onClick={() => setForm(EMPTY_ITEM)}>Aggiungi un punto</Btn>} />
+        <Empty
+          icon={MapPin}
+          title="Nessun punto ancora"
+          detail="I punti compaiono qui non appena aggiungi coordinate o un indirizzo a una scheda in Ristoranti, Pernottamento o Itinerario."
+        />
       )}
-
-      <div className="flex flex-col gap-3">
-        {section.items.map((item) => (
-          <div key={item.id} className="rounded-[24px] p-5 bg-[var(--card)] shadow-[0_1px_2px_rgb(var(--ink-rgb)/0.05),0_10px_24px_-14px_rgb(var(--ink-rgb)/0.25)]">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <p className="font-display font-semibold text-xl">{item.name || 'Senza nome'}</p>
-                {item.category && <p className="text-sm text-[var(--muted)]">{item.category}</p>}
-              </div>
-              <div className="flex gap-1 -mr-2 -mt-1">
-                <button onClick={() => setForm(item)} aria-label="Modifica punto" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
-                  <EditIcon size={15} />
-                </button>
-                <button onClick={() => removeItem(item)} aria-label="Elimina punto" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
-                  <DeleteIcon size={15} />
-                </button>
-              </div>
-            </div>
-            {item.note && <p className="text-base mt-2">{item.note}</p>}
-            {item.mapsLink && (
-              <a href={item.mapsLink} target="_blank" rel="noreferrer" className="text-base text-[var(--accent)] underline mt-2 inline-block">
-                Apri in Maps
-              </a>
-            )}
-            <ModifiedBy modifiedBy={item.modifiedBy} modifiedAt={item.modifiedAt} />
-          </div>
-        ))}
-      </div>
-
-      <Modal open={!!form} title={form?.id ? 'Modifica punto' : 'Nuovo punto'} onClose={() => setForm(null)}>
-        {form && (
-          <form onSubmit={saveItem} className="flex flex-col gap-3">
-            <input required placeholder="Nome" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={inputClass} />
-            <input placeholder="Categoria (spiaggia, ristorante, punto panoramico...)" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className={inputClass} />
-            <input placeholder="Link Google/Apple Maps" value={form.mapsLink} onChange={(e) => setForm({ ...form, mapsLink: e.target.value })} className={inputClass} />
-            <CoordsInput value={{ lat: form.lat, lng: form.lng }} onChange={(coords) => setForm({ ...form, ...coords })} />
-            <textarea placeholder="Nota" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} className={inputClass} rows={2} />
-            <Btn type="submit">Salva</Btn>
-          </form>
-        )}
-      </Modal>
     </div>
   )
 })

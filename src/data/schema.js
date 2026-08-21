@@ -390,9 +390,12 @@ export function buildDayTimeline(day, externalItems) {
 
 const DAY_MAP_KINDS = ['sentiero', 'spiaggia', 'pasto']
 
-// Punti con coordinate che vivono in altre sezioni/giorni del viaggio, utili
-// per la mappa aggregata. Calcolo derivato, nessuna copia salvata: chiamare
-// di nuovo dopo ogni modifica del viaggio, mai persistere il risultato.
+// Punti con coordinate (o, per il Pernottamento, anche solo un indirizzo) che
+// vivono in altre sezioni/giorni del viaggio, utili per la mappa aggregata.
+// Calcolo derivato, nessuna copia salvata: chiamare di nuovo dopo ogni
+// modifica del viaggio, mai persistere il risultato. Un punto senza lat/lng
+// ma con `address` va geocodificato da chi consuma questi dati (solo online,
+// mai salvando il risultato nel viaggio): vedi MapSection.jsx.
 export function collectExternalMapPoints(trip) {
   const fromCards = trip.sections
     .filter((s) => s.type === 'cards')
@@ -421,12 +424,13 @@ export function collectExternalMapPoints(trip) {
   const fromLodging = trip.sections
     .filter((s) => s.type === 'lodging')
     .flatMap((s) => s.items
-      .filter((i) => i.lat !== null && i.lng !== null)
+      .filter((i) => (i.lat !== null && i.lng !== null) || i.address)
       .map((i) => ({
         id: i.id,
         name: i.name,
         lat: i.lat,
         lng: i.lng,
+        address: i.lat === null || i.lng === null ? i.address : '',
         link: i.bookingLink,
         categoryGroup: 'lodging',
         origin: { tab: s.id, sectionTitle: s.title }

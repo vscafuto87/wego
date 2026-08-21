@@ -598,6 +598,31 @@ describe('collectExternalMapPoints', () => {
     expect(lodging[0].origin.sectionTitle).toBe('Pernottamento')
   })
 
+  it('include un alloggio senza coordinate ma con indirizzo, da geocodificare', () => {
+    const trip = normalizeTrip({
+      name: 'X',
+      sections: [{ title: 'Pernottamento', type: 'lodging', items: [
+        { name: 'Casa Vacanze', address: 'Via Roma 1, Ponza' },
+        { name: 'Senza nulla' }
+      ] }]
+    })
+    const points = collectExternalMapPoints(trip)
+    const lodging = points.filter((p) => p.categoryGroup === 'lodging')
+    expect(lodging).toHaveLength(1)
+    expect(lodging[0]).toMatchObject({ name: 'Casa Vacanze', lat: null, lng: null, address: 'Via Roma 1, Ponza' })
+  })
+
+  it('un alloggio con coordinate non porta un address da geocodificare', () => {
+    const trip = normalizeTrip({
+      name: 'X',
+      sections: [{ title: 'Pernottamento', type: 'lodging', items: [
+        { name: 'Hotel', lat: 41.9, lng: 12.5, address: 'Via Roma 1' }
+      ] }]
+    })
+    const [point] = collectExternalMapPoints(trip)
+    expect(point.address).toBe('')
+  })
+
   it('origin.tab di un alloggio è l\'id della sezione Pernottamento', () => {
     const trip = normalizeTrip({
       name: 'X',
