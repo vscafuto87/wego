@@ -141,7 +141,7 @@ function SortableCard({ item, onEdit, onRemove }) {
               ))}
             </div>
           )}
-          {item.kind === 'pasto' && item.prenotato && (
+          {item.kind === 'pasto' && item.prenotato && !item.date && (
             <span className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-[var(--accent2)] text-[var(--paper)] text-xs font-medium mt-3">
               <Check size={12} /> Prenotato
             </span>

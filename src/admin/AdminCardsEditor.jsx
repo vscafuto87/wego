@@ -123,7 +123,7 @@ export default function AdminCardsEditor({ section, onUpdate, activeDisplayName 
             {item.meta && <p className="font-mono text-sm text-[var(--muted)] mt-1">{item.meta}</p>}
             {isRistoranti(section) && item.date && <p className="text-sm text-[var(--accent)] mt-1">Prenotato · {item.date}{item.time ? ` · ${item.time}` : ''}</p>}
             {item.kind !== 'sentiero' && item.detail && <p className="text-base mt-2">{item.detail}</p>}
-            {item.kind === 'pasto' && item.luogo && <p className="text-base mt-2">{item.luogo}{item.prenotato ? ' · prenotato' : ''}</p>}
+            {item.kind === 'pasto' && item.luogo && <p className="text-base mt-2">{item.luogo}{item.prenotato && !item.date ? ' · prenotato' : ''}</p>}
             {item.kind === 'spiaggia' && (item.accesso || item.servizi) && (
               <p className="text-base mt-2">{[item.accesso, item.servizi].filter(Boolean).join(' · ')}</p>
             )}
