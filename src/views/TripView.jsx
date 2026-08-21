@@ -186,10 +186,19 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
   }, [activeTab, trip, extraSpace])
 
   // Il titolo grande dell'header si riduce scorrendo, come la nav bar di
-  // un'app nativa.
+  // un'app nativa. L'evento scroll può sparare molte volte per frame: senza
+  // il throttle a requestAnimationFrame, ogni sparo forzava un re-render che
+  // ricalcolava padding/opacità dell'header, causando un flickering visibile
+  // prima che l'header si assestasse nella barra compatta.
   useEffect(() => {
+    let ticking = false
     function onScroll() {
-      setScrollY(window.scrollY)
+      if (ticking) return
+      ticking = true
+      requestAnimationFrame(() => {
+        setScrollY(window.scrollY)
+        ticking = false
+      })
     }
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
@@ -294,8 +303,8 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
       ) : (
       <>
       <header className="sticky top-0 z-30 overflow-hidden" style={{ boxShadow: `0 1px 0 rgb(var(--ink-rgb) / ${collapse * 0.08})` }}>
-        <div className="absolute inset-0" style={{ background: 'var(--paper)', opacity: collapse }} />
-        <div className="absolute inset-0" style={{ opacity: 1 - collapse }}>
+        <div className="absolute inset-0" style={{ background: 'var(--paper)', opacity: collapse, willChange: 'opacity' }} />
+        <div className="absolute inset-0" style={{ opacity: 1 - collapse, willChange: 'opacity' }}>
           <Terrain seed={trip.id} palette={trip.palette} height={140} className="h-full w-full" />
         </div>
         <div className="relative px-5 max-w-2xl mx-auto" style={{ paddingTop: `calc(env(safe-area-inset-top) + ${32 - collapse * 8}px)`, paddingBottom: 24 - collapse * 16 }}>
