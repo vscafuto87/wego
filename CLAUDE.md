@@ -225,6 +225,32 @@ Non esiste un gate d'accesso separato per l'admin: `/` e `/admin` usano lo stess
 
 ---
 
+## Skill di pianificazione viaggio (`wego-trip`)
+
+Un CLI Node standalone, `scripts/wego-trip-sync.mjs` (+ `scripts/wego-trip-lib.mjs`
+per la logica pura), che legge/scrive direttamente `tv_trips` su Supabase con le
+stesse RLS dell'app — nessuna API `admin`, nessuna service-role key. Comandi:
+`list`, `pull`, `push`, `create`, `items`, `attach` (quest'ultimo allega un PDF a
+un trasporto/alloggio nel bucket `trip-attachments`). Autenticazione con
+`WEGO_SCRIPT_EMAIL`/`WEGO_SCRIPT_PASSWORD` in `.env.local` (mai `VITE_`-prefissate).
+Nessuna scrittura senza `--yes` esplicito: ogni comando di scrittura fa prima un
+dry-run.
+
+Due canali usano questo stesso CLI, senza duplicarne la logica:
+
+- **Skill di progetto Claude Code**, `.claude/skills/wego-trip/SKILL.md` — pianifica
+  un viaggio conversando (giorno per giorno) da Claude Code, lancia il CLI via Bash.
+- **Server MCP**, `scripts/wego-trip-mcp-server.mjs` — stesso CLI esposto come
+  strumenti MCP, per usarlo dall'app desktop di Claude.ai (dove non c'è accesso a
+  Bash/skill). Va registrato a mano nel `claude_desktop_config.json` dell'utente,
+  con le credenziali nel campo `env` di quella configurazione — mai nel repo.
+
+Spec e piani in `docs/superpowers/specs/` e `docs/superpowers/plans/` (file con
+`skill-pianificazione-viaggio`/`skill-wego-trip-*` nel nome) per il contesto
+completo di ogni decisione.
+
+---
+
 ## Design system — è l'identità del prodotto, non decorazione
 
 Font: `Barlow Condensed` (titoli e tab, come le etichette di una carta escursionistica),
@@ -258,7 +284,9 @@ scusarsi. Le schermate vuote sono un invito, non un avviso.
   non richieste; non rifattorizzare codice che funziona per il gusto di farlo.
 - Prima di installare una dipendenza nuova, chiedi. Il budget è: React, Tailwind,
   lucide-react, idb-keyval, @supabase/supabase-js, vite-plugin-pwa, leaflet,
-  react-leaflet. Nient'altro.
+  react-leaflet. Nient'altro. Eccezione approvata separatamente:
+  `@modelcontextprotocol/sdk`, usata solo da `scripts/wego-trip-mcp-server.mjs`
+  (vedi sotto) — non entra mai nel bundle dell'app, resta uno strumento locale.
 - Dopo ogni step scrivi in una riga cosa hai completato.
 - Fermati e chiedi prima di: cancellare file, cambiare lo schema del viaggio, toccare
   le migrazioni Supabase, modificare i token del design system.
