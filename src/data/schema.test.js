@@ -76,7 +76,7 @@ describe('dayItemFieldsForKind', () => {
     expect(dayItemFieldsForKind('spiaggia')).toEqual(['accesso', 'servizi', 'lat', 'lng'])
   })
   it('pasto', () => {
-    expect(dayItemFieldsForKind('pasto')).toEqual(['luogo', 'prenotato', 'lat', 'lng'])
+    expect(dayItemFieldsForKind('pasto')).toEqual(['prenotato', 'lat', 'lng'])
   })
   it('generico o sconosciuto: nessun campo proprio', () => {
     expect(dayItemFieldsForKind('')).toEqual([])
@@ -90,7 +90,6 @@ describe('normalizeTrip — kind sulle voci del giorno', () => {
     expect(item.kind).toBe('')
     expect(item.durata).toBeUndefined()
     expect(item.accesso).toBeUndefined()
-    expect(item.luogo).toBeUndefined()
   })
 
   it('sentiero: distanza, durata, dislivello, difficolta', () => {
@@ -117,10 +116,9 @@ describe('normalizeTrip — kind sulle voci del giorno', () => {
     expect(item.servizi).toBe('bar')
   })
 
-  it('pasto: luogo, prenotato', () => {
-    const item = tripWithItem({ title: 'Cena', kind: 'pasto', luogo: 'Trattoria', prenotato: true }).days[0].items[0]
+  it('pasto: prenotato', () => {
+    const item = tripWithItem({ title: 'Cena', kind: 'pasto', prenotato: true }).days[0].items[0]
     expect(item.kind).toBe('pasto')
-    expect(item.luogo).toBe('Trattoria')
     expect(item.prenotato).toBe(true)
   })
 
@@ -418,13 +416,12 @@ describe('normalizeTrip — le schede di Ristoranti sono sempre kind "pasto"', (
     expect(ristoranti.items[0].kind).toBe('pasto')
   })
 
-  it('forzando kind "pasto" popola anche i campi luogo/prenotato del kind', () => {
+  it('forzando kind "pasto" popola anche il campo prenotato del kind', () => {
     const trip = normalizeTrip({
       name: 'X',
-      sections: [{ title: 'Ristoranti', type: 'cards', items: [{ title: 'X', luogo: 'Porto', prenotato: true }] }]
+      sections: [{ title: 'Ristoranti', type: 'cards', items: [{ title: 'X', prenotato: true }] }]
     })
     const item = trip.sections.find((s) => s.title === 'Ristoranti').items[0]
-    expect(item.luogo).toBe('Porto')
     expect(item.prenotato).toBe(true)
   })
 
@@ -446,7 +443,7 @@ describe('dayItemFieldsForKind — include lat/lng per sentiero/spiaggia/pasto',
     expect(dayItemFieldsForKind('spiaggia')).toEqual(['accesso', 'servizi', 'lat', 'lng'])
   })
   it('pasto', () => {
-    expect(dayItemFieldsForKind('pasto')).toEqual(['luogo', 'prenotato', 'lat', 'lng'])
+    expect(dayItemFieldsForKind('pasto')).toEqual(['prenotato', 'lat', 'lng'])
   })
   it('voce generica: ancora nessun campo proprio', () => {
     expect(dayItemFieldsForKind('')).toEqual([])
@@ -748,15 +745,15 @@ describe('collectExternalDayItems', () => {
     expect(card.origin).toEqual({ tab: ristorantiSection.id })
   })
 
-  it('la voce ristorante porta anche kind, meta, luogo, prenotato e tag, per renderla identica alla scheda di origine', () => {
+  it('la voce ristorante porta anche kind, meta, prenotato e tag, per renderla identica alla scheda di origine', () => {
     const trip = normalizeTrip({
       name: 'X',
       sections: [{ title: 'Ristoranti', type: 'cards', items: [
-        { title: 'Da Assunta', kind: 'pasto', meta: '€€', luogo: 'Porto', prenotato: true, tags: ['pesce'], date: '2026-08-30', time: '20:30' }
+        { title: 'Da Assunta', kind: 'pasto', meta: '€€', prenotato: true, tags: ['pesce'], date: '2026-08-30', time: '20:30' }
       ] }]
     })
     const card = collectExternalDayItems(trip).find((i) => i.type === 'card')
-    expect(card).toMatchObject({ kind: 'pasto', meta: '€€', luogo: 'Porto', prenotato: true, tags: ['pesce'] })
+    expect(card).toMatchObject({ kind: 'pasto', meta: '€€', prenotato: true, tags: ['pesce'] })
   })
 
   it('viaggio senza sezione Ristoranti prenotata: nessuna voce card', () => {

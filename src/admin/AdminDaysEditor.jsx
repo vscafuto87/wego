@@ -13,13 +13,13 @@ function formatDate(date) {
 }
 
 const EMPTY_DAY = { date: '', title: '', note: '' }
-const EMPTY_ITEM = { kind: '', time: '', title: '', detail: '', link: '', distanza: '', durata: '', dislivello: '', difficolta: '', accesso: '', servizi: '', luogo: '', prenotato: false }
+const EMPTY_ITEM = { kind: '', time: '', title: '', detail: '', link: '', distanza: '', durata: '', dislivello: '', difficolta: '', accesso: '', servizi: '', prenotato: false }
 
 const KIND_OPTIONS = [
   { value: '', label: 'Generica' },
   { value: 'sentiero', label: 'Sentiero' },
   { value: 'spiaggia', label: 'Spiaggia' },
-  { value: 'pasto', label: 'Pasto' }
+  { value: 'pasto', label: 'Ristorante' }
 ]
 
 const KIND_ICONS = { sentiero: Mountain, spiaggia: Waves, pasto: Utensils }
@@ -30,7 +30,7 @@ function KindIcon({ kind }) {
   return <Icon size={15} className="inline mr-1.5 -mt-0.5 text-[var(--muted)]" />
 }
 
-const ALL_KIND_FIELDS = ['distanza', 'durata', 'dislivello', 'difficolta', 'accesso', 'servizi', 'luogo', 'prenotato']
+const ALL_KIND_FIELDS = ['distanza', 'durata', 'dislivello', 'difficolta', 'accesso', 'servizi', 'prenotato']
 
 function withoutKindFields(item) {
   const clean = { ...item }
@@ -314,13 +314,10 @@ export default function AdminDaysEditor({ trip, onUpdate, activeDisplayName, onN
               </>
             )}
             {itemForm.kind === 'pasto' && (
-              <>
-                <input placeholder="Nome del locale" value={itemForm.luogo} onChange={(e) => setItemForm({ ...itemForm, luogo: e.target.value })} className={inputClass} />
-                <label className="flex items-center gap-2 text-base">
-                  <input type="checkbox" checked={itemForm.prenotato} onChange={(e) => setItemForm({ ...itemForm, prenotato: e.target.checked })} />
-                  Prenotato
-                </label>
-              </>
+              <label className="flex items-center gap-2 text-base">
+                <input type="checkbox" checked={itemForm.prenotato} onChange={(e) => setItemForm({ ...itemForm, prenotato: e.target.checked })} />
+                Prenotato
+              </label>
             )}
             <div className="flex gap-2">
               <button type="submit" className="inline-flex items-center justify-center rounded-full font-sans font-medium text-base h-11 px-5 text-[var(--paper)] bg-[var(--accent)]">Salva</button>

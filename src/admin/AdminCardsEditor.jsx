@@ -7,14 +7,14 @@ import { stampModified, dayItemFieldsForKind } from '../data/schema.js'
 import { sentieroStats } from '../views/Days.jsx'
 
 const inputClass = 'border border-[var(--line)] bg-[var(--paper)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
-const EMPTY_FORM = { title: '', meta: '', kind: '', detail: '', link: '', tags: '', address: '', lat: null, lng: null, distanza: '', durata: '', dislivello: '', difficolta: '', accesso: '', servizi: '', luogo: '', prenotato: false, date: '', time: '' }
+const EMPTY_FORM = { title: '', meta: '', kind: '', detail: '', link: '', tags: '', address: '', phone: '', lat: null, lng: null, distanza: '', durata: '', dislivello: '', difficolta: '', accesso: '', servizi: '', prenotato: false, date: '', time: '' }
 const isRistoranti = (section) => section.type === 'cards' && section.title === 'Ristoranti'
 
 const KIND_OPTIONS = [
   { value: '', label: 'Generica' },
   { value: 'sentiero', label: 'Sentiero' },
   { value: 'spiaggia', label: 'Spiaggia' },
-  { value: 'pasto', label: 'Pasto' }
+  { value: 'pasto', label: 'Ristorante' }
 ]
 
 const KIND_ICONS = { sentiero: Mountain, spiaggia: Waves, pasto: Utensils }
@@ -25,7 +25,7 @@ function KindIcon({ kind }) {
   return <Icon size={15} className="inline mr-1.5 -mt-0.5 text-[var(--muted)]" />
 }
 
-const ALL_KIND_FIELDS = ['distanza', 'durata', 'dislivello', 'difficolta', 'accesso', 'servizi', 'luogo', 'prenotato']
+const ALL_KIND_FIELDS = ['distanza', 'durata', 'dislivello', 'difficolta', 'accesso', 'servizi', 'prenotato']
 
 function withoutKindFields(item) {
   const clean = { ...item }
@@ -35,7 +35,7 @@ function withoutKindFields(item) {
 
 function fieldsForForm(form) {
   const tags = form.tags.split(',').map((x) => x.trim()).filter(Boolean)
-  const common = { title: form.title, meta: form.meta, kind: form.kind, detail: form.detail, link: form.link, tags, address: form.address, lat: form.lat, lng: form.lng, date: form.date, time: form.time }
+  const common = { title: form.title, meta: form.meta, kind: form.kind, detail: form.detail, link: form.link, tags, address: form.address, phone: form.phone, lat: form.lat, lng: form.lng, date: form.date, time: form.time }
   for (const field of dayItemFieldsForKind(form.kind)) {
     if (field === 'lat' || field === 'lng') continue
     common[field] = form[field]
@@ -122,9 +122,10 @@ export default function AdminCardsEditor({ section, onUpdate, activeDisplayName 
             </div>
             {item.meta && <p className="font-mono text-sm text-[var(--muted)] mt-1">{item.meta}</p>}
             {item.address && <p className="text-sm text-[var(--muted)] mt-1">{item.address}</p>}
+            {item.phone && <p className="text-sm text-[var(--muted)] mt-1">{item.phone}</p>}
             {isRistoranti(section) && item.date && <p className="text-sm text-[var(--accent)] mt-1">Prenotato · {item.date}{item.time ? ` · ${item.time}` : ''}</p>}
             {item.kind !== 'sentiero' && item.detail && <p className="text-base mt-2">{item.detail}</p>}
-            {item.kind === 'pasto' && item.luogo && <p className="text-base mt-2">{item.luogo}{item.prenotato && !item.date ? ' · prenotato' : ''}</p>}
+            {item.kind === 'pasto' && item.prenotato && !item.date && <p className="text-base mt-2">Prenotato</p>}
             {item.kind === 'spiaggia' && (item.accesso || item.servizi) && (
               <p className="text-base mt-2">{[item.accesso, item.servizi].filter(Boolean).join(' · ')}</p>
             )}
@@ -177,15 +178,13 @@ export default function AdminCardsEditor({ section, onUpdate, activeDisplayName 
               </>
             )}
             {form.kind === 'pasto' && (
-              <>
-                <input placeholder="Nome del locale" value={form.luogo} onChange={(e) => setForm({ ...form, luogo: e.target.value })} className={inputClass} />
-                <label className="flex items-center gap-2 text-base">
-                  <input type="checkbox" checked={form.prenotato} onChange={(e) => setForm({ ...form, prenotato: e.target.checked })} />
-                  Prenotato
-                </label>
-              </>
+              <label className="flex items-center gap-2 text-base">
+                <input type="checkbox" checked={form.prenotato} onChange={(e) => setForm({ ...form, prenotato: e.target.checked })} />
+                Prenotato
+              </label>
             )}
             <input placeholder="Indirizzo" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} className={inputClass} />
+            <input placeholder="Telefono" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className={inputClass} />
             <CoordsInput
               value={{ lat: form.lat, lng: form.lng }}
               onChange={(coords) => setForm({ ...form, ...coords })}

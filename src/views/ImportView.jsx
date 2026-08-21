@@ -21,7 +21,7 @@ const PROMPT = `Trasforma questi appunti di viaggio grezzi in un JSON con questo
   ],
   "sections": [
     { "title": "Ristoranti", "icon": "food", "type": "cards",
-      "items": [ { "title": "string", "meta": "string", "detail": "string", "link": "string", "tags": ["string"], "date": "AAAA-MM-GG o vuoto", "time": "HH:MM o vuoto" } ] },
+      "items": [ { "title": "string", "meta": "string", "detail": "string", "link": "string", "phone": "string", "tags": ["string"], "date": "AAAA-MM-GG o vuoto", "time": "HH:MM o vuoto" } ] },
     { "title": "Trasporti", "icon": "bus", "type": "transport",
       "items": [ { "mode": "auto | treno | aereo | bus | traghetto", "from": "string", "to": "string", "date": "AAAA-MM-GG", "time": "HH:MM o vuoto", "ticketLink": "string", "note": "string" } ] },
     { "title": "Pernottamento", "icon": "bed", "type": "lodging",
@@ -55,15 +55,15 @@ scelto, nessun altro). Vale la stessa regola per entrambi:
 - "kind": "spiaggia" → aggiungi "accesso", "servizi" (string), "lat" e "lng" (numero o
   null, solo se noti per certo dagli appunti, altrimenti null).
   Es: { "time": "", "title": "Cala Fetovaia", "kind": "spiaggia", "accesso": "sentiero 15 min", "servizi": "bar, noleggio", "lat": null, "lng": null, "detail": "", "link": "" }
-- "kind": "pasto" → aggiungi "luogo" (string), "prenotato" (boolean), "lat" e "lng"
+- "kind": "pasto" → aggiungi "prenotato" (boolean), "lat" e "lng"
   (numero o null, solo se noti per certo dagli appunti, altrimenti null).
-  Es: { "time": "20:00", "title": "Cena", "kind": "pasto", "luogo": "Trattoria da Mario", "prenotato": true, "lat": null, "lng": null, "detail": "", "link": "" }
+  Es: { "time": "20:00", "title": "Cena da Mario", "kind": "pasto", "prenotato": true, "lat": null, "lng": null, "detail": "", "link": "" }
 
 Un item "cards" con "kind" ha gli stessi campi extra di sopra più i suoi campi normali
-(meta, tags): "lat"/"lng" ci sono sempre su una scheda, con o senza kind, non solo su
-quelle con kind. "date"/"time" restano quelli descritti sopra per Ristoranti, non legati
-al kind.
-Es: { "title": "Cena da Mario", "meta": "", "kind": "pasto", "luogo": "Trattoria da Mario", "prenotato": true, "detail": "", "link": "", "tags": [], "lat": null, "lng": null, "date": "", "time": "" }
+(meta, tags, phone): "lat"/"lng" ci sono sempre su una scheda, con o senza kind, non solo
+su quelle con kind. "date"/"time" restano quelli descritti sopra per Ristoranti, non
+legati al kind.
+Es: { "title": "Trattoria da Mario", "meta": "", "kind": "pasto", "prenotato": true, "detail": "", "link": "", "phone": "", "tags": [], "lat": null, "lng": null, "date": "", "time": "" }
 
 Non inventare né calcolare "lat"/"lng" da un nome di luogo o da una ricerca: usali solo
 se gli appunti grezzi contengono un link Maps o coordinate numeriche esplicite. Vale anche

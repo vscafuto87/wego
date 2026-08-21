@@ -8,7 +8,7 @@ const DAY_ORDER_TAGS = ['item', 'transport', 'card']
 const KIND_FIELDS = {
   sentiero: ['distanza', 'durata', 'dislivello', 'difficolta', 'lat', 'lng'],
   spiaggia: ['accesso', 'servizi', 'lat', 'lng'],
-  pasto: ['luogo', 'prenotato', 'lat', 'lng']
+  pasto: ['prenotato', 'lat', 'lng']
 }
 
 export function dayItemFieldsForKind(kind) {
@@ -51,7 +51,7 @@ function normalizeDayItem(raw) {
     return { ...base, accesso: str(item.accesso), servizi: str(item.servizi), lat: toCoord(item.lat), lng: toCoord(item.lng) }
   }
   if (kind === 'pasto') {
-    return { ...base, luogo: str(item.luogo), prenotato: item.prenotato === true, lat: toCoord(item.lat), lng: toCoord(item.lng) }
+    return { ...base, prenotato: item.prenotato === true, lat: toCoord(item.lat), lng: toCoord(item.lng) }
   }
   return base
 }
@@ -88,6 +88,7 @@ function normalizeCardItem(raw) {
     link: str(item.link),
     tags: arr(item.tags).map(str),
     address: str(item.address),
+    phone: str(item.phone),
     lat: toCoord(item.lat),
     lng: toCoord(item.lng),
     date: str(item.date),
@@ -102,7 +103,7 @@ function normalizeCardItem(raw) {
     return { ...base, accesso: str(item.accesso), servizi: str(item.servizi) }
   }
   if (kind === 'pasto') {
-    return { ...base, luogo: str(item.luogo), prenotato: item.prenotato === true }
+    return { ...base, prenotato: item.prenotato === true }
   }
   return base
 }
@@ -366,7 +367,7 @@ export function collectExternalDayItems(trip) {
         meta: i.meta,
         detail: i.detail,
         address: i.address,
-        luogo: i.luogo,
+        phone: i.phone,
         prenotato: i.prenotato,
         tags: i.tags,
         link: i.link,

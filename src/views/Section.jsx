@@ -1,5 +1,5 @@
 import { forwardRef, lazy, Suspense, useImperativeHandle, useRef, useState } from 'react'
-import { Plus, Check, GripVertical, ExternalLink } from 'lucide-react'
+import { Plus, Check, GripVertical, ExternalLink, Phone } from 'lucide-react'
 import EditIcon from '../components/EditIcon.jsx'
 import DeleteIcon from '../components/DeleteIcon.jsx'
 import Btn from '../components/Btn.jsx'
@@ -53,20 +53,20 @@ function isFixedSection(section) {
 
 const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
 const chipClass = 'inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-[var(--tint)] text-[var(--accent)] text-sm font-medium'
-const EMPTY_CARD = { title: '', meta: '', kind: '', detail: '', link: '', tags: '', address: '', lat: null, lng: null, distanza: '', durata: '', dislivello: '', difficolta: '', accesso: '', servizi: '', luogo: '', prenotato: false, date: '', time: '' }
+const EMPTY_CARD = { title: '', meta: '', kind: '', detail: '', link: '', tags: '', address: '', phone: '', lat: null, lng: null, distanza: '', durata: '', dislivello: '', difficolta: '', accesso: '', servizi: '', prenotato: false, date: '', time: '' }
 
 const KIND_OPTIONS = [
   { value: '', label: 'Generica' },
   { value: 'sentiero', label: 'Sentiero' },
   { value: 'spiaggia', label: 'Spiaggia' },
-  { value: 'pasto', label: 'Pasto' }
+  { value: 'pasto', label: 'Ristorante' }
 ]
 
 function kindLabel(kind) {
   return KIND_OPTIONS.find((k) => k.value === kind)?.label ?? kind
 }
 
-const ALL_KIND_FIELDS = ['distanza', 'durata', 'dislivello', 'difficolta', 'accesso', 'servizi', 'luogo', 'prenotato']
+const ALL_KIND_FIELDS = ['distanza', 'durata', 'dislivello', 'difficolta', 'accesso', 'servizi', 'prenotato']
 
 function withoutKindFields(item) {
   const clean = { ...item }
@@ -76,7 +76,7 @@ function withoutKindFields(item) {
 
 function cardFieldsForForm(cardForm) {
   const tags = cardForm.tags.split(',').map((x) => x.trim()).filter(Boolean)
-  const common = { title: cardForm.title, meta: cardForm.meta, kind: cardForm.kind, detail: cardForm.detail, link: cardForm.link, tags, address: cardForm.address, lat: cardForm.lat, lng: cardForm.lng, date: cardForm.date, time: cardForm.time }
+  const common = { title: cardForm.title, meta: cardForm.meta, kind: cardForm.kind, detail: cardForm.detail, link: cardForm.link, tags, address: cardForm.address, phone: cardForm.phone, lat: cardForm.lat, lng: cardForm.lng, date: cardForm.date, time: cardForm.time }
   for (const field of dayItemFieldsForKind(cardForm.kind)) {
     if (field === 'lat' || field === 'lng') continue
     common[field] = cardForm[field]
@@ -129,7 +129,6 @@ function SortableCard({ item, onEdit, onRemove }) {
           {item.meta && <p className="font-mono text-sm text-[var(--muted)] mt-1.5">{item.meta}</p>}
           {item.address && <p className="text-sm text-[var(--muted)] mt-1.5">{item.address}</p>}
           {item.kind !== 'sentiero' && item.detail && <p className="text-base mt-2">{item.detail}</p>}
-          {item.kind === 'pasto' && item.luogo && <p className="text-base mt-2">{item.luogo}</p>}
           {item.kind === 'spiaggia' && (item.accesso || item.servizi) && (
             <p className="text-base mt-2">{[item.accesso, item.servizi].filter(Boolean).join(' · ')}</p>
           )}
@@ -173,13 +172,20 @@ function SortableCard({ item, onEdit, onRemove }) {
         </div>
       </div>
 
-      {item.link && (
+      {(item.link || item.phone) && (
         <>
           <div className="h-px bg-[var(--line)] mt-3 mb-3" />
           <div className="flex gap-2 flex-wrap">
-            <a href={item.link} target="_blank" rel="noreferrer" className={chipClass}>
-              <ExternalLink size={15} /> Apri il link
-            </a>
+            {item.link && (
+              <a href={item.link} target="_blank" rel="noreferrer" className={chipClass}>
+                <ExternalLink size={15} /> Apri il link
+              </a>
+            )}
+            {item.phone && (
+              <a href={`tel:${item.phone.replace(/\s+/g, '')}`} className={chipClass}>
+                <Phone size={15} /> Chiama
+              </a>
+            )}
           </div>
         </>
       )}
@@ -539,15 +545,13 @@ const Section = forwardRef(function Section({ trip, section, onUpdate, activeDis
               </>
             )}
             {cardForm.kind === 'pasto' && (
-              <>
-                <input placeholder="Nome del locale" value={cardForm.luogo} onChange={(e) => setCardForm({ ...cardForm, luogo: e.target.value })} className={inputClass} />
-                <label className="flex items-center gap-2 text-base">
-                  <input type="checkbox" checked={cardForm.prenotato} onChange={(e) => setCardForm({ ...cardForm, prenotato: e.target.checked })} />
-                  Prenotato
-                </label>
-              </>
+              <label className="flex items-center gap-2 text-base">
+                <input type="checkbox" checked={cardForm.prenotato} onChange={(e) => setCardForm({ ...cardForm, prenotato: e.target.checked })} />
+                Prenotato
+              </label>
             )}
             <input placeholder="Indirizzo" value={cardForm.address} onChange={(e) => setCardForm({ ...cardForm, address: e.target.value })} className={inputClass} />
+            <input placeholder="Telefono" value={cardForm.phone} onChange={(e) => setCardForm({ ...cardForm, phone: e.target.value })} className={inputClass} />
             <CoordsInput
               value={{ lat: cardForm.lat, lng: cardForm.lng }}
               onChange={(coords) => setCardForm({ ...cardForm, ...coords })}

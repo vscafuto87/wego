@@ -1,5 +1,5 @@
 import { forwardRef, lazy, Suspense, useImperativeHandle, useMemo, useState } from 'react'
-import { Plus, Mountain, Waves, Utensils, ExternalLink, Check, Ruler, Clock, TrendingUp, MapPin, Bus, ArrowRight, GripVertical } from 'lucide-react'
+import { Plus, Mountain, Waves, Utensils, ExternalLink, Check, Ruler, Clock, TrendingUp, MapPin, Bus, ArrowRight, GripVertical, Phone } from 'lucide-react'
 import EditIcon from '../components/EditIcon.jsx'
 import DeleteIcon from '../components/DeleteIcon.jsx'
 import Btn from '../components/Btn.jsx'
@@ -45,13 +45,13 @@ function closestDayId(days, todayStr) {
 }
 
 const EMPTY_DAY = { date: '', title: '', note: '' }
-const EMPTY_ITEM = { kind: '', time: '', title: '', detail: '', link: '', distanza: '', durata: '', dislivello: '', difficolta: '', accesso: '', servizi: '', luogo: '', prenotato: false, lat: null, lng: null }
+const EMPTY_ITEM = { kind: '', time: '', title: '', detail: '', link: '', distanza: '', durata: '', dislivello: '', difficolta: '', accesso: '', servizi: '', prenotato: false, lat: null, lng: null }
 
 const KIND_OPTIONS = [
   { value: '', label: 'Generica' },
   { value: 'sentiero', label: 'Sentiero' },
   { value: 'spiaggia', label: 'Spiaggia' },
-  { value: 'pasto', label: 'Pasto' }
+  { value: 'pasto', label: 'Ristorante' }
 ]
 
 export const KIND_ICONS = { '': MapPin, sentiero: Mountain, spiaggia: Waves, pasto: Utensils }
@@ -70,7 +70,7 @@ function transportModeLabel(mode) {
   return TRANSPORT_MODES.find((m) => m.value === mode)?.label ?? 'Trasporto'
 }
 
-const ALL_KIND_FIELDS = ['distanza', 'durata', 'dislivello', 'difficolta', 'accesso', 'servizi', 'luogo', 'prenotato', 'lat', 'lng']
+const ALL_KIND_FIELDS = ['distanza', 'durata', 'dislivello', 'difficolta', 'accesso', 'servizi', 'prenotato', 'lat', 'lng']
 
 function positiveDislivello(value) {
   return value ? value.split('·')[0].trim() : value
@@ -112,7 +112,6 @@ export function DayItemCard({ item, onEdit, onRemove, onNavigate, dragHandle }) 
           {item.meta && <p className="font-mono text-sm text-[var(--muted)] mt-1">{item.meta}</p>}
           {item.address && <p className="text-sm text-[var(--muted)] mt-1">{item.address}</p>}
           {item.kind !== 'sentiero' && item.detail && <p className="text-sm text-[var(--muted)] mt-1">{item.detail}</p>}
-          {item.kind === 'pasto' && item.luogo && <p className="text-sm text-[var(--muted)] mt-1">{item.luogo}</p>}
           {item.kind === 'spiaggia' && (item.accesso || item.servizi) && (
             <p className="text-sm text-[var(--muted)] mt-1">{[item.accesso, item.servizi].filter(Boolean).join(' · ')}</p>
           )}
@@ -160,13 +159,18 @@ export function DayItemCard({ item, onEdit, onRemove, onNavigate, dragHandle }) 
         </span>
       )}
 
-      {(item.link || (item.origin && onNavigate)) && (
+      {(item.link || item.phone || (item.origin && onNavigate)) && (
         <>
           <div className="h-px bg-[var(--line)] mt-3 mb-3" />
           <div className="flex gap-2 flex-wrap">
             {item.link && (
               <a href={item.link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-[var(--tint)] text-[var(--accent)] text-sm font-medium">
                 <ExternalLink size={15} /> Apri il link
+              </a>
+            )}
+            {item.phone && (
+              <a href={`tel:${item.phone.replace(/\s+/g, '')}`} className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-[var(--tint)] text-[var(--accent)] text-sm font-medium">
+                <Phone size={15} /> Chiama
               </a>
             )}
             {item.origin && onNavigate && (
@@ -575,13 +579,10 @@ const Days = forwardRef(function Days({ trip, onUpdate, activeDisplayName, onNav
               </>
             )}
             {itemForm.kind === 'pasto' && (
-              <>
-                <input placeholder="Nome del locale" value={itemForm.luogo} onChange={(e) => setItemForm({ ...itemForm, luogo: e.target.value })} className={inputClass} />
-                <label className="flex items-center gap-2 text-base">
-                  <input type="checkbox" checked={itemForm.prenotato} onChange={(e) => setItemForm({ ...itemForm, prenotato: e.target.checked })} />
-                  Prenotato
-                </label>
-              </>
+              <label className="flex items-center gap-2 text-base">
+                <input type="checkbox" checked={itemForm.prenotato} onChange={(e) => setItemForm({ ...itemForm, prenotato: e.target.checked })} />
+                Prenotato
+              </label>
             )}
 
             {['sentiero', 'spiaggia', 'pasto'].includes(itemForm.kind) && (
