@@ -9,21 +9,47 @@ import ModifiedBy from '../components/ModifiedBy.jsx'
 import CoordsInput from '../components/CoordsInput.jsx'
 import Transport from './Transport.jsx'
 import Lodging from './Lodging.jsx'
-import { DndContext, PointerSensor, KeyboardSensor, useSensor, useSensors, closestCenter } from '@dnd-kit/core'
+import { DndContext, PointerSensor, KeyboardSensor, useSensor, useSensors, closestCenter, useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy, sortableKeyboardCoordinates, arrayMove, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 
 const MapSection = lazy(() => import('./MapSection.jsx'))
 
+function isRistoranti(section) {
+  return section.type === 'cards' && section.title === 'Ristoranti'
+}
+
+const CARD_DATE_FMT = new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short' })
+
+function formatCardDate(date) {
+  return date ? CARD_DATE_FMT.format(new Date(`${date}T00:00:00`)) : ''
+}
+
+function groupKeyFor(item) {
+  return item.date ? 'prenotati' : 'consigliati'
+}
+
 function isFixedSection(section) {
   if (section.type === 'transport' || section.type === 'lodging' || section.type === 'map') return true
-  return section.type === 'cards' && section.title === 'Ristoranti'
+  return isRistoranti(section)
 }
 
 const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
 
 function updateSection(trip, sectionId, fn) {
   return { ...trip, sections: trip.sections.map((s) => (s.id === sectionId ? fn(s) : s)) }
+}
+
+const RISTORANTI_GROUPS = [
+  { key: 'prenotati', label: 'Prenotati' },
+  { key: 'consigliati', label: 'Consigliati' }
+]
+
+// Contenitore di un gruppo Prenotati/Consigliati: resta un'area di drop
+// valida anche quando il gruppo è vuoto (dnd-kit "multiple containers").
+function DroppableGroup({ groupKey, children }) {
+  const { setNodeRef } = useDroppable({ id: `group-${groupKey}` })
+  return <div ref={setNodeRef} className="flex flex-col gap-3 min-h-[3rem]">{children}</div>
 }
 
 // Scheda Ristoranti trascinabile: la maniglia avvia il drag, il resto della
@@ -75,6 +101,11 @@ function SortableCard({ item, onEdit, onRemove }) {
           ))}
         </div>
       )}
+      {item.date && (
+        <span className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-[var(--accent2)] text-[var(--paper)] text-xs font-medium mt-3">
+          <Check size={12} /> Prenotato · {formatCardDate(item.date)}{item.time ? ` · ${item.time}` : ''}
+        </span>
+      )}
       <ModifiedBy modifiedBy={item.modifiedBy} modifiedAt={item.modifiedAt} />
     </div>
   )
@@ -108,9 +139,66 @@ const Section = forwardRef(function Section({ trip, section, onUpdate, activeDis
     )
   }
 
+  function targetGroupKey(over, items) {
+    if (!over) return null
+    if (over.id === 'group-prenotati' || over.id === 'group-consigliati') return over.id.replace('group-', '')
+    const overItem = items.find((it) => it.id === over.id)
+    return overItem ? groupKeyFor(overItem) : null
+  }
+
+  // Trascinare una scheda Ristoranti nell'altro gruppo cambia la
+  // prenotazione: verso "Prenotati" chiede data/ora (annullare il prompt
+  // annulla lo spostamento), verso "Consigliati" chiede conferma prima di
+  // svuotarla (annullare la conferma annulla lo spostamento). Dentro lo
+  // stesso gruppo, riordina soltanto.
+  function handleRistorantiDragEnd(event) {
+    const { active, over } = event
+    if (!over) return
+    onUpdate((t) =>
+      updateSection(t, section.id, (s) => {
+        const activeItem = s.items.find((it) => it.id === active.id)
+        if (!activeItem) return s
+        const fromGroup = groupKeyFor(activeItem)
+        const toGroup = targetGroupKey(over, s.items)
+        if (!toGroup) return s
+        if (fromGroup === toGroup && active.id === over.id) return s
+
+        let updatedItem = activeItem
+        if (fromGroup !== toGroup) {
+          if (toGroup === 'prenotati') {
+            const date = window.prompt('Data della prenotazione (AAAA-MM-GG)', '')
+            if (!date) return s
+            const time = window.prompt('Ora della prenotazione (HH:MM, lascia vuoto se non serve)', '') ?? ''
+            updatedItem = stampModified({ ...activeItem, date, time }, activeDisplayName)
+          } else {
+            if (!window.confirm(`Annullare la prenotazione di "${activeItem.title}"?`)) return s
+            updatedItem = stampModified({ ...activeItem, date: '', time: '' }, activeDisplayName)
+          }
+        }
+
+        const withoutActive = s.items.filter((it) => it.id !== active.id)
+        const overIsGroupContainer = over.id === 'group-prenotati' || over.id === 'group-consigliati'
+        const overIndex = overIsGroupContainer ? -1 : withoutActive.findIndex((it) => it.id === over.id)
+
+        if (overIndex === -1) {
+          const groupItems = withoutActive.filter((it) => groupKeyFor(it) === toGroup)
+          const lastOfGroupId = groupItems.length > 0 ? groupItems[groupItems.length - 1].id : null
+          const insertAt = lastOfGroupId ? withoutActive.findIndex((it) => it.id === lastOfGroupId) + 1 : withoutActive.length
+          const items = [...withoutActive]
+          items.splice(insertAt, 0, updatedItem)
+          return { ...s, items }
+        }
+
+        const items = [...withoutActive]
+        items.splice(overIndex, 0, updatedItem)
+        return { ...s, items }
+      })
+    )
+  }
+
   useImperativeHandle(ref, () => ({
     openAdd: () => {
-      if (section.type === 'cards') setCardForm({ title: '', meta: '', detail: '', link: '', tags: '', lat: null, lng: null })
+      if (section.type === 'cards') setCardForm({ title: '', meta: '', detail: '', link: '', tags: '', lat: null, lng: null, date: '', time: '' })
       else if (section.type === 'checklist') checklistInputRef.current?.focus()
       else childRef.current?.openAdd()
     }
@@ -177,13 +265,13 @@ const Section = forwardRef(function Section({ trip, section, onUpdate, activeDis
         )}
       </div>
 
-      {section.type === 'cards' && (
+      {section.type === 'cards' && !isRistoranti(section) && (
         <>
           {section.items.length === 0 && (
             <Empty
               title="Nessuna scheda ancora"
               detail="Aggiungine una per iniziare."
-              action={<Btn onClick={() => setCardForm({ title: '', meta: '', detail: '', link: '', tags: '', lat: null, lng: null })}>Aggiungi una scheda</Btn>}
+              action={<Btn onClick={() => setCardForm({ title: '', meta: '', detail: '', link: '', tags: '', lat: null, lng: null, date: '', time: '' })}>Aggiungi una scheda</Btn>}
             />
           )}
           <DndContext sensors={cardSensors} collisionDetection={closestCenter} onDragEnd={handleCardDragEnd}>
@@ -193,12 +281,47 @@ const Section = forwardRef(function Section({ trip, section, onUpdate, activeDis
                   <SortableCard
                     key={item.id}
                     item={item}
-                    onEdit={() => setCardForm({ id: item.id, title: item.title, meta: item.meta, detail: item.detail, link: item.link, tags: item.tags.join(', '), lat: item.lat, lng: item.lng })}
+                    onEdit={() => setCardForm({ id: item.id, title: item.title, meta: item.meta, detail: item.detail, link: item.link, tags: item.tags.join(', '), lat: item.lat, lng: item.lng, date: item.date, time: item.time })}
                     onRemove={() => removeCard(item)}
                   />
                 ))}
               </div>
             </SortableContext>
+          </DndContext>
+        </>
+      )}
+
+      {section.type === 'cards' && isRistoranti(section) && (
+        <>
+          {section.items.length === 0 && (
+            <Empty
+              title="Nessuna scheda ancora"
+              detail="Aggiungine una per iniziare."
+              action={<Btn onClick={() => setCardForm({ title: '', meta: '', detail: '', link: '', tags: '', lat: null, lng: null, date: '', time: '' })}>Aggiungi una scheda</Btn>}
+            />
+          )}
+          <DndContext sensors={cardSensors} collisionDetection={closestCenter} onDragEnd={handleRistorantiDragEnd}>
+            {RISTORANTI_GROUPS.map(({ key, label }) => {
+              const groupItems = section.items.filter((it) => groupKeyFor(it) === key)
+              return (
+                <div key={key} className="flex flex-col gap-3">
+                  <Label>{label}</Label>
+                  {groupItems.length === 0 && <p className="text-sm text-[var(--muted)]">Nessuna scheda qui.</p>}
+                  <SortableContext items={groupItems.map((it) => it.id)} strategy={verticalListSortingStrategy}>
+                    <DroppableGroup groupKey={key}>
+                      {groupItems.map((item) => (
+                        <SortableCard
+                          key={item.id}
+                          item={item}
+                          onEdit={() => setCardForm({ id: item.id, title: item.title, meta: item.meta, detail: item.detail, link: item.link, tags: item.tags.join(', '), lat: item.lat, lng: item.lng, date: item.date, time: item.time })}
+                          onRemove={() => removeCard(item)}
+                        />
+                      ))}
+                    </DroppableGroup>
+                  </SortableContext>
+                </div>
+              )
+            })}
           </DndContext>
         </>
       )}
@@ -295,6 +418,12 @@ const Section = forwardRef(function Section({ trip, section, onUpdate, activeDis
             <input placeholder="Link" value={cardForm.link} onChange={(e) => setCardForm({ ...cardForm, link: e.target.value })} className={inputClass} />
             <input placeholder="Tag (separati da virgola)" value={cardForm.tags} onChange={(e) => setCardForm({ ...cardForm, tags: e.target.value })} className={inputClass} />
             <CoordsInput value={{ lat: cardForm.lat, lng: cardForm.lng }} onChange={(coords) => setCardForm({ ...cardForm, ...coords })} />
+            {isRistoranti(section) && (
+              <>
+                <input type="date" value={cardForm.date} onChange={(e) => setCardForm({ ...cardForm, date: e.target.value })} className={inputClass} />
+                <input type="time" value={cardForm.time} onChange={(e) => setCardForm({ ...cardForm, time: e.target.value })} className={inputClass} />
+              </>
+            )}
             <Btn type="submit">Salva</Btn>
           </form>
         )}
