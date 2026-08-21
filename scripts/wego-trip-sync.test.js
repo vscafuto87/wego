@@ -297,4 +297,34 @@ describe('cmdCreate', () => {
     await expect(cmdCreate(supabase, { user: { id: 'user-1' } }, filePath, { yes: false })).rejects.toThrow(/name/)
     expect(supabase.from).not.toHaveBeenCalled()
   })
+
+  it('interrompe il retry su errore non-23505 (non collisione)', async () => {
+    const single = vi.fn().mockResolvedValue({ data: null, error: { code: '42501', message: 'permission denied' } })
+    const insertTrip = vi.fn().mockReturnValue({ select: () => ({ single }) })
+    const supabase = {
+      from: vi.fn((table) => {
+        if (table === 'tv_trips') return { insert: insertTrip }
+        throw new Error(`tabella inattesa: ${table}`)
+      })
+    }
+    const filePath = writeTempTripFile({ name: 'Ponza', days: [], sections: [] })
+
+    await expect(cmdCreate(supabase, { user: { id: 'user-1' } }, filePath, { yes: true })).rejects.toThrow(/permission denied/)
+    expect(insertTrip).toHaveBeenCalledTimes(1)
+  })
+
+  it('esaurisce 3 tentativi se tutti falliscono con collisione 23505', async () => {
+    const single = vi.fn().mockResolvedValue({ data: null, error: { code: '23505', message: 'duplicate share_code' } })
+    const insertTrip = vi.fn().mockReturnValue({ select: () => ({ single }) })
+    const supabase = {
+      from: vi.fn((table) => {
+        if (table === 'tv_trips') return { insert: insertTrip }
+        throw new Error(`tabella inattesa: ${table}`)
+      })
+    }
+    const filePath = writeTempTripFile({ name: 'Ponza', days: [], sections: [] })
+
+    await expect(cmdCreate(supabase, { user: { id: 'user-1' } }, filePath, { yes: true })).rejects.toThrow(/duplicate share_code/)
+    expect(insertTrip).toHaveBeenCalledTimes(3)
+  })
 })
