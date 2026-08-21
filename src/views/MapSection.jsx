@@ -99,12 +99,39 @@ function useOnlineStatus() {
   return online
 }
 
-// Traduce l'indirizzo di un Pernottamento senza lat/lng in coordinate, solo
-// quando c'è rete e solo per mostrarlo sulla mappa: nessun risultato viene
-// mai scritto nel viaggio (calcolo derivato, va rifatto a ogni apertura), e
-// le richieste sono sequenziali per rispettare il limite di Nominatim (max 1
-// al secondo). Se la geocodifica fallisce il punto resta senza pin, in
-// silenzio: non è un errore da mostrare.
+// Cache locale (solo sul device, mai nel documento del viaggio) dei risultati
+// di geocodifica, per indirizzo testuale: evita di rifare da capo, ogni volta
+// che si apre la Mappa, le stesse chiamate sequenziali a Nominatim (1 al
+// secondo) per indirizzi già risolti in una sessione precedente. Nessuna
+// scadenza: se l'indirizzo cambia, cambia la chiave, quindi le voci vecchie
+// restano semplicemente inutilizzate.
+const GEOCODE_CACHE_KEY = 'wego:geocode-cache:v1'
+
+function readGeocodeCache() {
+  try {
+    return JSON.parse(localStorage.getItem(GEOCODE_CACHE_KEY)) || {}
+  } catch {
+    return {}
+  }
+}
+
+function writeGeocodeCache(address, coords) {
+  try {
+    const cache = readGeocodeCache()
+    cache[address] = coords
+    localStorage.setItem(GEOCODE_CACHE_KEY, JSON.stringify(cache))
+  } catch {
+    // storage pieno o non disponibile: la cache resta solo in memoria per questa apertura
+  }
+}
+
+// Traduce l'indirizzo di un Pernottamento o di una scheda senza lat/lng in
+// coordinate, solo quando c'è rete e solo per mostrarlo sulla mappa: nessun
+// risultato viene mai scritto nel viaggio (calcolo derivato). Prima cerca
+// nella cache locale (istantaneo); solo per gli indirizzi mai visti prima
+// chiama Nominatim, in sequenza, rispettandone il limite (max 1 al secondo).
+// Se la geocodifica fallisce il punto resta senza pin, in silenzio: non è un
+// errore da mostrare.
 function useGeocodedAddresses(points, online) {
   const [geocoded, setGeocoded] = useState({})
   const attempted = useRef(new Set())
@@ -117,6 +144,12 @@ function useGeocodedAddresses(points, online) {
     async function run() {
       for (const p of toGeocode) {
         if (cancelled) return
+        const cached = readGeocodeCache()[p.address]
+        if (cached) {
+          attempted.current.add(p.id)
+          setGeocoded((prev) => ({ ...prev, [p.id]: cached }))
+          continue
+        }
         try {
           const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(p.address)}`)
           const data = await res.json()
@@ -127,7 +160,11 @@ function useGeocodedAddresses(points, online) {
           // legittimo di `points` a metà fetch) il tentativo va ripetuto, non
           // scartato in silenzio per sempre.
           attempted.current.add(p.id)
-          if (hit) setGeocoded((prev) => ({ ...prev, [p.id]: { lat: Number(hit.lat), lng: Number(hit.lon) } }))
+          if (hit) {
+            const coords = { lat: Number(hit.lat), lng: Number(hit.lon) }
+            writeGeocodeCache(p.address, coords)
+            setGeocoded((prev) => ({ ...prev, [p.id]: coords }))
+          }
         } catch {
           if (!cancelled) attempted.current.add(p.id)
         }
