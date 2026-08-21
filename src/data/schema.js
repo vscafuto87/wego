@@ -87,6 +87,7 @@ function normalizeCardItem(raw) {
     detail: str(item.detail),
     link: str(item.link),
     tags: arr(item.tags).map(str),
+    address: str(item.address),
     lat: toCoord(item.lat),
     lng: toCoord(item.lng),
     date: str(item.date),
@@ -357,6 +358,7 @@ export function collectExternalDayItems(trip) {
         kind: i.kind,
         meta: i.meta,
         detail: i.detail,
+        address: i.address,
         luogo: i.luogo,
         prenotato: i.prenotato,
         tags: i.tags,
@@ -405,12 +407,13 @@ export function collectExternalMapPoints(trip) {
   const fromCards = trip.sections
     .filter((s) => s.type === 'cards')
     .flatMap((s) => s.items
-      .filter((i) => i.lat !== null && i.lng !== null)
+      .filter((i) => (i.lat !== null && i.lng !== null) || i.address)
       .map((i) => ({
         id: i.id,
         name: i.title,
         lat: i.lat,
         lng: i.lng,
+        address: i.lat === null || i.lng === null ? i.address : '',
         link: i.link,
         categoryGroup: i.kind || 'schede',
         origin: { tab: s.id, sectionTitle: s.title }

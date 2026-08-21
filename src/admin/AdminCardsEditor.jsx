@@ -7,7 +7,7 @@ import { stampModified, dayItemFieldsForKind } from '../data/schema.js'
 import { sentieroStats } from '../views/Days.jsx'
 
 const inputClass = 'border border-[var(--line)] bg-[var(--paper)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
-const EMPTY_FORM = { title: '', meta: '', kind: '', detail: '', link: '', tags: '', lat: null, lng: null, distanza: '', durata: '', dislivello: '', difficolta: '', accesso: '', servizi: '', luogo: '', prenotato: false, date: '', time: '' }
+const EMPTY_FORM = { title: '', meta: '', kind: '', detail: '', link: '', tags: '', address: '', lat: null, lng: null, distanza: '', durata: '', dislivello: '', difficolta: '', accesso: '', servizi: '', luogo: '', prenotato: false, date: '', time: '' }
 const isRistoranti = (section) => section.type === 'cards' && section.title === 'Ristoranti'
 
 const KIND_OPTIONS = [
@@ -35,7 +35,7 @@ function withoutKindFields(item) {
 
 function fieldsForForm(form) {
   const tags = form.tags.split(',').map((x) => x.trim()).filter(Boolean)
-  const common = { title: form.title, meta: form.meta, kind: form.kind, detail: form.detail, link: form.link, tags, lat: form.lat, lng: form.lng, date: form.date, time: form.time }
+  const common = { title: form.title, meta: form.meta, kind: form.kind, detail: form.detail, link: form.link, tags, address: form.address, lat: form.lat, lng: form.lng, date: form.date, time: form.time }
   for (const field of dayItemFieldsForKind(form.kind)) {
     if (field === 'lat' || field === 'lng') continue
     common[field] = form[field]
@@ -121,6 +121,7 @@ export default function AdminCardsEditor({ section, onUpdate, activeDisplayName 
               </div>
             </div>
             {item.meta && <p className="font-mono text-sm text-[var(--muted)] mt-1">{item.meta}</p>}
+            {item.address && <p className="text-sm text-[var(--muted)] mt-1">{item.address}</p>}
             {isRistoranti(section) && item.date && <p className="text-sm text-[var(--accent)] mt-1">Prenotato · {item.date}{item.time ? ` · ${item.time}` : ''}</p>}
             {item.kind !== 'sentiero' && item.detail && <p className="text-base mt-2">{item.detail}</p>}
             {item.kind === 'pasto' && item.luogo && <p className="text-base mt-2">{item.luogo}{item.prenotato && !item.date ? ' · prenotato' : ''}</p>}
@@ -184,7 +185,12 @@ export default function AdminCardsEditor({ section, onUpdate, activeDisplayName 
                 </label>
               </>
             )}
-            <CoordsInput value={{ lat: form.lat, lng: form.lng }} onChange={(coords) => setForm({ ...form, ...coords })} />
+            <input placeholder="Indirizzo" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} className={inputClass} />
+            <CoordsInput
+              value={{ lat: form.lat, lng: form.lng }}
+              onChange={(coords) => setForm({ ...form, ...coords })}
+              onAddressFound={(address) => setForm((f) => (f.address ? f : { ...f, address }))}
+            />
             {isRistoranti(section) && (
               <div className="flex gap-2">
                 <input type="date" aria-label="Data della prenotazione" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className={`flex-1 min-w-0 ${inputClass}`} />

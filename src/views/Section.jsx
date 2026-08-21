@@ -53,7 +53,7 @@ function isFixedSection(section) {
 
 const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
 const chipClass = 'inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-[var(--tint)] text-[var(--accent)] text-sm font-medium'
-const EMPTY_CARD = { title: '', meta: '', kind: '', detail: '', link: '', tags: '', lat: null, lng: null, distanza: '', durata: '', dislivello: '', difficolta: '', accesso: '', servizi: '', luogo: '', prenotato: false, date: '', time: '' }
+const EMPTY_CARD = { title: '', meta: '', kind: '', detail: '', link: '', tags: '', address: '', lat: null, lng: null, distanza: '', durata: '', dislivello: '', difficolta: '', accesso: '', servizi: '', luogo: '', prenotato: false, date: '', time: '' }
 
 const KIND_OPTIONS = [
   { value: '', label: 'Generica' },
@@ -76,7 +76,7 @@ function withoutKindFields(item) {
 
 function cardFieldsForForm(cardForm) {
   const tags = cardForm.tags.split(',').map((x) => x.trim()).filter(Boolean)
-  const common = { title: cardForm.title, meta: cardForm.meta, kind: cardForm.kind, detail: cardForm.detail, link: cardForm.link, tags, lat: cardForm.lat, lng: cardForm.lng, date: cardForm.date, time: cardForm.time }
+  const common = { title: cardForm.title, meta: cardForm.meta, kind: cardForm.kind, detail: cardForm.detail, link: cardForm.link, tags, address: cardForm.address, lat: cardForm.lat, lng: cardForm.lng, date: cardForm.date, time: cardForm.time }
   for (const field of dayItemFieldsForKind(cardForm.kind)) {
     if (field === 'lat' || field === 'lng') continue
     common[field] = cardForm[field]
@@ -127,6 +127,7 @@ function SortableCard({ item, onEdit, onRemove }) {
           </div>
           <p className="font-display font-semibold text-xl mt-0.5">{item.title || 'Senza titolo'}</p>
           {item.meta && <p className="font-mono text-sm text-[var(--muted)] mt-1.5">{item.meta}</p>}
+          {item.address && <p className="text-sm text-[var(--muted)] mt-1.5">{item.address}</p>}
           {item.kind !== 'sentiero' && item.detail && <p className="text-base mt-2">{item.detail}</p>}
           {item.kind === 'pasto' && item.luogo && <p className="text-base mt-2">{item.luogo}</p>}
           {item.kind === 'spiaggia' && (item.accesso || item.servizi) && (
@@ -546,7 +547,12 @@ const Section = forwardRef(function Section({ trip, section, onUpdate, activeDis
                 </label>
               </>
             )}
-            <CoordsInput value={{ lat: cardForm.lat, lng: cardForm.lng }} onChange={(coords) => setCardForm({ ...cardForm, ...coords })} />
+            <input placeholder="Indirizzo" value={cardForm.address} onChange={(e) => setCardForm({ ...cardForm, address: e.target.value })} className={inputClass} />
+            <CoordsInput
+              value={{ lat: cardForm.lat, lng: cardForm.lng }}
+              onChange={(coords) => setCardForm({ ...cardForm, ...coords })}
+              onAddressFound={(address) => setCardForm((f) => (f.address ? f : { ...f, address }))}
+            />
             {isRistoranti(section) && (
               <>
                 <label className="flex flex-col gap-1">

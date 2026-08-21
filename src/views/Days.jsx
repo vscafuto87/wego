@@ -110,6 +110,7 @@ export function DayItemCard({ item, onEdit, onRemove, onNavigate, dragHandle }) 
           {item.time && <span className="font-mono text-sm text-[var(--muted)] mt-0.5 block">{item.time}</span>}
           <p className="font-display font-semibold text-xl mt-0.5 leading-snug">{item.title}</p>
           {item.meta && <p className="font-mono text-sm text-[var(--muted)] mt-1">{item.meta}</p>}
+          {item.address && <p className="text-sm text-[var(--muted)] mt-1">{item.address}</p>}
           {item.kind !== 'sentiero' && item.detail && <p className="text-sm text-[var(--muted)] mt-1">{item.detail}</p>}
           {item.kind === 'pasto' && item.luogo && <p className="text-sm text-[var(--muted)] mt-1">{item.luogo}</p>}
           {item.kind === 'spiaggia' && (item.accesso || item.servizi) && (

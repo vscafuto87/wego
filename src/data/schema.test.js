@@ -361,6 +361,20 @@ describe('normalizeTrip — coordinate opzionali sulle schede (cards)', () => {
     expect(exported.items[0].lng).toBe(12.9)
     expect(exported.items[0].id).toBeUndefined()
   })
+
+  it('scheda con indirizzo ma senza coordinate: address riempito, lat/lng null', () => {
+    const item = tripWithCardItem({ title: 'Trattoria', address: 'Via Roma 1, Forni di Sopra (UD)' })
+      .sections.find((s) => s.title === 'Bar consigliati').items[0]
+    expect(item.address).toBe('Via Roma 1, Forni di Sopra (UD)')
+    expect(item.lat).toBeNull()
+    expect(item.lng).toBeNull()
+  })
+
+  it('exportTrip conserva address sulle schede', () => {
+    const trip = tripWithCardItem({ title: 'X', address: 'Via Roma 1' })
+    const exported = exportTrip(trip).sections.find((s) => s.title === 'Bar consigliati')
+    expect(exported.items[0].address).toBe('Via Roma 1')
+  })
 })
 
 describe('normalizeTrip — prenotazione sulle schede (cards)', () => {
@@ -522,6 +536,29 @@ describe('collectExternalMapPoints', () => {
     expect(schede).toHaveLength(1)
     expect(schede[0]).toMatchObject({ name: 'Da Assunta', lat: 40.897, lng: 12.958, link: '' })
     expect(schede[0].origin.sectionTitle).toBe('Ristoranti')
+  })
+
+  it('include una scheda senza coordinate ma con indirizzo, da geocodificare', () => {
+    const trip = normalizeTrip({
+      name: 'X',
+      sections: [{ title: 'Ristoranti', type: 'cards', items: [
+        { title: 'Osteria Da Nice', address: 'Via Venezia 14, Forni di Sopra (UD)' },
+        { title: 'Senza nulla' }
+      ] }]
+    })
+    const points = collectExternalMapPoints(trip)
+    const schede = points.filter((p) => p.categoryGroup === 'schede')
+    expect(schede).toHaveLength(1)
+    expect(schede[0]).toMatchObject({ name: 'Osteria Da Nice', lat: null, lng: null, address: 'Via Venezia 14, Forni di Sopra (UD)' })
+  })
+
+  it('una scheda con coordinate non porta un address da geocodificare', () => {
+    const trip = normalizeTrip({
+      name: 'X',
+      sections: [{ title: 'Ristoranti', type: 'cards', items: [{ title: 'X', lat: 40.9, lng: 12.9, address: 'Via Roma 1' }] }]
+    })
+    const [point] = collectExternalMapPoints(trip)
+    expect(point.address).toBe('')
   })
 
   it('conserva il link generico dell\'item, se presente', () => {

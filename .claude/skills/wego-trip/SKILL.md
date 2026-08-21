@@ -24,7 +24,7 @@ dell'app (`src/views/ImportView.jsx`) — stesso schema, zero divergenza.
       "order": ["item", "transport"] }
   ],
   "sections": [
-    { "title": "Ristoranti", "icon": "food", "type": "cards", "items": [ { "title": "", "meta": "", "detail": "", "link": "", "tags": [], "lat": null, "lng": null, "date": "", "time": "" } ] },
+    { "title": "Ristoranti", "icon": "food", "type": "cards", "items": [ { "title": "", "meta": "", "detail": "", "link": "", "tags": [], "address": "", "lat": null, "lng": null, "date": "", "time": "" } ] },
     { "title": "Trasporti", "icon": "bus", "type": "transport", "items": [ { "mode": "auto | treno | aereo | bus | traghetto", "from": "", "to": "", "date": "AAAA-MM-GG", "time": "", "ticketLink": "", "note": "", "ticketFilePath": "", "ticketFileName": "" } ] },
     { "title": "Pernottamento", "icon": "bed", "type": "lodging", "items": [ { "name": "", "checkIn": "AAAA-MM-GG", "checkOut": "AAAA-MM-GG", "address": "", "bookingLink": "", "note": "", "bookingFilePath": "", "bookingFileName": "" } ] },
     { "title": "Mappa", "icon": "map", "type": "map", "items": [ { "name": "", "category": "", "mapsLink": "", "lat": null, "lng": null, "note": "" } ] },
@@ -81,6 +81,39 @@ campo vuoto e vai avanti senza richiederlo di nuovo per quella voce.
 Per i campi **decorativi** — note, dettagli aggiuntivi, tag, `meta` delle
 schede Ristoranti — resta libero di lasciarli vuoti se l'utente non li
 menziona spontaneamente: non serve chiederli uno per uno.
+
+## Punti di interesse: indirizzo e link Maps, sempre se reperibili
+
+Quando la skill propone o registra un punto di interesse con una sede fisica
+(ristorante, alloggio, tappa di una sezione `map`, o qualunque voce che
+identifica un posto) — specialmente quando i dati arrivano da una ricerca
+fatta dalla skill stessa (es. "trovami dei ristoranti vicino a...") e non da
+ciò che l'utente ha dettato — cerca sempre l'indirizzo e un link Google Maps,
+se reperibili, e includili. Non è un'eccezione alla regola su `lat`/`lng`
+sopra: indirizzo e link sono testo, non coordinate, quindi vanno cercati
+attivamente invece di essere lasciati vuoti per default come i campi
+decorativi.
+
+Dove vanno scritti:
+
+- `cards` (Ristoranti e altre sezioni `cards`): indirizzo nel campo dedicato
+  `address` (non in `meta`, che resta per info libere come prezzo od orari),
+  link Maps nel campo `link` (è l'unico slot disponibile: se vuoi conservare
+  anche un sito ufficiale o una pagina di recensioni, mettila in `detail`
+  come testo).
+- `lodging`: indirizzo in `address`.
+- sezione `map`: indirizzo in `note`, link Maps nel campo dedicato `mapsLink`.
+
+Se non trovi un link diretto al locale (place ID), costruisci un link di
+ricerca `https://www.google.com/maps/search/?api=1&query=<nome, indirizzo>`
+con nome e indirizzo URL-encoded: è sicuro perché non richiede di calcolare
+coordinate, e porta comunque al posto giusto. Se anche l'indirizzo non è
+reperibile, lascia il campo vuoto e dillo all'utente invece di inventarlo.
+
+`address` su una scheda senza `lat`/`lng` viene geocodificato automaticamente
+quando il viaggio è online (mostra comunque un pin sulla Mappa aggregata),
+esattamente come per il Pernottamento: non serve calcolare le coordinate a
+mano, basta l'indirizzo testuale.
 
 ## Flusso "viaggio nuovo"
 
