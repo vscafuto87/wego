@@ -82,6 +82,15 @@ describe('diffTrip', () => {
     expect(diff.days).toEqual([{ date: '2026-09-01', status: 'nuovo', itemCount: 1 }])
     expect(diff.sections).toEqual([{ title: 'Ristoranti', status: 'nuova', itemCount: 0 }])
   })
+  it('ignora l\'ordine delle chiavi quando confronta item (Supabase vs Claude order mismatch)', () => {
+    // Remote da Supabase: { title: '...', detail: '...' }
+    // Proposed da Claude: { detail: '...', title: '...' }
+    // Sono identici semanticamente, non dovrebbero essere segnalati come "changed"
+    const remote = { days: [{ date: '2026-09-01', items: [{ title: 'Colazione', detail: '' }] }], sections: [] }
+    const proposed = { days: [{ date: '2026-09-01', items: [{ detail: '', title: 'Colazione' }] }], sections: [] }
+    const diff = diffTrip(remote, proposed)
+    expect(diff.days).toEqual([{ date: '2026-09-01', status: 'invariato' }])
+  })
 })
 
 describe('formatDiffSummary', () => {

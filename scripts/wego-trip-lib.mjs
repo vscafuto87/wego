@@ -27,6 +27,22 @@ export function validateTripPayload(data) {
   }
 }
 
+function deepEqual(a, b) {
+  if (a === b) return true
+  if (a === null || b === null) return a === b
+  if (typeof a !== 'object' || typeof b !== 'object') return a === b
+  if (Array.isArray(a) !== Array.isArray(b)) return false
+  if (Array.isArray(a)) {
+    if (a.length !== b.length) return false
+    return a.every((item, i) => deepEqual(item, b[i]))
+  }
+  const keysA = Object.keys(a).sort()
+  const keysB = Object.keys(b).sort()
+  if (keysA.length !== keysB.length) return false
+  if (!keysA.every((k, i) => k === keysB[i])) return false
+  return keysA.every((key) => deepEqual(a[key], b[key]))
+}
+
 function itemKey(item) {
   if (item && typeof item === 'object') {
     if (typeof item.title === 'string' && item.title) return item.title
@@ -44,7 +60,7 @@ function diffItems(remoteItems, proposedItems) {
   const changed = []
   for (const [key, item] of proposedMap) {
     if (!remoteMap.has(key)) added.push(key)
-    else if (JSON.stringify(remoteMap.get(key)) !== JSON.stringify(item)) changed.push(key)
+    else if (!deepEqual(remoteMap.get(key), item)) changed.push(key)
   }
   const removed = [...remoteMap.keys()].filter((key) => !proposedMap.has(key))
   return { added, removed, changed }
