@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { loadTrips, saveTrips } from '../data/storage.js'
-import { bootstrapSyncedTrips } from '../data/sync.js'
+import { loadTrips, saveTrips, getSyncState } from '../data/storage.js'
+import { bootstrapSyncedTrips, deleteTripAsOwner, leaveTripAsMember } from '../data/sync.js'
 import { normalizeTrip } from '../data/schema.js'
 import { getSession, subscribeAuth, signOut, isCloudConfigured } from '../data/supabase.js'
 import { themeStyle } from '../theme/themes.js'
@@ -56,7 +56,20 @@ export default function AdminApp() {
     persist(trips.map((t) => (t.id === id ? updater(t) : t)))
   }
 
-  function deleteTrip(id) {
+  async function deleteTrip(id) {
+    const syncState = await getSyncState(id)
+    if (syncState) {
+      try {
+        if (syncState.role === 'editor') {
+          await deleteTripAsOwner(syncState.remoteId)
+        } else {
+          await leaveTripAsMember(syncState.remoteId)
+        }
+      } catch (e) {
+        window.alert(`Non è stato possibile eliminare il viaggio. Controlla la rete e riprova.\n\n${e.message}`)
+        return
+      }
+    }
     persist(trips.filter((t) => t.id !== id))
     setActiveTripId(null)
   }
