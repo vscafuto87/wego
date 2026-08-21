@@ -391,7 +391,7 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
         <div className="max-w-2xl mx-auto relative">
           <div
             ref={navScrollRef}
-            className="flex items-center justify-between gap-1 overflow-x-auto no-scrollbar bg-[rgb(var(--card-rgb)/0.9)] backdrop-blur-lg rounded-full p-1.5 shadow-[0_2px_4px_rgb(var(--ink-rgb)/0.08),0_20px_40px_-18px_rgb(var(--ink-rgb)/0.3)]"
+            className="flex items-center gap-1 w-fit max-w-full mx-auto overflow-x-auto no-scrollbar bg-[rgb(var(--card-rgb)/0.9)] backdrop-blur-lg rounded-full p-1.5 shadow-[0_2px_4px_rgb(var(--ink-rgb)/0.08),0_20px_40px_-18px_rgb(var(--ink-rgb)/0.3)]"
           >
             {tabs.map((tab) => {
               const active = navActiveTab === tab.key
