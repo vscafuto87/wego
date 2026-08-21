@@ -1,5 +1,5 @@
 import { forwardRef, lazy, Suspense, useImperativeHandle, useRef, useState } from 'react'
-import { Plus, Check, GripVertical } from 'lucide-react'
+import { Plus, Check, GripVertical, ExternalLink } from 'lucide-react'
 import EditIcon from '../components/EditIcon.jsx'
 import DeleteIcon from '../components/DeleteIcon.jsx'
 import Btn from '../components/Btn.jsx'
@@ -52,6 +52,7 @@ function isFixedSection(section) {
 }
 
 const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
+const chipClass = 'inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-[var(--tint)] text-[var(--accent)] text-sm font-medium'
 const EMPTY_CARD = { title: '', meta: '', kind: '', detail: '', link: '', tags: '', lat: null, lng: null, distanza: '', durata: '', dislivello: '', difficolta: '', accesso: '', servizi: '', luogo: '', prenotato: false, date: '', time: '' }
 
 const KIND_OPTIONS = [
@@ -60,6 +61,10 @@ const KIND_OPTIONS = [
   { value: 'spiaggia', label: 'Spiaggia' },
   { value: 'pasto', label: 'Pasto' }
 ]
+
+function kindLabel(kind) {
+  return KIND_OPTIONS.find((k) => k.value === kind)?.label ?? kind
+}
 
 const ALL_KIND_FIELDS = ['distanza', 'durata', 'dislivello', 'difficolta', 'accesso', 'servizi', 'luogo', 'prenotato']
 
@@ -110,16 +115,44 @@ function SortableCard({ item, onEdit, onRemove }) {
     opacity: isDragging ? 0.6 : 1,
     boxShadow: isDragging ? '0 12px 32px -10px rgb(var(--ink-rgb) / 0.4)' : undefined
   }
-  const KindIcon = KIND_ICONS[item.kind]
+  const KindIcon = KIND_ICONS[item.kind] ?? KIND_ICONS['']
   const stats = sentieroStats(item)
   return (
     <div ref={setNodeRef} style={style} className="rounded-[24px] p-5 bg-[var(--card)] shadow-[0_1px_2px_rgb(var(--ink-rgb)/0.05),0_10px_24px_-14px_rgb(var(--ink-rgb)/0.25)]">
       <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-1.5">
-          {item.kind && KindIcon && <KindIcon size={16} className="flex-shrink-0 text-[var(--accent)]" />}
-          <p className="font-display font-semibold text-xl">{item.title || 'Senza titolo'}</p>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <KindIcon size={13} className="text-[var(--accent)]" />
+            <p className="font-display font-semibold text-xs uppercase tracking-wider text-[var(--accent)]">{kindLabel(item.kind)}</p>
+          </div>
+          <p className="font-display font-semibold text-xl mt-0.5">{item.title || 'Senza titolo'}</p>
+          {item.meta && <p className="font-mono text-sm text-[var(--muted)] mt-1.5">{item.meta}</p>}
+          {item.kind !== 'sentiero' && item.detail && <p className="text-base mt-2">{item.detail}</p>}
+          {item.kind === 'pasto' && item.luogo && <p className="text-base mt-2">{item.luogo}</p>}
+          {item.kind === 'spiaggia' && (item.accesso || item.servizi) && (
+            <p className="text-base mt-2">{[item.accesso, item.servizi].filter(Boolean).join(' · ')}</p>
+          )}
+          {stats.length > 0 && (
+            <div className="flex items-center gap-2 mt-2 overflow-x-auto no-scrollbar">
+              {stats.map((s, i) => (
+                <span key={i} className="flex-none inline-flex items-center gap-1 font-mono text-xs bg-[var(--tint)] rounded-full px-2.5 py-1 whitespace-nowrap">
+                  <s.icon size={12} /> {s.value}
+                </span>
+              ))}
+            </div>
+          )}
+          {item.kind === 'pasto' && item.prenotato && (
+            <span className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-[var(--accent2)] text-[var(--paper)] text-xs font-medium mt-3">
+              <Check size={12} /> Prenotato
+            </span>
+          )}
+          {item.date && (
+            <span className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-[var(--accent2)] text-[var(--paper)] text-xs font-medium mt-3">
+              <Check size={12} /> Prenotato · {formatCardDate(item.date)}{item.time ? ` · ${item.time}` : ''}
+            </span>
+          )}
         </div>
-        <div className="flex gap-1 -mr-2 -mt-1">
+        <div className="flex gap-1 -mr-2 -mt-4 flex-none">
           <button
             type="button"
             ref={setActivatorNodeRef}
@@ -138,45 +171,25 @@ function SortableCard({ item, onEdit, onRemove }) {
           </button>
         </div>
       </div>
-      {item.meta && <p className="font-mono text-sm text-[var(--muted)] mt-1">{item.meta}</p>}
-      {item.kind !== 'sentiero' && item.detail && <p className="text-base mt-2">{item.detail}</p>}
-      {item.kind === 'pasto' && item.luogo && <p className="text-base mt-2">{item.luogo}</p>}
-      {item.kind === 'spiaggia' && (item.accesso || item.servizi) && (
-        <p className="text-base mt-2">{[item.accesso, item.servizi].filter(Boolean).join(' · ')}</p>
-      )}
-      {stats.length > 0 && (
-        <div className="flex flex-wrap gap-4 mt-2">
-          {stats.map((s, i) => (
-            <div key={i} className="flex items-center gap-1.5 text-[var(--muted)]">
-              <s.icon size={14} />
-              <span className="font-mono text-sm font-medium text-[var(--ink)] whitespace-nowrap">{s.value}</span>
-            </div>
-          ))}
-        </div>
-      )}
-      {item.kind === 'pasto' && item.prenotato && (
-        <span className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-[var(--accent2)] text-[var(--paper)] text-xs font-medium mt-3">
-          <Check size={12} /> Prenotato
-        </span>
-      )}
+
       {item.link && (
-        <a href={item.link} target="_blank" rel="noreferrer" className="text-base text-[var(--accent)] underline mt-2 inline-block">
-          Apri il link
-        </a>
+        <>
+          <div className="h-px bg-[var(--line)] mt-3 mb-3" />
+          <div className="flex gap-2 flex-wrap">
+            <a href={item.link} target="_blank" rel="noreferrer" className={chipClass}>
+              <ExternalLink size={15} /> Apri il link
+            </a>
+          </div>
+        </>
       )}
       {item.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1 mt-2">
+        <div className="flex flex-wrap gap-1 mt-3">
           {item.tags.map((tag) => (
             <Label key={tag} className="bg-[var(--tint)] px-2.5 py-1 rounded-full">
               {tag}
             </Label>
           ))}
         </div>
-      )}
-      {item.date && (
-        <span className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-[var(--accent2)] text-[var(--paper)] text-xs font-medium mt-3">
-          <Check size={12} /> Prenotato · {formatCardDate(item.date)}{item.time ? ` · ${item.time}` : ''}
-        </span>
       )}
       <ModifiedBy modifiedBy={item.modifiedBy} modifiedAt={item.modifiedAt} />
     </div>
@@ -285,7 +298,7 @@ const Section = forwardRef(function Section({ trip, section, onUpdate, activeDis
 
   useImperativeHandle(ref, () => ({
     openAdd: () => {
-      if (section.type === 'cards') setCardForm({ ...EMPTY_CARD })
+      if (section.type === 'cards') setCardForm({ ...EMPTY_CARD, kind: isRistoranti(section) ? 'pasto' : '' })
       else if (section.type === 'checklist') checklistInputRef.current?.focus()
       else childRef.current?.openAdd()
     }
@@ -384,7 +397,7 @@ const Section = forwardRef(function Section({ trip, section, onUpdate, activeDis
             <Empty
               title="Nessuna scheda ancora"
               detail="Aggiungine una per iniziare."
-              action={<Btn onClick={() => setCardForm({ title: '', meta: '', detail: '', link: '', tags: '', lat: null, lng: null, date: '', time: '' })}>Aggiungi una scheda</Btn>}
+              action={<Btn onClick={() => setCardForm({ ...EMPTY_CARD, kind: 'pasto' })}>Aggiungi una scheda</Btn>}
             />
           ) : (
             <DndContext sensors={cardSensors} collisionDetection={closestCenter} onDragEnd={handleRistorantiDragEnd}>
@@ -400,7 +413,7 @@ const Section = forwardRef(function Section({ trip, section, onUpdate, activeDis
                           <SortableCard
                             key={item.id}
                             item={item}
-                            onEdit={() => setCardForm({ id: item.id, title: item.title, meta: item.meta, detail: item.detail, link: item.link, tags: item.tags.join(', '), lat: item.lat, lng: item.lng, date: item.date, time: item.time })}
+                            onEdit={() => setCardForm({ ...EMPTY_CARD, ...item, kind: 'pasto', tags: item.tags.join(', ') })}
                             onRemove={() => removeCard(item)}
                           />
                         ))}
@@ -500,9 +513,11 @@ const Section = forwardRef(function Section({ trip, section, onUpdate, activeDis
       <Modal open={!!cardForm} title={cardForm?.id ? 'Modifica scheda' : 'Nuova scheda'} onClose={() => setCardForm(null)}>
         {cardForm && (
           <form onSubmit={saveCard} className="flex flex-col gap-3">
-            <select value={cardForm.kind} onChange={(e) => setCardForm({ ...cardForm, kind: e.target.value })} className={inputClass}>
-              {KIND_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-            </select>
+            {!isRistoranti(section) && (
+              <select value={cardForm.kind} onChange={(e) => setCardForm({ ...cardForm, kind: e.target.value })} className={inputClass}>
+                {KIND_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+              </select>
+            )}
             <input required placeholder="Titolo" value={cardForm.title} onChange={(e) => setCardForm({ ...cardForm, title: e.target.value })} className={inputClass} />
             <input placeholder="Info breve (es. km, orario)" value={cardForm.meta} onChange={(e) => setCardForm({ ...cardForm, meta: e.target.value })} className={inputClass} />
             <textarea placeholder="Dettaglio" value={cardForm.detail} onChange={(e) => setCardForm({ ...cardForm, detail: e.target.value })} className={inputClass} rows={2} />

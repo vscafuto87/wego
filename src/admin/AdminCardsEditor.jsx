@@ -112,7 +112,7 @@ export default function AdminCardsEditor({ section, onUpdate, activeDisplayName 
                 <p className="font-display font-semibold text-xl"><KindIcon kind={item.kind} />{item.title || 'Senza titolo'}</p>
               </div>
               <div className="flex gap-1">
-                <button onClick={() => setForm({ id: item.id, ...EMPTY_FORM, ...item, tags: item.tags.join(', ') })} aria-label="Modifica scheda" className="p-2 text-[var(--muted)]">
+                <button onClick={() => setForm({ id: item.id, ...EMPTY_FORM, ...item, kind: isRistoranti(section) ? 'pasto' : item.kind, tags: item.tags.join(', ') })} aria-label="Modifica scheda" className="p-2 text-[var(--muted)]">
                   <EditIcon size={15} />
                 </button>
                 <button onClick={() => removeItem(item)} aria-label="Elimina scheda" className="p-2 text-[var(--muted)]">
@@ -144,16 +144,18 @@ export default function AdminCardsEditor({ section, onUpdate, activeDisplayName 
 
       <div className="flex flex-col gap-3 bg-[var(--card)] border border-[var(--line)] rounded-2xl p-5 sticky top-6">
         {!form && (
-          <button onClick={() => setForm({ ...EMPTY_FORM })} className="self-start inline-flex items-center gap-1.5 rounded-full font-sans font-medium text-base h-11 px-5 text-[var(--paper)] bg-[var(--accent)]">
+          <button onClick={() => setForm({ ...EMPTY_FORM, kind: isRistoranti(section) ? 'pasto' : '' })} className="self-start inline-flex items-center gap-1.5 rounded-full font-sans font-medium text-base h-11 px-5 text-[var(--paper)] bg-[var(--accent)]">
             <Plus size={16} /> Nuova scheda
           </button>
         )}
         {form && (
           <form onSubmit={saveItem} className="flex flex-col gap-3">
             <h2 className="font-display font-semibold text-xl">{form.id ? 'Modifica scheda' : 'Nuova scheda'}</h2>
-            <select value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })} className={inputClass}>
-              {KIND_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-            </select>
+            {!isRistoranti(section) && (
+              <select value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })} className={inputClass}>
+                {KIND_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+              </select>
+            )}
             <input required placeholder="Titolo" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className={inputClass} />
             <input placeholder="Info breve (es. km, orario)" value={form.meta} onChange={(e) => setForm({ ...form, meta: e.target.value })} className={inputClass} />
             <textarea placeholder="Dettaglio" value={form.detail} onChange={(e) => setForm({ ...form, detail: e.target.value })} className={inputClass} rows={2} />
