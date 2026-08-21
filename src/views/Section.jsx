@@ -22,6 +22,46 @@ function isRistoranti(section) {
   return section.type === 'cards' && section.title === 'Ristoranti'
 }
 
+// Sezioni cards con schede che, quando hanno una data, si raggruppano in due
+// liste trascinabili invece della lista piatta generica (vedi
+// DATE_GROUP_CONFIG sotto per le etichette e i testi specifici di ciascuna).
+const DATE_GROUP_CONFIG = {
+  Ristoranti: {
+    groups: [
+      { key: 'prenotati', label: 'Prenotati' },
+      { key: 'consigliati', label: 'Consigliati' }
+    ],
+    dateFieldLabel: 'Data della prenotazione',
+    timeFieldLabel: 'Ora della prenotazione',
+    datePromptLabel: 'Data della prenotazione (AAAA-MM-GG)',
+    dateInvalidLabel: 'Data non valida. Usa il formato AAAA-MM-GG (es. 2026-08-30)',
+    timePromptLabel: 'Ora della prenotazione (HH:MM, lascia vuoto se non serve)',
+    confirmRemove: (title) => `Annullare la prenotazione di "${title}"?`,
+    badgeLabel: 'Prenotato'
+  },
+  'Spiagge e cale': {
+    groups: [
+      { key: 'prenotati', label: 'In programma' },
+      { key: 'consigliati', label: 'Da scegliere' }
+    ],
+    dateFieldLabel: 'Giorno del viaggio',
+    timeFieldLabel: 'Ora (facoltativa)',
+    datePromptLabel: 'Giorno del viaggio per questa spiaggia (AAAA-MM-GG)',
+    dateInvalidLabel: 'Data non valida. Usa il formato AAAA-MM-GG (es. 2026-08-31)',
+    timePromptLabel: 'Ora (HH:MM, lascia vuoto se non serve)',
+    confirmRemove: (title) => `Togliere "${title}" dal programma dei giorni?`,
+    badgeLabel: 'In programma'
+  }
+}
+
+function dateGroupConfig(section) {
+  return section.type === 'cards' ? (DATE_GROUP_CONFIG[section.title] ?? null) : null
+}
+
+function hasDateGrouping(section) {
+  return dateGroupConfig(section) !== null
+}
+
 const CARD_DATE_FMT = new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short' })
 
 function formatCardDate(date) {
@@ -88,11 +128,6 @@ function updateSection(trip, sectionId, fn) {
   return { ...trip, sections: trip.sections.map((s) => (s.id === sectionId ? fn(s) : s)) }
 }
 
-const RISTORANTI_GROUPS = [
-  { key: 'prenotati', label: 'Prenotati' },
-  { key: 'consigliati', label: 'Consigliati' }
-]
-
 // Contenitore di un gruppo Prenotati/Consigliati: resta un'area di drop
 // valida quando il gruppo è vuoto (dnd-kit "multiple containers"). Quando il
 // gruppo ha già delle schede, il droppable del contenitore è disattivato:
@@ -105,9 +140,11 @@ function DroppableGroup({ groupKey, disabled, children }) {
   return <div ref={setNodeRef} className="flex flex-col gap-3 min-h-[3rem]">{children}</div>
 }
 
-// Scheda Ristoranti trascinabile: la maniglia avvia il drag, il resto della
-// scheda si comporta come oggi (tap su matita/cestino invariato).
-function SortableCard({ item, onEdit, onRemove }) {
+// Scheda trascinabile di una sezione con raggruppamento per data (Ristoranti,
+// Spiagge e cale): la maniglia avvia il drag, il resto della scheda si
+// comporta come oggi (tap su matita/cestino invariato). dateBadgeLabel viene
+// dalla config della sezione di appartenenza (vedi DATE_GROUP_CONFIG).
+function SortableCard({ item, onEdit, onRemove, dateBadgeLabel = 'Prenotato' }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: item.id })
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -168,7 +205,7 @@ function SortableCard({ item, onEdit, onRemove }) {
       )}
       {item.date && (
         <span className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-[var(--accent2)] text-[var(--paper)] text-xs font-medium mt-3">
-          <Check size={12} /> Prenotato · {formatCardDate(item.date)}{item.time ? ` · ${item.time}` : ''}
+          <Check size={12} /> {dateBadgeLabel} · {formatCardDate(item.date)}{item.time ? ` · ${item.time}` : ''}
         </span>
       )}
 
@@ -238,12 +275,15 @@ const Section = forwardRef(function Section({ trip, section, onUpdate, activeDis
     return overItem ? groupKeyFor(overItem) : null
   }
 
-  // Trascinare una scheda Ristoranti nell'altro gruppo cambia la
-  // prenotazione: verso "Prenotati" chiede data/ora (annullare il prompt
-  // annulla lo spostamento), verso "Consigliati" chiede conferma prima di
-  // svuotarla (annullare la conferma annulla lo spostamento). Dentro lo
-  // stesso gruppo, riordina soltanto.
-  function handleRistorantiDragEnd(event) {
+  // Trascinare una scheda di una sezione con raggruppamento (Ristoranti,
+  // Spiagge e cale) nell'altro gruppo cambia la data: verso il primo gruppo
+  // chiede data/ora (annullare il prompt annulla lo spostamento), verso il
+  // secondo chiede conferma prima di svuotarla (annullare la conferma
+  // annulla lo spostamento). Testi dei prompt dalla config della sezione.
+  // Dentro lo stesso gruppo, riordina soltanto.
+  function handleGroupedDragEnd(event) {
+    const config = dateGroupConfig(section)
+    if (!config) return
     const { active, over } = event
     if (!over) return
     onUpdate((t) =>
@@ -258,15 +298,15 @@ const Section = forwardRef(function Section({ trip, section, onUpdate, activeDis
         let updatedItem = activeItem
         if (fromGroup !== toGroup) {
           if (toGroup === 'prenotati') {
-            let date = window.prompt('Data della prenotazione (AAAA-MM-GG)', '')
+            let date = window.prompt(config.datePromptLabel, '')
             while (date !== null && !isValidISODate(date)) {
-              date = window.prompt('Data non valida. Usa il formato AAAA-MM-GG (es. 2026-08-30)', date)
+              date = window.prompt(config.dateInvalidLabel, date)
             }
             if (!date) return s
-            const time = window.prompt('Ora della prenotazione (HH:MM, lascia vuoto se non serve)', '') ?? ''
+            const time = window.prompt(config.timePromptLabel, '') ?? ''
             updatedItem = stampModified({ ...activeItem, date, time }, activeDisplayName)
           } else {
-            if (!window.confirm(`Annullare la prenotazione di "${activeItem.title}"?`)) return s
+            if (!window.confirm(config.confirmRemove(activeItem.title))) return s
             updatedItem = stampModified({ ...activeItem, date: '', time: '' }, activeDisplayName)
           }
         }
@@ -372,7 +412,7 @@ const Section = forwardRef(function Section({ trip, section, onUpdate, activeDis
         )}
       </div>
 
-      {section.type === 'cards' && !isRistoranti(section) && (
+      {section.type === 'cards' && !hasDateGrouping(section) && (
         <>
           {section.items.length === 0 && (
             <Empty
@@ -398,17 +438,17 @@ const Section = forwardRef(function Section({ trip, section, onUpdate, activeDis
         </>
       )}
 
-      {section.type === 'cards' && isRistoranti(section) && (
+      {section.type === 'cards' && hasDateGrouping(section) && (
         <>
           {section.items.length === 0 ? (
             <Empty
               title="Nessuna scheda ancora"
               detail="Aggiungine una per iniziare."
-              action={<Btn onClick={() => setCardForm({ ...EMPTY_CARD, kind: 'pasto' })}>Aggiungi una scheda</Btn>}
+              action={<Btn onClick={() => setCardForm({ ...EMPTY_CARD, kind: isRistoranti(section) ? 'pasto' : '' })}>Aggiungi una scheda</Btn>}
             />
           ) : (
-            <DndContext sensors={cardSensors} collisionDetection={closestCenter} onDragEnd={handleRistorantiDragEnd}>
-              {RISTORANTI_GROUPS.map(({ key, label }) => {
+            <DndContext sensors={cardSensors} collisionDetection={closestCenter} onDragEnd={handleGroupedDragEnd}>
+              {dateGroupConfig(section).groups.map(({ key, label }) => {
                 const groupItems = section.items.filter((it) => groupKeyFor(it) === key)
                 return (
                   <div key={key} className="flex flex-col gap-3">
@@ -420,7 +460,8 @@ const Section = forwardRef(function Section({ trip, section, onUpdate, activeDis
                           <SortableCard
                             key={item.id}
                             item={item}
-                            onEdit={() => setCardForm({ ...EMPTY_CARD, ...item, kind: 'pasto', tags: item.tags.join(', ') })}
+                            dateBadgeLabel={dateGroupConfig(section).badgeLabel}
+                            onEdit={() => setCardForm({ ...EMPTY_CARD, ...item, kind: isRistoranti(section) ? 'pasto' : item.kind, tags: item.tags.join(', ') })}
                             onRemove={() => removeCard(item)}
                           />
                         ))}
@@ -566,15 +607,15 @@ const Section = forwardRef(function Section({ trip, section, onUpdate, activeDis
               onChange={(coords) => setCardForm({ ...cardForm, ...coords })}
               onAddressFound={(address) => setCardForm((f) => (f.address ? f : { ...f, address }))}
             />
-            {isRistoranti(section) && (
+            {hasDateGrouping(section) && (
               <>
                 <label className="flex flex-col gap-1">
-                  <Label>Data della prenotazione</Label>
-                  <input type="date" aria-label="Data della prenotazione" value={cardForm.date} onChange={(e) => setCardForm({ ...cardForm, date: e.target.value })} className={inputClass} />
+                  <Label>{dateGroupConfig(section).dateFieldLabel}</Label>
+                  <input type="date" aria-label={dateGroupConfig(section).dateFieldLabel} value={cardForm.date} onChange={(e) => setCardForm({ ...cardForm, date: e.target.value })} className={inputClass} />
                 </label>
                 <label className="flex flex-col gap-1">
-                  <Label>Ora della prenotazione</Label>
-                  <input type="time" aria-label="Ora della prenotazione" value={cardForm.time} onChange={(e) => setCardForm({ ...cardForm, time: e.target.value })} className={inputClass} />
+                  <Label>{dateGroupConfig(section).timeFieldLabel}</Label>
+                  <input type="time" aria-label={dateGroupConfig(section).timeFieldLabel} value={cardForm.time} onChange={(e) => setCardForm({ ...cardForm, time: e.target.value })} className={inputClass} />
                 </label>
               </>
             )}

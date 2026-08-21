@@ -742,7 +742,7 @@ describe('collectExternalDayItems', () => {
     const ristorantiSection = trip.sections.find((s) => s.title === 'Ristoranti')
     const card = collectExternalDayItems(trip).find((i) => i.type === 'card')
     expect(card).toMatchObject({ date: '2026-08-30', time: '20:30', title: 'Da Assunta', detail: 'Pesce', link: 'https://example.com' })
-    expect(card.origin).toEqual({ tab: ristorantiSection.id })
+    expect(card.origin).toEqual({ tab: ristorantiSection.id, sectionTitle: 'Ristoranti' })
   })
 
   it('la voce ristorante porta anche kind, meta, prenotato e tag, per renderla identica alla scheda di origine', () => {
@@ -758,6 +758,29 @@ describe('collectExternalDayItems', () => {
 
   it('viaggio senza sezione Ristoranti prenotata: nessuna voce card', () => {
     const trip = normalizeTrip({ name: 'X', sections: [{ title: 'Ristoranti', type: 'cards', items: [{ title: 'Senza data' }] }] })
+    expect(collectExternalDayItems(trip).filter((i) => i.type === 'card')).toEqual([])
+  })
+
+  it('include anche le schede di Spiagge e cale con data, con accesso/servizi e origin verso quella sezione', () => {
+    const trip = normalizeTrip({
+      name: 'Ponza',
+      sections: [{ title: 'Spiagge e cale', icon: 'map', type: 'cards', items: [
+        { title: 'Frontone', kind: 'spiaggia', accesso: 'A piedi', servizi: 'Bar', date: '2026-08-31', time: '' },
+        { title: 'La Parata', kind: 'spiaggia' }
+      ] }]
+    })
+    const spiaggeSection = trip.sections.find((s) => s.title === 'Spiagge e cale')
+    const items = collectExternalDayItems(trip).filter((i) => i.type === 'card')
+    expect(items).toHaveLength(1)
+    expect(items[0]).toMatchObject({ title: 'Frontone', kind: 'spiaggia', accesso: 'A piedi', servizi: 'Bar', date: '2026-08-31' })
+    expect(items[0].origin).toEqual({ tab: spiaggeSection.id, sectionTitle: 'Spiagge e cale' })
+  })
+
+  it('ignora le schede con data di una sezione cards generica non elencata', () => {
+    const trip = normalizeTrip({
+      name: 'X',
+      sections: [{ title: 'Musei', icon: 'star', type: 'cards', items: [{ title: 'Museo', date: '2026-08-30' }] }]
+    })
     expect(collectExternalDayItems(trip).filter((i) => i.type === 'card')).toEqual([])
   })
 })

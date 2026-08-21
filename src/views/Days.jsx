@@ -175,7 +175,7 @@ export function DayItemCard({ item, onEdit, onRemove, onNavigate, dragHandle }) 
             )}
             {item.origin && onNavigate && (
               <button type="button" onClick={() => onNavigate(item.origin.tab)} className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-[var(--tint)] text-[var(--accent)] text-sm font-medium">
-                <ArrowRight size={15} /> Vai a Ristoranti
+                <ArrowRight size={15} /> Vai a {item.origin.sectionTitle ?? 'Ristoranti'}
               </button>
             )}
           </div>

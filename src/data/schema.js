@@ -329,10 +329,16 @@ export function parseAddressFromMapsLink(url) {
   return null
 }
 
-// Voci Trasporti e schede Ristoranti con una data, mostrate anche nel giorno
-// corrispondente dell'Itinerario. Calcolo derivato come collectExternalMapPoints:
-// nessuna copia salvata, ogni voce resta editabile solo dalla sua sezione di
-// origine (Trasporti o Ristoranti).
+// Sezioni cards le cui schede, quando hanno una data, compaiono anche nel
+// giorno corrispondente dell'Itinerario (vedi collectExternalDayItems sotto).
+// Ristoranti = prenotazione confermata; Spiagge e cale = spiaggia programmata
+// per quel giorno. Altre sezioni cards restano solo consultabili dalla loro tab.
+const DAY_ITINERARY_CARD_SECTIONS = ['Ristoranti', 'Spiagge e cale']
+
+// Voci Trasporti e schede delle sezioni sopra con una data, mostrate anche nel
+// giorno corrispondente dell'Itinerario. Calcolo derivato come
+// collectExternalMapPoints: nessuna copia salvata, ogni voce resta editabile
+// solo dalla sua sezione di origine (Trasporti, Ristoranti o Spiagge e cale).
 export function collectExternalDayItems(trip) {
   const transportSection = trip.sections.find((s) => s.type === 'transport')
   const transportEntries = transportSection
@@ -353,9 +359,9 @@ export function collectExternalDayItems(trip) {
       }))
     : []
 
-  const ristorantiSection = trip.sections.find((s) => s.type === 'cards' && s.title === 'Ristoranti')
-  const cardEntries = ristorantiSection
-    ? ristorantiSection.items
+  const cardSections = trip.sections.filter((s) => s.type === 'cards' && DAY_ITINERARY_CARD_SECTIONS.includes(s.title))
+  const cardEntries = cardSections.flatMap((section) =>
+    section.items
       .filter((i) => i.date)
       .map((i) => ({
         type: 'card',
@@ -369,13 +375,15 @@ export function collectExternalDayItems(trip) {
         address: i.address,
         phone: i.phone,
         prenotato: i.prenotato,
+        accesso: i.accesso,
+        servizi: i.servizi,
         tags: i.tags,
         link: i.link,
         modifiedBy: i.modifiedBy,
         modifiedAt: i.modifiedAt,
-        origin: { tab: ristorantiSection.id }
+        origin: { tab: section.id, sectionTitle: section.title }
       }))
-    : []
+  )
 
   return [...transportEntries, ...cardEntries]
 }

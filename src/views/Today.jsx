@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ArrowRight, Bus, Utensils, Check, Sun, Cloud, CloudFog, CloudRain, CloudSnow, CloudLightning } from 'lucide-react'
+import { ArrowRight, Bus, Check, Sun, Cloud, CloudFog, CloudRain, CloudSnow, CloudLightning } from 'lucide-react'
 import Btn from '../components/Btn.jsx'
 import DayLabel from '../components/DayLabel.jsx'
 import Empty from '../components/Empty.jsx'
@@ -109,7 +109,7 @@ function computeStatus(groups, isToday) {
 }
 
 function AgendaRow({ entry, kind, done }) {
-  const Icon = kind === 'transport' ? Bus : kind === 'card' ? Utensils : (KIND_ICONS[entry.kind] ?? KIND_ICONS[''])
+  const Icon = kind === 'transport' ? Bus : (KIND_ICONS[entry.kind] ?? KIND_ICONS[''])
   return (
     <li className={`flex items-center gap-3 px-3.5 py-3 ${done ? 'opacity-[0.55]' : ''}`}>
       <span className="h-8 w-8 rounded-full bg-[var(--tint)] flex items-center justify-center flex-shrink-0">
