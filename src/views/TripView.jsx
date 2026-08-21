@@ -325,7 +325,11 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
         <div className="relative px-5 max-w-2xl mx-auto" style={{ paddingTop: `calc(env(safe-area-inset-top) + ${32 - collapse * 8}px)`, paddingBottom: 24 - collapse * 16 }}>
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
-              <button onClick={onBack} aria-label="Torna ai viaggi" className="h-11 w-11 -ml-2 flex-shrink-0 flex items-center justify-center rounded-full bg-[var(--tint)] active:scale-[0.97] transition-transform duration-150 ease-out">
+              <button
+                onClick={() => (isHubSectionPage ? setActiveTab('sections-hub') : onBack())}
+                aria-label={isHubSectionPage ? 'Torna alle sezioni' : 'Torna ai viaggi'}
+                className="h-11 w-11 -ml-2 flex-shrink-0 flex items-center justify-center rounded-full bg-[var(--tint)] active:scale-[0.97] transition-transform duration-150 ease-out"
+              >
                 <ArrowLeft size={20} />
               </button>
               <div
@@ -367,11 +371,6 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
         {currentTab === 'today' && <Today trip={trip} onNavigate={setActiveTab} />}
         {currentTab === 'days' && <Days ref={activeViewRef} trip={trip} onUpdate={handleUpdate} activeDisplayName={cloudDisplayName} onNavigate={setActiveTab} />}
         {currentTab === 'sections-hub' && <SectionsHub sections={hubSections} onOpen={setActiveTab} />}
-        {isHubSectionPage && (
-          <button onClick={() => setActiveTab('sections-hub')} className="flex items-center gap-1.5 text-base text-[var(--muted)] mt-5 mb-1 min-h-12 -ml-1">
-            <ArrowLeft size={17} /> Sezioni
-          </button>
-        )}
         {[...hubSections, ...(mapSection ? [mapSection] : [])].map((section) => (currentTab === section.id ? (
           <Section
             key={section.id}
