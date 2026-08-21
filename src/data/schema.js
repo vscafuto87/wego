@@ -105,6 +105,8 @@ function normalizeTransportItem(raw) {
     date: str(item.date),
     time: str(item.time),
     ticketLink: str(item.ticketLink),
+    ticketFilePath: str(item.ticketFilePath),
+    ticketFileName: str(item.ticketFileName),
     note: str(item.note),
     modifiedBy: str(item.modifiedBy),
     modifiedAt: str(item.modifiedAt)

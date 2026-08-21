@@ -5,8 +5,8 @@ import AdminTransportEditor from './AdminTransportEditor.jsx'
 import AdminLodgingEditor from './AdminLodgingEditor.jsx'
 import AdminMapEditor from './AdminMapEditor.jsx'
 
-export default function AdminSectionEditor({ trip, section, onUpdate, activeDisplayName }) {
-  const props = { trip, section, onUpdate, activeDisplayName }
+export default function AdminSectionEditor({ trip, section, onUpdate, activeDisplayName, remoteId, role }) {
+  const props = { trip, section, onUpdate, activeDisplayName, remoteId, role }
   if (section.type === 'checklist') return <AdminChecklistEditor {...props} />
   if (section.type === 'notes') return <AdminNotesEditor {...props} />
   if (section.type === 'transport') return <AdminTransportEditor {...props} />

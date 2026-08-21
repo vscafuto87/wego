@@ -247,7 +247,17 @@ const Section = forwardRef(function Section({ trip, section, onUpdate, activeDis
         </>
       )}
 
-      {section.type === 'transport' && <Transport ref={childRef} trip={trip} section={section} onUpdate={onUpdate} activeDisplayName={activeDisplayName} />}
+      {section.type === 'transport' && (
+        <Transport
+          ref={childRef}
+          trip={trip}
+          section={section}
+          onUpdate={onUpdate}
+          activeDisplayName={activeDisplayName}
+          remoteId={syncState?.remoteId ?? null}
+          role={syncState?.role ?? null}
+        />
+      )}
 
       {section.type === 'lodging' && (
         <Lodging

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Plus, Pencil, Trash2, Mountain, Waves, Utensils, GripVertical, Bus, ExternalLink, ArrowRight } from 'lucide-react'
 import { stampModified, dayItemFieldsForKind, collectExternalDayItems } from '../data/schema.js'
+import { sentieroStats } from '../views/Days.jsx'
 
 const inputClass = 'border border-[var(--line)] bg-[var(--paper)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
 const DATE_FMT = new Intl.DateTimeFormat('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })
@@ -191,7 +192,17 @@ export default function AdminDaysEditor({ trip, onUpdate, activeDisplayName, onN
                       {item.time && <span className="font-mono text-sm text-[var(--muted)] mr-2">{item.time}</span>}
                       <KindIcon kind={item.kind} />
                       <span className="text-base">{item.title}</span>
-                      {item.detail && <p className="text-sm text-[var(--muted)] mt-0.5">{item.detail}</p>}
+                      {item.kind !== 'sentiero' && item.detail && <p className="text-sm text-[var(--muted)] mt-0.5">{item.detail}</p>}
+                      {sentieroStats(item).length > 0 && (
+                        <div className="flex flex-wrap gap-3 mt-1">
+                          {sentieroStats(item).map((s, i) => (
+                            <div key={i} className="flex items-center gap-1 text-[var(--muted)]">
+                              <s.icon size={13} />
+                              <span className="font-mono text-sm font-medium text-[var(--ink)] whitespace-nowrap">{s.value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <button onClick={() => setItemForm({ dayId: day.id, id: item.id, ...EMPTY_ITEM, ...item })} aria-label="Modifica voce" className="p-1.5 text-[var(--muted)]">
                       <Pencil size={14} />

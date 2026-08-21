@@ -261,7 +261,15 @@ export default function AdminTripEditor({ trip, onBack, onUpdate, onDelete }) {
             {activeTab === 'days' && <AdminDaysEditor trip={trip} onUpdate={handleUpdate} activeDisplayName={displayName} onNavigate={setActiveTab} />}
             {trip.sections.map((section) =>
               activeTab === section.id ? (
-                <AdminSectionEditor key={section.id} trip={trip} section={section} onUpdate={handleUpdate} activeDisplayName={displayName} />
+                <AdminSectionEditor
+                  key={section.id}
+                  trip={trip}
+                  section={section}
+                  onUpdate={handleUpdate}
+                  activeDisplayName={displayName}
+                  remoteId={syncState?.remoteId ?? null}
+                  role={syncState ? 'editor' : null}
+                />
               ) : null
             )}
           </div>
