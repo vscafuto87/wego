@@ -17,11 +17,14 @@ import ModifiedBy from '../components/ModifiedBy.jsx'
 // bundler non riesce a risolvere i path relativi che la libreria si aspetta.
 L.Icon.Default.mergeOptions({ iconRetinaUrl: markerIcon2x, iconUrl: markerIcon, shadowUrl: markerShadow })
 
-const CATEGORY_COLORS = { schede: '#f97316', lodging: '#a855f7', sentiero: '#16a34a', spiaggia: '#0ea5e9', pasto: '#eab308' }
+export const CATEGORY_COLORS = { schede: '#f97316', lodging: '#a855f7', sentiero: '#16a34a', spiaggia: '#0ea5e9', pasto: '#eab308' }
 const CATEGORY_LABELS = { mappa: 'Mappa', schede: 'Schede', lodging: 'Pernottamento', sentiero: 'Sentieri', spiaggia: 'Spiagge', pasto: 'Pasti' }
 const CATEGORY_ORDER = ['mappa', 'schede', 'lodging', 'sentiero', 'spiaggia', 'pasto']
 
-function dotIcon(color) {
+// Esportata: la mini-mappa del giorno nell'Itinerario (DayMiniMap) riusa gli
+// stessi pallini colorati per sentiero/spiaggia/pasto, invece di un secondo
+// stile di marker.
+export function dotIcon(color) {
   return L.divIcon({
     className: '',
     html: `<span style="display:block;width:16px;height:16px;border-radius:9999px;background:${color};border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.4)"></span>`,

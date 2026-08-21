@@ -1,9 +1,12 @@
-import { forwardRef, useImperativeHandle, useMemo, useState } from 'react'
+import { forwardRef, lazy, Suspense, useImperativeHandle, useMemo, useState } from 'react'
 import { Plus, Pencil, Trash2, Mountain, Waves, Utensils, ExternalLink, Check, Ruler, Clock, TrendingUp, MapPin, Bus, ArrowRight, GripVertical } from 'lucide-react'
 import Btn from '../components/Btn.jsx'
 import DayLabel from '../components/DayLabel.jsx'
+import Label from '../components/Label.jsx'
 import Modal from '../components/Modal.jsx'
 import Empty from '../components/Empty.jsx'
+
+const DayMiniMap = lazy(() => import('./DayMiniMap.jsx'))
 import { stampModified, dayItemFieldsForKind, collectExternalDayItems } from '../data/schema.js'
 import ModifiedBy from '../components/ModifiedBy.jsx'
 import CoordsInput from '../components/CoordsInput.jsx'
@@ -341,6 +344,9 @@ const Days = forwardRef(function Days({ trip, onUpdate, activeDisplayName, onNav
   const selectedDay = trip.days.length > 0
     ? trip.days.find((d) => d.id === selectedDayId) ?? trip.days.find((d) => d.id === closestDayId(trip.days, todayString()))
     : null
+  // Le tappe con coordinate di questo giorno: se ce ne sono, la mini-mappa
+  // qui sotto evita di dover aprire la tab Mappa solo per vedere dove sono.
+  const dayMapItems = selectedDay ? selectedDay.items.filter((it) => it.lat != null && it.lng != null) : []
 
   const itemSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -495,6 +501,15 @@ const Days = forwardRef(function Days({ trip, onUpdate, activeDisplayName, onNav
               </button>
             </div>
           </div>
+
+          {dayMapItems.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <Label>{dayMapItems.length === 1 ? '1 tappa con posizione' : `${dayMapItems.length} tappe con posizione`}</Label>
+              <Suspense fallback={null}>
+                <DayMiniMap items={dayMapItems} />
+              </Suspense>
+            </div>
+          )}
 
           <DndContext sensors={itemSensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
             <SortableContext items={selectedDay.items.map((it) => it.id)} strategy={verticalListSortingStrategy}>

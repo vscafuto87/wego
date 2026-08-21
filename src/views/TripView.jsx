@@ -1,11 +1,12 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { ArrowLeft, Plus, Settings as SettingsIcon, Sun, CalendarDays } from 'lucide-react'
+import { ArrowLeft, Plus, Settings as SettingsIcon, Sun, CalendarDays, LayoutGrid } from 'lucide-react'
 import { themeStyle, getTheme, ACCENT_GRADIENT } from '../theme/themes.js'
 import Terrain from '../theme/Terrain.jsx'
 import Today from './Today.jsx'
 import Settings, { ICONS } from './Settings.jsx'
 import Days from './Days.jsx'
 import Section from './Section.jsx'
+import SectionsHub from './SectionsHub.jsx'
 import { getSyncState, setSyncState as persistSyncState, markDirty, getDisplayNamePreference } from '../data/storage.js'
 import { syncTrip, pushTrip, pullTrip, restoreLastVersion } from '../data/sync.js'
 import Modal from '../components/Modal.jsx'
@@ -30,10 +31,16 @@ const ADD_LABELS = {
 }
 
 export default function TripView({ trip, onBack, onUpdate, onDelete }) {
+  // Mappa resta una destinazione fissa in barra; le altre sezioni (Ristoranti,
+  // Trasporti, Pernottamento, checklist, note...) vivono dentro l'hub "Sezioni",
+  // altrimenti la barra continuerebbe a crescere con ogni sezione del viaggio.
+  const mapSection = trip.sections.find((s) => s.type === 'map')
+  const hubSections = trip.sections.filter((s) => s.type !== 'map')
   const tabs = [
     { key: 'today', label: 'Oggi', icon: Sun },
     { key: 'days', label: 'Itinerario', icon: CalendarDays },
-    ...trip.sections.map((s) => ({ key: s.id, label: s.title || 'Sezione', icon: ICONS[s.icon] }))
+    { key: 'sections-hub', label: 'Sezioni', icon: LayoutGrid },
+    ...(mapSection ? [{ key: mapSection.id, label: 'Mappa', icon: ICONS.map }] : [])
   ]
   const [activeTab, setActiveTab] = useState('today')
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -279,8 +286,16 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
 
   const status = syncStatus()
   // Un pull rigenera gli id delle sezioni: se la tab aperta non esiste più si
-  // torna a "Oggi" invece di mostrare una pagina vuota.
-  const currentTab = tabs.some((t) => t.key === activeTab) ? activeTab : 'today'
+  // torna a "Oggi" invece di mostrare una pagina vuota. Le sezioni sono
+  // raggiungibili anche senza una propria pillola (si apre dall'hub), quindi
+  // contano come "valide" pure quando activeTab è un loro id.
+  const validTabKeys = new Set([...tabs.map((t) => t.key), ...hubSections.map((s) => s.id)])
+  const currentTab = validTabKeys.has(activeTab) ? activeTab : 'today'
+  const isHubSectionPage = hubSections.some((s) => s.id === currentTab)
+  // La pillola "Sezioni" resta evidenziata anche dentro l'hub e dentro una
+  // sua sezione: il tab davvero "attivo" per la barra non coincide sempre con
+  // currentTab, che invece sceglie soltanto cosa mostrare in pagina.
+  const navActiveTab = isHubSectionPage ? 'sections-hub' : currentTab
   const activeSection = trip.sections.find((s) => s.id === currentTab)
   const addLabel = currentTab === 'days' ? 'Aggiungi un giorno' : (activeSection ? ADD_LABELS[activeSection.type] : undefined)
   // Un viewer non può scrivere sul server: non gli si offre di forzare la propria
@@ -351,7 +366,13 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
       <main className="px-5 max-w-2xl mx-auto pb-36">
         {currentTab === 'today' && <Today trip={trip} onNavigate={setActiveTab} />}
         {currentTab === 'days' && <Days ref={activeViewRef} trip={trip} onUpdate={handleUpdate} activeDisplayName={cloudDisplayName} onNavigate={setActiveTab} />}
-        {trip.sections.map((section) => (currentTab === section.id ? (
+        {currentTab === 'sections-hub' && <SectionsHub sections={hubSections} onOpen={setActiveTab} />}
+        {isHubSectionPage && (
+          <button onClick={() => setActiveTab('sections-hub')} className="flex items-center gap-1.5 text-base text-[var(--muted)] mt-5 mb-1 min-h-12 -ml-1">
+            <ArrowLeft size={17} /> Sezioni
+          </button>
+        )}
+        {[...hubSections, ...(mapSection ? [mapSection] : [])].map((section) => (currentTab === section.id ? (
           <Section
             key={section.id}
             ref={activeViewRef}
@@ -373,7 +394,7 @@ export default function TripView({ trip, onBack, onUpdate, onDelete }) {
             className="flex items-center gap-1 overflow-x-auto no-scrollbar bg-[rgb(var(--card-rgb)/0.9)] backdrop-blur-lg rounded-full p-1.5 shadow-[0_2px_4px_rgb(var(--ink-rgb)/0.08),0_20px_40px_-18px_rgb(var(--ink-rgb)/0.3)]"
           >
             {tabs.map((tab) => {
-              const active = currentTab === tab.key
+              const active = navActiveTab === tab.key
               const Icon = tab.icon
               return (
                 <button
