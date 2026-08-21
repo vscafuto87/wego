@@ -1,10 +1,36 @@
-import { ArrowRight, Bus, Check } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { ArrowRight, Bus, Check, Sun, Cloud, CloudFog, CloudRain, CloudSnow, CloudLightning } from 'lucide-react'
 import Btn from '../components/Btn.jsx'
 import DayLabel from '../components/DayLabel.jsx'
 import Empty from '../components/Empty.jsx'
 import ModifiedBy from '../components/ModifiedBy.jsx'
 import { KIND_ICONS, sentieroStats, DayItemCard, TransportDayCard, DayItemsList } from './Days.jsx'
 import { collectExternalDayItems } from '../data/schema.js'
+import { getTodayWeather, weatherIcon } from '../data/weather.js'
+
+const WEATHER_ICONS = { sun: Sun, cloud: Cloud, fog: CloudFog, rain: CloudRain, snow: CloudSnow, storm: CloudLightning }
+
+// Meteo attuale del luogo del viaggio, solo per il giorno che è davvero oggi:
+// fallisce in silenzio (offline, place non geocodificabile) restando null.
+function useTodayWeather(trip, isToday) {
+  const [weather, setWeather] = useState(null)
+
+  useEffect(() => {
+    if (!isToday) {
+      setWeather(null)
+      return
+    }
+    let cancelled = false
+    getTodayWeather(trip).then((result) => {
+      if (!cancelled) setWeather(result)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [trip.id, trip.place, isToday])
+
+  return weather
+}
 
 const DATE_FMT = new Intl.DateTimeFormat('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })
 
@@ -127,7 +153,12 @@ function AgendaGroup({ group, currentId, doneIds, onNavigate }) {
 }
 
 export default function Today({ trip, onNavigate }) {
-  if (trip.days.length === 0) {
+  const todayStr = todayString()
+  const day = trip.days.length > 0 ? closestDay(trip.days, todayStr) : null
+  const isToday = day ? daysDiff(day.date, todayStr) === 0 : false
+  const weather = useTodayWeather(trip, isToday)
+
+  if (!day) {
     return (
       <div className="pt-5">
         <Empty
@@ -139,10 +170,8 @@ export default function Today({ trip, onNavigate }) {
     )
   }
 
-  const todayStr = todayString()
-  const day = closestDay(trip.days, todayStr)
   const diff = daysDiff(day.date, todayStr)
-  const isToday = diff === 0
+  const WeatherIcon = weather ? WEATHER_ICONS[weatherIcon(weather.code)] : null
   const transportItems = collectExternalDayItems(trip).filter((i) => i.date === day.date)
   const hasContent = day.items.length > 0 || transportItems.length > 0
   const groups = isToday ? groupByDaypart(day.items, transportItems) : []
@@ -154,7 +183,15 @@ export default function Today({ trip, onNavigate }) {
     <div className="flex flex-col gap-5 pt-5">
       <div>
         <DayLabel>{relativeDayLabel(diff)} · {DATE_FMT.format(new Date(`${day.date}T00:00:00`))}</DayLabel>
-        <p className="font-display font-semibold text-2xl mt-2">{day.title || 'Senza titolo'}</p>
+        <div className="flex items-center gap-2 mt-2">
+          <p className="font-display font-semibold text-2xl">{day.title || 'Senza titolo'}</p>
+          {WeatherIcon && (
+            <span className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-[var(--tint)] font-mono text-[13px] flex-shrink-0">
+              <WeatherIcon size={14} className="text-[var(--accent)]" />
+              {Math.round(weather.temp)}°
+            </span>
+          )}
+        </div>
         {day.note && <p className="text-base text-[var(--muted)] mt-1">{day.note}</p>}
         <ModifiedBy modifiedBy={day.modifiedBy} modifiedAt={day.modifiedAt} />
       </div>

@@ -18,6 +18,8 @@ function formatRange(start, end) {
     : `${MONTH.format(s)} – ${MONTH.format(e)} ${e.getFullYear()}`
 }
 
+// null se il viaggio non ha date; altrimenti un countdown (numero di giorni
+// alla partenza, mostrato in grande) oppure uno stato testuale piccolo.
 function tripStatus(trip) {
   if (!trip.start || !trip.end) return null
   const today = new Date()
@@ -26,10 +28,10 @@ function tripStatus(trip) {
   const end = new Date(trip.end)
   if (today < start) {
     const days = Math.round((start - today) / 86400000)
-    return days === 1 ? 'tra 1 giorno' : `tra ${days} giorni`
+    return { kind: 'countdown', days }
   }
-  if (today <= end) return 'in corso'
-  return 'concluso'
+  if (today <= end) return { kind: 'label', text: 'in corso' }
+  return { kind: 'label', text: 'concluso' }
 }
 
 const EMPTY_FORM = { name: '', emoji: '', place: '', start: '', end: '', palette: 'mountain', people: '' }
@@ -91,12 +93,18 @@ export default function Home({ trips, onOpen, onCreate, onImport, onDelete }) {
                 <button onClick={() => onOpen(trip.id)} className="block w-full text-left mt-4">
                   <span className="font-display font-semibold text-4xl leading-none block">{trip.name}</span>
                   {trip.place && <p className="text-base text-[var(--muted)] mt-1.5">{trip.place}</p>}
-                  <div className="flex items-baseline justify-between mt-4">
+                  <div className="flex items-end justify-between mt-4">
                     <span className="font-mono text-sm text-[var(--muted)]">{formatRange(trip.start, trip.end)}</span>
-                    {status && (
+                    {status?.kind === 'countdown' && (
+                      <span className="flex items-baseline gap-1.5 text-[var(--accent)]">
+                        <span className="font-mono text-3xl leading-none font-semibold">{status.days}</span>
+                        <span className="font-mono text-[11px] tracking-widest uppercase">{status.days === 1 ? 'giorno' : 'giorni'}</span>
+                      </span>
+                    )}
+                    {status?.kind === 'label' && (
                       <span className="font-mono text-xs text-[var(--accent)] flex items-center gap-1.5">
                         <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
-                        {status}
+                        {status.text}
                       </span>
                     )}
                   </div>
