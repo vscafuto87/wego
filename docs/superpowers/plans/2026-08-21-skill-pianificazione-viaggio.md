@@ -54,7 +54,7 @@ import {
 
 describe('isShareCode', () => {
   it('riconosce un codice a 6 caratteri dal set consentito', () => {
-    expect(isShareCode('AB12CD')).toBe(true)
+    expect(isShareCode('AB23CD')).toBe(true)
   })
   it('rifiuta un nome di viaggio normale', () => {
     expect(isShareCode('Ponza')).toBe(false)
@@ -131,8 +131,8 @@ describe('diffTrip', () => {
 describe('formatDiffSummary', () => {
   it('produce un riepilogo leggibile per una modifica', () => {
     const diff = { days: [{ date: '2026-09-01', status: 'invariato' }], sections: [{ title: 'Trasporti', status: 'modificata', added: ['Traghetto'], removed: [], changed: [] }] }
-    const summary = formatDiffSummary({ tripName: 'Ponza', shareCode: 'AB12CD', diff, isCreate: false })
-    expect(summary).toContain('Viaggio: Ponza (share_code AB12CD)')
+    const summary = formatDiffSummary({ tripName: 'Ponza', shareCode: 'AB23CD', diff, isCreate: false })
+    expect(summary).toContain('Viaggio: Ponza (share_code AB23CD)')
     expect(summary).toContain('2026-09-01: nessuna modifica')
     expect(summary).toContain('Trasporti: +1 voce (Traghetto)')
     expect(summary).toContain('Nessuna scrittura eseguita (dry-run)')
@@ -401,7 +401,7 @@ describe('cmdList', () => {
     const select = vi.fn().mockReturnValue({
       eq: vi.fn().mockResolvedValue({
         data: [
-          { trip_id: 't1', role: 'editor', tv_trips: { data: { name: 'Ponza' }, share_code: 'AB12CD', updated_at: '2026-08-21T10:00:00Z' } },
+          { trip_id: 't1', role: 'editor', tv_trips: { data: { name: 'Ponza' }, share_code: 'AB23CD', updated_at: '2026-08-21T10:00:00Z' } },
           { trip_id: 't2', role: 'viewer', tv_trips: { data: { name: 'Dolomiti' }, share_code: 'ZZ99YY', updated_at: '2026-08-20T09:00:00Z' } }
         ],
         error: null
@@ -414,7 +414,7 @@ describe('cmdList', () => {
 
     expect(supabase.from).toHaveBeenCalledWith('tv_trip_members')
     expect(trips).toEqual([
-      { name: 'Ponza', shareCode: 'AB12CD', role: 'editor', updatedAt: '2026-08-21T10:00:00Z' },
+      { name: 'Ponza', shareCode: 'AB23CD', role: 'editor', updatedAt: '2026-08-21T10:00:00Z' },
       { name: 'Dolomiti', shareCode: 'ZZ99YY', role: 'viewer', updatedAt: '2026-08-20T09:00:00Z' }
     ])
   })
@@ -552,7 +552,7 @@ Aggiungi a `scripts/wego-trip-sync.test.js` (in coda al file):
 const { findTrip, cmdPull } = await import('./wego-trip-sync.mjs')
 
 function tripRow(overrides = {}) {
-  return { id: 'trip-1', share_code: 'AB12CD', data: { name: 'Ponza' }, updated_at: '2026-08-21T10:00:00Z', owner_id: 'user-1', ...overrides }
+  return { id: 'trip-1', share_code: 'AB23CD', data: { name: 'Ponza' }, updated_at: '2026-08-21T10:00:00Z', owner_id: 'user-1', ...overrides }
 }
 
 describe('findTrip', () => {
@@ -566,7 +566,7 @@ describe('findTrip', () => {
       })
     }
     const result = await findTrip(supabase, { user: { id: 'user-1' } }, 'Ponza')
-    expect(result).toEqual({ id: 'trip-1', shareCode: 'AB12CD', data: { name: 'Ponza' }, updatedAt: '2026-08-21T10:00:00Z', ownerId: 'user-1', role: 'editor' })
+    expect(result).toEqual({ id: 'trip-1', shareCode: 'AB23CD', data: { name: 'Ponza' }, updatedAt: '2026-08-21T10:00:00Z', ownerId: 'user-1', role: 'editor' })
   })
 
   it('trova per share_code (eq su share_code)', async () => {
@@ -578,8 +578,8 @@ describe('findTrip', () => {
         throw new Error(`tabella inattesa: ${table}`)
       })
     }
-    const result = await findTrip(supabase, { user: { id: 'user-2' } }, 'AB12CD')
-    expect(eqShareCode).toHaveBeenCalledWith('share_code', 'AB12CD')
+    const result = await findTrip(supabase, { user: { id: 'user-2' } }, 'AB23CD')
+    expect(eqShareCode).toHaveBeenCalledWith('share_code', 'AB23CD')
     expect(result.role).toBe('viewer')
   })
 
@@ -615,7 +615,7 @@ describe('cmdPull', () => {
         throw new Error(`tabella inattesa: ${table}`)
       })
     }
-    const data = await cmdPull(supabase, { user: { id: 'user-1' } }, 'AB12CD')
+    const data = await cmdPull(supabase, { user: { id: 'user-1' } }, 'AB23CD')
     expect(data).toEqual({ name: 'Ponza', days: [] })
   })
 })
@@ -879,7 +879,7 @@ describe('cmdCreate', () => {
   })
 
   it('con --yes crea la riga tv_trips e la membership owner', async () => {
-    const insertTrip = vi.fn().mockReturnValue({ select: () => ({ single: async () => ({ data: { id: 'trip-1', share_code: 'AB12CD' }, error: null }) }) })
+    const insertTrip = vi.fn().mockReturnValue({ select: () => ({ single: async () => ({ data: { id: 'trip-1', share_code: 'AB23CD' }, error: null }) }) })
     const insertMember = vi.fn().mockResolvedValue({ error: null })
     const supabase = {
       from: vi.fn((table) => {
@@ -894,7 +894,7 @@ describe('cmdCreate', () => {
     const result = await cmdCreate(supabase, { user: { id: 'user-1' } }, filePath, { yes: true })
     logSpy.mockRestore()
 
-    expect(result).toEqual({ written: true, shareCode: 'AB12CD' })
+    expect(result).toEqual({ written: true, shareCode: 'AB23CD' })
     expect(insertMember).toHaveBeenCalledWith({ trip_id: 'trip-1', user_id: 'user-1', role: 'editor' })
   })
 
