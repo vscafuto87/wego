@@ -145,7 +145,8 @@ Fuori da Claude Code (es. dall'app desktop generica di Claude.ai), questi
 stessi comandi sono disponibili come strumenti MCP (`wego_list`, `wego_pull`,
 `wego_push`, `wego_create`, `wego_items`, `wego_attach`) tramite
 `scripts/wego-trip-mcp-server.mjs`, registrato una tantum
-nel file di configurazione dell'app desktop:
+nel file di configurazione dell'app desktop. Guida passo-passo completa per
+chi configura per la prima volta: [ONBOARDING.md](ONBOARDING.md).
 
 - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
 - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
