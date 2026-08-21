@@ -25,8 +25,8 @@ dell'app (`src/views/ImportView.jsx`) — stesso schema, zero divergenza.
   ],
   "sections": [
     { "title": "Ristoranti", "icon": "food", "type": "cards", "items": [ { "title": "", "meta": "", "detail": "", "link": "", "tags": [], "lat": null, "lng": null } ] },
-    { "title": "Trasporti", "icon": "bus", "type": "transport", "items": [ { "mode": "auto | treno | aereo | bus | traghetto", "from": "", "to": "", "date": "AAAA-MM-GG", "time": "", "ticketLink": "", "note": "" } ] },
-    { "title": "Pernottamento", "icon": "bed", "type": "lodging", "items": [ { "name": "", "checkIn": "AAAA-MM-GG", "checkOut": "AAAA-MM-GG", "address": "", "bookingLink": "", "note": "" } ] },
+    { "title": "Trasporti", "icon": "bus", "type": "transport", "items": [ { "mode": "auto | treno | aereo | bus | traghetto", "from": "", "to": "", "date": "AAAA-MM-GG", "time": "", "ticketLink": "", "note": "", "ticketFilePath": "", "ticketFileName": "" } ] },
+    { "title": "Pernottamento", "icon": "bed", "type": "lodging", "items": [ { "name": "", "checkIn": "AAAA-MM-GG", "checkOut": "AAAA-MM-GG", "address": "", "bookingLink": "", "note": "", "bookingFilePath": "", "bookingFileName": "" } ] },
     { "title": "Mappa", "icon": "map", "type": "map", "items": [ { "name": "", "category": "", "mapsLink": "", "lat": null, "lng": null, "note": "" } ] },
     { "title": "string", "icon": "check", "type": "checklist", "items": [ { "text": "", "done": false } ] },
     { "title": "string", "icon": "note", "type": "notes", "text": "" }
@@ -54,6 +54,14 @@ modificando solo `items` o il resto del giorno: ometterlo non rompe nulla
 personalizzato che l'utente aveva impostato trascinando le voci nell'app. Per
 un giorno nuovo che stai creando da zero, ometti `order` (o lascialo `[]`):
 l'app userà l'ordine di default finché l'utente non lo trascina lui stesso.
+
+`ticketFilePath`/`ticketFileName` (trasporti) e `bookingFilePath`/
+`bookingFileName` (alloggi) sono gestiti dal comando `attach`, non
+dall'utente. Se una voce pullata ha già questi campi valorizzati,
+**riportali invariati** quando riscrivi quella voce con `push`, anche se
+stai modificando solo altri campi: ometterli cancella silenziosamente il
+collegamento al PDF già caricato (il file resta nel bucket di Storage,
+orfano, senza più nulla che lo referenzi).
 
 ## Dati mancanti: chiedi, non lasciare vuoto
 
@@ -100,6 +108,30 @@ node --env-file-if-exists=.env.local scripts/wego-trip-sync.mjs push "<nome o sh
 node --env-file-if-exists=.env.local scripts/wego-trip-sync.mjs create <file.json>
 ```
 
+## Allegare un PDF a un trasporto o un alloggio
+
+Quando l'utente allega un PDF di un biglietto o di una prenotazione durante
+la conversazione:
+
+1. Esegui `items <nome|share_code> <transport|lodging>` per la sezione
+   pertinente e mostra l'elenco numerato all'utente, facendoti confermare
+   quale voce corrisponde al PDF.
+2. Esegui `attach <nome|share_code> <transport|lodging> <indice> <percorso.pdf>`
+   **senza** `--yes`: riporta il riepilogo (incluso l'avviso se sostituisce
+   un allegato già presente) e aspetta un sì esplicito, stessa procedura di
+   `push`/`create`.
+3. Rilancia con `--yes` solo dopo la conferma.
+
+Il file PDF deve essere leggibile da un percorso locale nel momento in cui
+lanci il comando via Bash — dipende da come l'ambiente in cui giri espone i
+file allegati alla conversazione. Se non riesci a risalire a un percorso
+locale del file, dillo all'utente invece di inventare un percorso.
+
+```bash
+node --env-file-if-exists=.env.local scripts/wego-trip-sync.mjs items "<nome o share_code>" transport
+node --env-file-if-exists=.env.local scripts/wego-trip-sync.mjs attach "<nome o share_code>" transport 2 /percorso/biglietto.pdf
+```
+
 ## Conferma obbligatoria prima di scrivere
 
 `push` e `create` **senza** `--yes` non scrivono nulla: stampano solo un
@@ -130,3 +162,7 @@ all'utente di aggiungere le due variabili a `.env.local`.
   `share_code` indicato nel messaggio invece del nome.
 - **"Sei solo viewer su «X»..."** → l'utente non è owner/editor di quel
   viaggio: non è possibile modificarlo con questa skill.
+- **"Sezione non valida..."** → `items`/`attach` valgono solo per `transport`
+  o `lodging`.
+- **"Indice non valido..."** → rilancia `items` per vedere l'elenco
+  aggiornato prima di riprovare `attach`.

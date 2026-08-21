@@ -328,3 +328,178 @@ describe('cmdCreate', () => {
     expect(insertTrip).toHaveBeenCalledTimes(3)
   })
 })
+
+const { findAttachmentSection, cmdItems } = await import('./wego-trip-sync.mjs')
+
+describe('findAttachmentSection', () => {
+  it('trova la sezione transport nel data del viaggio', () => {
+    const tripData = { sections: [{ title: 'Trasporti', type: 'transport', items: [{ mode: 'auto' }] }] }
+    const section = findAttachmentSection(tripData, 'transport')
+    expect(section.title).toBe('Trasporti')
+  })
+
+  it('rifiuta un sectionType non transport/lodging', () => {
+    const tripData = { sections: [] }
+    expect(() => findAttachmentSection(tripData, 'cards')).toThrow(/transport, lodging/)
+  })
+
+  it('rifiuta se il viaggio non ha quella sezione', () => {
+    const tripData = { sections: [{ title: 'Trasporti', type: 'transport', items: [] }] }
+    expect(() => findAttachmentSection(tripData, 'lodging')).toThrow(/lodging/)
+  })
+})
+
+describe('cmdItems', () => {
+  it('torna titolo sezione e voci per il viaggio risolto', async () => {
+    const tripData = { name: 'Ponza', sections: [{ title: 'Pernottamento', type: 'lodging', items: [{ name: 'Hotel Roma' }] }] }
+    const supabase = {
+      from: vi.fn((table) => {
+        if (table === 'tv_trips') return { select: () => ({ ilike: async () => ({ data: [tripRow({ data: tripData })], error: null }) }) }
+        if (table === 'tv_trip_members') return { select: () => ({ eq: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { role: 'editor' }, error: null }) }) }) }) }
+        throw new Error(`tabella inattesa: ${table}`)
+      })
+    }
+    const result = await cmdItems(supabase, { user: { id: 'user-1' } }, 'Ponza', 'lodging')
+    expect(result).toEqual({ sectionTitle: 'Pernottamento', items: [{ name: 'Hotel Roma' }] })
+  })
+})
+
+function writeTempPdfFile(name = 'biglietto.pdf') {
+  const dir = mkdtempSync(join(tmpdir(), 'wego-attach-'))
+  const filePath = join(dir, name)
+  writeFileSync(filePath, '%PDF-1.4 contenuto finto')
+  return filePath
+}
+
+const { cmdAttach } = await import('./wego-trip-sync.mjs')
+
+describe('cmdAttach', () => {
+  function tripDataWithTransport(overrides = {}) {
+    return {
+      name: 'Ponza',
+      sections: [
+        { title: 'Trasporti', type: 'transport', items: [{ mode: 'traghetto', from: 'Formia', to: 'Ponza', date: '2026-08-30', ticketFileName: '', ticketFilePath: '', ...overrides }] }
+      ]
+    }
+  }
+
+  function supabaseFor(tripData, { role = 'editor', uploadError = null, removeError = null } = {}) {
+    // update è il mock di .update(payload): deve catturare il payload per
+    // le asserzioni, non l'.eq() successivo (bug da non reintrodurre).
+    const update = vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) })
+    const upload = vi.fn().mockResolvedValue({ error: uploadError })
+    const remove = vi.fn().mockResolvedValue({ error: removeError })
+    const supabase = {
+      from: vi.fn((table) => {
+        if (table === 'tv_trips') return { select: () => ({ ilike: async () => ({ data: [tripRow({ data: tripData })], error: null }) }), update }
+        if (table === 'tv_trip_members') return { select: () => ({ eq: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { role }, error: null }) }) }) }) }
+        throw new Error(`tabella inattesa: ${table}`)
+      }),
+      storage: { from: vi.fn().mockReturnValue({ upload, remove }) }
+    }
+    return { supabase, update, upload, remove }
+  }
+
+  it('in dry-run stampa il riepilogo e non carica né scrive', async () => {
+    const { supabase, update, upload } = supabaseFor(tripDataWithTransport())
+    const filePath = writeTempPdfFile()
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const result = await cmdAttach(supabase, { user: { id: 'user-1' } }, 'Ponza', 'transport', 1, filePath, { yes: false })
+    logSpy.mockRestore()
+
+    expect(result).toEqual({ written: false })
+    expect(upload).not.toHaveBeenCalled()
+    expect(update).not.toHaveBeenCalled()
+  })
+
+  it('con --yes carica il file e aggiorna la voce, previous_data resta l\'originale', async () => {
+    const tripData = tripDataWithTransport()
+    const { supabase, update, upload } = supabaseFor(tripData)
+    const filePath = writeTempPdfFile('nuovo.pdf')
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const result = await cmdAttach(supabase, { user: { id: 'user-1' } }, 'Ponza', 'transport', 1, filePath, { yes: true })
+    logSpy.mockRestore()
+
+    expect(result).toEqual({ written: true })
+    expect(upload).toHaveBeenCalledTimes(1)
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({
+      previous_data: tripData,
+      data: expect.objectContaining({
+        sections: [expect.objectContaining({
+          items: [expect.objectContaining({ ticketFileName: 'nuovo.pdf' })]
+        })]
+      })
+    }))
+  })
+
+  it('sostituendo un allegato esistente, rimuove il vecchio file dopo aver scritto il nuovo', async () => {
+    const tripData = tripDataWithTransport({ ticketFileName: 'vecchio.pdf', ticketFilePath: 'trip-1/vecchio-uuid.pdf' })
+    const { supabase, remove, upload } = supabaseFor(tripData)
+    const filePath = writeTempPdfFile('nuovo.pdf')
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    await cmdAttach(supabase, { user: { id: 'user-1' } }, 'Ponza', 'transport', 1, filePath, { yes: true })
+    logSpy.mockRestore()
+
+    expect(remove).toHaveBeenCalledWith(['trip-1/vecchio-uuid.pdf'])
+    expect(upload).toHaveBeenCalledTimes(1)
+  })
+
+  it('se la rimozione del vecchio allegato fallisce, il comando ha comunque già scritto il nuovo allegato', async () => {
+    const tripData = tripDataWithTransport({ ticketFileName: 'vecchio.pdf', ticketFilePath: 'trip-1/vecchio-uuid.pdf' })
+    const { supabase, upload, update } = supabaseFor(tripData, { removeError: { message: 'file già assente' } })
+    const filePath = writeTempPdfFile('nuovo.pdf')
+
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const result = await cmdAttach(supabase, { user: { id: 'user-1' } }, 'Ponza', 'transport', 1, filePath, { yes: true })
+    logSpy.mockRestore()
+    errorSpy.mockRestore()
+
+    expect(result).toEqual({ written: true })
+    expect(upload).toHaveBeenCalledTimes(1)
+    expect(update).toHaveBeenCalledTimes(1)
+  })
+
+  it('se l\'upload fallisce, non scrive su tv_trips', async () => {
+    const { supabase, update } = supabaseFor(tripDataWithTransport(), { uploadError: { message: 'upload fallito' } })
+    const filePath = writeTempPdfFile()
+
+    await expect(cmdAttach(supabase, { user: { id: 'user-1' } }, 'Ponza', 'transport', 1, filePath, { yes: true })).rejects.toThrow('upload fallito')
+    expect(update).not.toHaveBeenCalled()
+  })
+
+  it('rifiuta se il ruolo è viewer, prima di ogni upload', async () => {
+    const { supabase, upload } = supabaseFor(tripDataWithTransport(), { role: 'viewer' })
+    const filePath = writeTempPdfFile()
+
+    await expect(cmdAttach(supabase, { user: { id: 'user-2' } }, 'Ponza', 'transport', 1, filePath, { yes: true })).rejects.toThrow(/viewer/)
+    expect(upload).not.toHaveBeenCalled()
+  })
+
+  it('rifiuta un indice fuori range, prima di interrogare Supabase Storage', async () => {
+    const { supabase, upload } = supabaseFor(tripDataWithTransport())
+    const filePath = writeTempPdfFile()
+
+    await expect(cmdAttach(supabase, { user: { id: 'user-1' } }, 'Ponza', 'transport', 5, filePath, { yes: true })).rejects.toThrow(/1 voci|indice/i)
+    expect(upload).not.toHaveBeenCalled()
+  })
+
+  it('rifiuta un file non-pdf prima di interrogare Supabase', async () => {
+    const supabase = { from: vi.fn(), storage: { from: vi.fn() } }
+    const dir = mkdtempSync(join(tmpdir(), 'wego-attach-'))
+    const filePath = join(dir, 'nota.txt')
+    writeFileSync(filePath, 'non è un pdf')
+
+    await expect(cmdAttach(supabase, { user: { id: 'user-1' } }, 'Ponza', 'transport', 1, filePath, { yes: false })).rejects.toThrow(/pdf/i)
+    expect(supabase.from).not.toHaveBeenCalled()
+  })
+
+  it('rifiuta un file inesistente prima di interrogare Supabase', async () => {
+    const supabase = { from: vi.fn(), storage: { from: vi.fn() } }
+    await expect(cmdAttach(supabase, { user: { id: 'user-1' } }, 'Ponza', 'transport', 1, '/tmp/non-esiste-davvero.pdf', { yes: false })).rejects.toThrow()
+    expect(supabase.from).not.toHaveBeenCalled()
+  })
+})

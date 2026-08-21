@@ -1,7 +1,8 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, existsSync } from 'node:fs'
+import { basename } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { createClient } from '@supabase/supabase-js'
-import { isShareCode, generateShareCode, validateTripPayload, diffTrip, formatDiffSummary } from './wego-trip-lib.mjs'
+import { isShareCode, generateShareCode, validateTripPayload, diffTrip, formatDiffSummary, ATTACHMENT_SECTION_TYPES, formatItemsList, attachmentFields, describeSectionItem, isPdfPath } from './wego-trip-lib.mjs'
 
 export function parseArgs(argv) {
   const [command, ...rest] = argv
@@ -132,6 +133,89 @@ export async function cmdCreate(supabase, session, filePath, { yes }) {
   throw new Error(lastError?.message || 'Impossibile creare il viaggio.')
 }
 
+export function findAttachmentSection(tripData, sectionType) {
+  if (!ATTACHMENT_SECTION_TYPES.includes(sectionType)) {
+    throw new Error(`Sezione non valida: "${sectionType}". Tipi ammessi: ${ATTACHMENT_SECTION_TYPES.join(', ')}.`)
+  }
+  const section = (tripData.sections ?? []).find((s) => s.type === sectionType)
+  if (!section) {
+    throw new Error(`Il viaggio non ha una sezione di tipo "${sectionType}".`)
+  }
+  return section
+}
+
+export async function cmdItems(supabase, session, identifier, sectionType) {
+  const trip = await findTrip(supabase, session, identifier)
+  const section = findAttachmentSection(trip.data, sectionType)
+  return { sectionTitle: section.title, items: section.items ?? [] }
+}
+
+export async function cmdAttach(supabase, session, identifier, sectionType, index, filePath, { yes }) {
+  if (!ATTACHMENT_SECTION_TYPES.includes(sectionType)) {
+    throw new Error(`Sezione non valida: "${sectionType}". Tipi ammessi: ${ATTACHMENT_SECTION_TYPES.join(', ')}.`)
+  }
+  if (!existsSync(filePath) || !isPdfPath(filePath)) {
+    throw new Error(`Il file "${filePath}" non esiste o non è un PDF.`)
+  }
+
+  const trip = await findTrip(supabase, session, identifier)
+  if (trip.role === 'viewer') {
+    throw new Error(`Sei solo viewer su "${trip.data.name}", non puoi modificarlo.`)
+  }
+
+  const section = findAttachmentSection(trip.data, sectionType)
+  const items = section.items ?? []
+  if (!Number.isInteger(index) || index < 1 || index > items.length) {
+    throw new Error(`Indice non valido: ${section.title} ha ${items.length} voci. Usa "items" per vedere l'elenco aggiornato.`)
+  }
+  const item = items[index - 1]
+  const { pathField, nameField } = attachmentFields(sectionType)
+  const fileName = basename(filePath)
+  const description = describeSectionItem(sectionType, item)
+
+  if (!yes) {
+    const lines = [`Verrà caricato "${fileName}" e collegato a: ${description}.`]
+    if (item[nameField]) lines.push(`Sostituirà l'allegato attuale (${item[nameField]}).`)
+    lines.push('', 'Nessuna scrittura eseguita (dry-run). Rilancia con --yes per confermare.')
+    console.log(lines.join('\n'))
+    return { written: false }
+  }
+
+  const oldPath = item[pathField]
+
+  const buffer = readFileSync(filePath)
+  const storagePath = `${trip.id}/${crypto.randomUUID()}.pdf`
+  const { error: uploadError } = await supabase.storage
+    .from('trip-attachments')
+    .upload(storagePath, buffer, { contentType: 'application/pdf' })
+  if (uploadError) throw new Error(uploadError.message)
+
+  const updatedData = {
+    ...trip.data,
+    sections: trip.data.sections.map((s) => {
+      if (s !== section) return s
+      return {
+        ...s,
+        items: s.items.map((it, i) => (i === index - 1 ? { ...it, [pathField]: storagePath, [nameField]: fileName } : it))
+      }
+    })
+  }
+
+  const { error } = await supabase
+    .from('tv_trips')
+    .update({ data: updatedData, previous_data: trip.data, updated_at: new Date().toISOString() })
+    .eq('id', trip.id)
+  if (error) throw new Error(error.message)
+
+  if (oldPath) {
+    const { error: removeError } = await supabase.storage.from('trip-attachments').remove([oldPath])
+    if (removeError) console.error(`Avviso: impossibile rimuovere il vecchio allegato (${removeError.message}).`)
+  }
+
+  console.log(`Allegato "${fileName}" collegato a ${description}.`)
+  return { written: true }
+}
+
 export async function main() {
   const { command, positional, yes } = parseArgs(process.argv.slice(2))
   try {
@@ -171,7 +255,23 @@ export async function main() {
       return
     }
 
-    console.error(`Comando sconosciuto: "${command}". Comandi disponibili: list, pull, push, create.`)
+    if (command === 'items') {
+      const [identifier, sectionType] = positional
+      if (!identifier || !sectionType) throw new Error('Uso: items <nome|share_code> <transport|lodging>')
+      const { sectionTitle, items } = await cmdItems(supabase, session, identifier, sectionType)
+      console.log(formatItemsList(sectionType, sectionTitle, items))
+      return
+    }
+
+    if (command === 'attach') {
+      const [identifier, sectionType, indexArg, filePath] = positional
+      if (!identifier || !sectionType || !indexArg || !filePath) throw new Error('Uso: attach <nome|share_code> <transport|lodging> <indice> <file.pdf> [--yes]')
+      const index = Number.parseInt(indexArg, 10)
+      await cmdAttach(supabase, session, identifier, sectionType, index, filePath, { yes })
+      return
+    }
+
+    console.error(`Comando sconosciuto: "${command}". Comandi disponibili: list, pull, push, create, items, attach.`)
     process.exitCode = 1
   } catch (err) {
     console.error(err.message)

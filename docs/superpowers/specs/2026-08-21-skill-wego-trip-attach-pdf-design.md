@@ -77,19 +77,28 @@ node --env-file-if-exists=.env.local scripts/wego-trip-sync.mjs attach <nome|sha
 - **Senza `--yes`**: stampa il riepilogo, nessun upload, nessuna scrittura,
   torna `{ written: false }`.
 - **Con `--yes`**:
-  1. Se la voce ha già `ticketFilePath`/`bookingFilePath`, tenta la
-     rimozione del vecchio file da Storage (`supabase.storage.from('trip-attachments').remove([oldPath])`).
-     Se la rimozione fallisce (es. file già assente), stampa un avviso su
-     stderr e **continua** — non blocca il nuovo upload per un file vecchio
-     già perso.
-  2. Carica il nuovo file: `supabase.storage.from('trip-attachments').upload(`${trip.id}/${crypto.randomUUID()}.pdf`, buffer, { contentType: 'application/pdf' })`.
-     Se l'upload fallisce, errore e nessuna scrittura su `tv_trips`.
-  3. Imposta `ticketFilePath`/`ticketFileName` (trasporti) o
+  1. Carica il nuovo file: `supabase.storage.from('trip-attachments').upload(`${trip.id}/${crypto.randomUUID()}.pdf`, buffer, { contentType: 'application/pdf' })`.
+     Se l'upload fallisce, errore e nessuna scrittura su `tv_trips`, nessun
+     effetto sul vecchio allegato.
+  2. Imposta `ticketFilePath`/`ticketFileName` (trasporti) o
      `bookingFilePath`/`bookingFileName` (alloggi) sulla voce all'indice
      indicato, con `fileName` = nome del file dato in input (basename del
      percorso).
-  4. Scrive `data` aggiornato su `tv_trips`, stesso pattern di `push`
-     (`previous_data` = `data` precedente, `updated_at` nuovo).
+  3. Scrive `data` aggiornato su `tv_trips`, stesso pattern di `push`
+     (`previous_data` = `data` precedente, `updated_at` nuovo). Se la
+     scrittura fallisce, il nuovo file resta orfano nel bucket ma il vecchio
+     allegato (se presente) è ancora intatto e valido: nessun riferimento
+     rotto, nessuna perdita di dati.
+  4. Solo ora, se la voce aveva già `ticketFilePath`/`bookingFilePath`, tenta
+     la rimozione del vecchio file da Storage
+     (`supabase.storage.from('trip-attachments').remove([oldPath])`). Se la
+     rimozione fallisce (es. file già assente), stampa un avviso su stderr e
+     **continua** — il comando ha già scritto con successo il nuovo
+     allegato, quindi non blocca né annulla nulla per un vecchio file che al
+     più resta orfano nel bucket. Rimuovere prima di caricare/scrivere
+     lascerebbe invece, in caso di errore successivo, un riferimento rotto
+     al vecchio file già cancellato: peggio di un file orfano, è perdita di
+     dati.
   5. Conferma: `Allegato "<nomefile>" collegato a <descrizione voce>.`
 
 ## 3. Normalizzazione minima
