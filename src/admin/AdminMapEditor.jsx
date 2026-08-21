@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { collectExternalMapPoints } from '../data/schema.js'
 
-const CATEGORY_LABELS = { schede: 'Scheda', lodging: 'Pernottamento', sentiero: 'Sentiero', spiaggia: 'Spiaggia', pasto: 'Pasto' }
+const CATEGORY_LABELS = { schede: 'Scheda', lodging: 'Pernottamento', sentiero: 'Sentiero', spiaggia: 'Spiaggia', pasto: 'Ristorante' }
 
 // Sola lettura: la Mappa non ha più punti propri. I punti si aggiungono
 // dalle sezioni di origine (Ristoranti, Pernottamento, Itinerario), qui si

@@ -8,7 +8,7 @@ import Empty from '../components/Empty.jsx'
 import { collectExternalMapPoints } from '../data/schema.js'
 
 export const CATEGORY_COLORS = { schede: '#f97316', lodging: '#a855f7', sentiero: '#16a34a', spiaggia: '#0ea5e9', pasto: '#eab308' }
-const CATEGORY_LABELS = { schede: 'Schede', lodging: 'Pernottamento', sentiero: 'Sentieri', spiaggia: 'Spiagge', pasto: 'Pasti' }
+const CATEGORY_LABELS = { schede: 'Schede', lodging: 'Pernottamento', sentiero: 'Sentieri', spiaggia: 'Spiagge', pasto: 'Ristoranti' }
 const CATEGORY_ORDER = ['schede', 'lodging', 'sentiero', 'spiaggia', 'pasto']
 const CATEGORY_MARKER_ICONS = { schede: Star, lodging: Bed, sentiero: Mountain, spiaggia: Waves, pasto: Utensils }
 

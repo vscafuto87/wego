@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { CATEGORY_COLORS, dotIcon } from './MapSection.jsx'
 
-const KIND_LABELS = { sentiero: 'Sentiero', spiaggia: 'Spiaggia', pasto: 'Pasto' }
+const KIND_LABELS = { sentiero: 'Sentiero', spiaggia: 'Spiaggia', pasto: 'Ristorante' }
 
 function useOnlineStatus() {
   const [online, setOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine))
