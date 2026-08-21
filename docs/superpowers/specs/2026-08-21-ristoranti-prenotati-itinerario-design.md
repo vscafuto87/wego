@@ -72,20 +72,27 @@ Nuovo componente `RestaurantDayCard` (stesso ruolo di `TransportDayCard`): sola
 lettura nel giorno, maniglia di drag, pulsante "Vai a Ristoranti" che naviga alla
 sezione per modificare davvero la scheda.
 
-### 4. Section.jsx: raggruppamento Prenotati/Consigliati
+### 4. Section.jsx: raggruppamento Prenotati/Consigliati, drag tra i due gruppi
 
 Solo per la sezione fissa Ristoranti, le schede si dividono in due liste con
-intestazione — "Prenotati" (quelle con `date` non vuota, ordinate per data/ora) e
-"Consigliati" (le altre, ordine array come oggi). Puro derivato dal render, nessun
-nuovo stato salvato. Il drag&drop di riordino resta un unico `SortableContext` per
-l'intera sezione (comportamento invariato): trascinare una scheda tra i due gruppi
-non ha effetto sulla prenotazione, che si imposta solo editando i campi data/ora
-nella scheda (nuovi campi nel form di modifica scheda, analoghi a quelli già
-presenti in Trasporti).
+intestazione — "Prenotati" (`date` non vuota) e "Consigliati" (le altre) — ognuna
+in **ordine manuale** (posizione nell'array `section.items`, filtrato per gruppo),
+non ordinate per data/ora: stessa filosofia già in vigore per l'Itinerario ("l'ordine
+manuale sostituisce l'ordinamento per orario"). `time`/`date` restano solo
+informativi, mostrati come badge sulla scheda.
 
-Sezioni `cards` non fisse (create manualmente dall'utente, non "Ristoranti") non
-mostrano questo raggruppamento: restano una singola lista come oggi, anche se le
-loro schede hanno ora `date`/`time` disponibili (semplicemente inutilizzati lì).
+Due `SortableContext` di `@dnd-kit`, uno per gruppo, entrambi dentro un unico
+`DndContext`: **trascinare una scheda nell'altro gruppo cambia la prenotazione**.
+Verso "Prenotati": un prompt (`window.prompt`, come i `window.confirm` già usati per
+le eliminazioni) chiede data e ora; annullare il prompt annulla lo spostamento.
+Verso "Consigliati": svuota `date`/`time` senza chiedere conferma. Ogni gruppo resta
+un'area di drop valida anche da vuoto (contenitore `useDroppable` dedicato), pattern
+standard "board a più colonne" di dnd-kit.
+
+Il form di modifica scheda espone comunque campi data/ora espliciti (per chi
+preferisce non usare il drag). Sezioni `cards` non fisse (create manualmente
+dall'utente, non "Ristoranti") non mostrano né il raggruppamento né questi campi:
+restano una singola lista come oggi, anche se lo schema li supporta.
 
 ## Edge case
 
@@ -106,11 +113,21 @@ loro schede hanno ora `date`/`time` disponibili (semplicemente inutilizzati lì)
 ## File toccati
 
 - `src/data/schema.js` — `normalizeCardItem()` (+`date`/`time`), `DAY_ORDER_TAGS`,
-  `collectExternalDayItems()`, `buildDayTimeline()`.
+  `collectExternalDayItems()` (ora ritorna anche voci `type: 'card'`, oltre a
+  `type: 'transport'`), `buildDayTimeline()` (terza coda).
 - `src/views/Days.jsx` — split a tre in `handleDragEnd`, nuovo
-  `RestaurantDayCard`.
+  `RestaurantDayCard`, `TimelineBlock`/`SortableTimelineEntry`/`DragOverlay`
+  estesi al terzo tipo, `DayItemsList` (parametro rinominato in `externalItems`
+  perché non è più solo trasporti).
 - `src/views/Section.jsx` — campi data/ora nel form scheda, raggruppamento
-  Prenotati/Consigliati solo per la sezione fissa Ristoranti.
+  Prenotati/Consigliati e drag tra gruppi solo per la sezione fissa Ristoranti.
+- `src/views/Today.jsx` — stesso motivo di Days.jsx: `collectExternalDayItems()`
+  ora mischia trasporti e ristoranti prenotati, quindi `groupByDaypart`,
+  `AgendaRow`, `AgendaGroup` (icona e card intera in corso) devono distinguere
+  i tre tipi invece di due, altrimenti un ristorante prenotato apparirebbe con
+  l'icona del bus nell'agenda di Oggi.
+- `src/admin/AdminDaysEditor.jsx` — stesso motivo: `reorderTimeline()` e il
+  render della timeline (drag HTML5 nativo) gestiscono tre tipi invece di due.
 
 Non toccati: `sync.js` (nessuna trasformazione, stesso schema `data` su Supabase),
 `ExportPanel.jsx`/import (i due campi nuovi seguono lo stesso giro degli altri
