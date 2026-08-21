@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import { pathToFileURL } from 'node:url'
 import { createClient } from '@supabase/supabase-js'
 import { isShareCode, generateShareCode, validateTripPayload, diffTrip, formatDiffSummary } from './wego-trip-lib.mjs'
 
@@ -79,7 +80,7 @@ export async function cmdPush(supabase, session, identifier, filePath, { yes }) 
   }
 
   const diff = diffTrip(trip.data, proposed)
-  const summary = formatDiffSummary({ tripName: trip.data.name, shareCode: trip.shareCode, diff, isCreate: false })
+  const summary = formatDiffSummary({ tripName: proposed.name, shareCode: trip.shareCode, diff, isCreate: false })
 
   if (!yes) {
     console.log(summary)
@@ -178,6 +179,6 @@ export async function main() {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   main()
 }

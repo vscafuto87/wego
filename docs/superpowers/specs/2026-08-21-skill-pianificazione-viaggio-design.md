@@ -112,10 +112,16 @@ ambiguità impreviste). Casi:
 
 ## 2. Riepilogo differenze (dry-run)
 
-Confronto strutturale tra `data` remoto e il JSON proposto, per sezione:
+Confronto strutturale tra `data` remoto e il JSON proposto, per sezione. Il
+riepilogo segnala anche i cambiamenti a livello di viaggio (nome, date,
+palette, ecc.), non solo giorni e sezioni: quando presenti, compaiono in un
+blocco `Dati generali:` sopra `Giorni:`.
 
 ```
-Viaggio: Ponza (share_code ABC123)
+Viaggio: Ponza (bis) (share_code ABC123)
+
+Dati generali:
+  name: Ponza → Ponza (bis)
 
 Giorni:
   2026-09-01: +1 voce itinerario ("Cena da Mario")

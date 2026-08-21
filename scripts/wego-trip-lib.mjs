@@ -114,8 +114,37 @@ function diffSections(remoteSections, proposedSections) {
   return sections
 }
 
+const META_SCALAR_FIELDS = ['name', 'emoji', 'place', 'start', 'end', 'palette']
+
+function diffMeta(remoteData, proposedData) {
+  const entries = []
+  if (remoteData) {
+    for (const field of META_SCALAR_FIELDS) {
+      const from = remoteData[field] ?? ''
+      const to = proposedData[field] ?? ''
+      if (from !== to) entries.push({ field, from, to })
+    }
+    if (!deepEqual(remoteData.people ?? [], proposedData.people ?? [])) {
+      entries.push({
+        field: 'people',
+        from: (remoteData.people ?? []).join(', '),
+        to: (proposedData.people ?? []).join(', ')
+      })
+    }
+  } else {
+    for (const field of META_SCALAR_FIELDS) {
+      if (proposedData[field]) entries.push({ field, to: proposedData[field] })
+    }
+    if ((proposedData.people ?? []).length) {
+      entries.push({ field: 'people', to: proposedData.people.join(', ') })
+    }
+  }
+  return entries
+}
+
 export function diffTrip(remoteData, proposedData) {
   return {
+    meta: diffMeta(remoteData, proposedData),
     days: diffDays(remoteData?.days ?? [], proposedData?.days ?? []),
     sections: diffSections(remoteData?.sections ?? [], proposedData?.sections ?? [])
   }
@@ -144,11 +173,18 @@ function describeSection(section) {
   return describeChange(section.title, section)
 }
 
+function describeMeta(entry) {
+  if (entry.from !== undefined) return `  ${entry.field}: ${entry.from} → ${entry.to}`
+  return `  ${entry.field}: ${entry.to}`
+}
+
 export function formatDiffSummary({ tripName, shareCode, diff, isCreate }) {
   const header = isCreate ? `Nuovo viaggio: ${tripName}` : `Viaggio: ${tripName} (share_code ${shareCode})`
+  const meta = diff.meta ?? []
   return [
     header,
     '',
+    ...(meta.length ? ['Dati generali:', ...meta.map(describeMeta), ''] : []),
     'Giorni:',
     ...diff.days.map(describeDay),
     '',

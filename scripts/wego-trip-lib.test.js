@@ -91,6 +91,34 @@ describe('diffTrip', () => {
     const diff = diffTrip(remote, proposed)
     expect(diff.days).toEqual([{ date: '2026-09-01', status: 'invariato' }])
   })
+  it('segnala i campi generali cambiati (name, start) quando giorni e sezioni sono invariati', () => {
+    const remote = { name: 'Ponza', start: '2026-08-30', end: '2026-09-05', days: [], sections: [] }
+    const proposed = { name: 'Ponza (bis)', start: '2026-09-01', end: '2026-09-05', days: [], sections: [] }
+    const diff = diffTrip(remote, proposed)
+    expect(diff.meta).toEqual([
+      { field: 'name', from: 'Ponza', to: 'Ponza (bis)' },
+      { field: 'start', from: '2026-08-30', to: '2026-09-01' }
+    ])
+  })
+  it('segnala un meta vuoto quando nulla è cambiato a livello di viaggio', () => {
+    const remote = { name: 'Ponza', start: '2026-08-30', end: '2026-09-05', days: [], sections: [] }
+    const proposed = { name: 'Ponza', start: '2026-08-30', end: '2026-09-05', days: [], sections: [] }
+    const diff = diffTrip(remote, proposed)
+    expect(diff.meta).toEqual([])
+  })
+  it('in creazione (remoto null) segnala ogni campo scalare non vuoto della proposta, solo "to"', () => {
+    const proposed = { name: 'Ponza', emoji: '🌊', place: 'Ponza (LT)', start: '2026-08-30', end: '2026-09-05', palette: 'sea', people: ['Vincenzo'], days: [], sections: [] }
+    const diff = diffTrip(null, proposed)
+    expect(diff.meta).toEqual([
+      { field: 'name', to: 'Ponza' },
+      { field: 'emoji', to: '🌊' },
+      { field: 'place', to: 'Ponza (LT)' },
+      { field: 'start', to: '2026-08-30' },
+      { field: 'end', to: '2026-09-05' },
+      { field: 'palette', to: 'sea' },
+      { field: 'people', to: 'Vincenzo' }
+    ])
+  })
 })
 
 describe('formatDiffSummary', () => {
@@ -107,5 +135,24 @@ describe('formatDiffSummary', () => {
     const summary = formatDiffSummary({ tripName: 'Ponza', shareCode: null, diff, isCreate: true })
     expect(summary).toContain('Nuovo viaggio: Ponza')
     expect(summary).toContain('2026-09-01: nuovo giorno (2 voci)')
+  })
+  it('include un blocco "Dati generali:" quando diff.meta non è vuoto', () => {
+    const diff = {
+      meta: [{ field: 'name', from: 'Ponza', to: 'Ponza (bis)' }],
+      days: [{ date: '2026-09-01', status: 'invariato' }],
+      sections: []
+    }
+    const summary = formatDiffSummary({ tripName: 'Ponza (bis)', shareCode: 'AB12CD', diff, isCreate: false })
+    expect(summary).toContain('Dati generali:')
+    expect(summary).toContain('name: Ponza → Ponza (bis)')
+  })
+  it('non include "Dati generali:" quando diff.meta è vuoto o assente (retrocompatibilità)', () => {
+    const diffSenzaMeta = { days: [{ date: '2026-09-01', status: 'invariato' }], sections: [{ title: 'Trasporti', status: 'modificata', added: ['Traghetto'], removed: [], changed: [] }] }
+    const summarySenzaMeta = formatDiffSummary({ tripName: 'Ponza', shareCode: 'AB12CD', diff: diffSenzaMeta, isCreate: false })
+    expect(summarySenzaMeta).not.toContain('Dati generali:')
+
+    const diffMetaVuoto = { meta: [], days: [{ date: '2026-09-01', status: 'invariato' }], sections: [] }
+    const summaryMetaVuoto = formatDiffSummary({ tripName: 'Ponza', shareCode: 'AB12CD', diff: diffMetaVuoto, isCreate: false })
+    expect(summaryMetaVuoto).not.toContain('Dati generali:')
   })
 })

@@ -70,10 +70,10 @@ anche vuote (`items: []`), sono fisse in ogni viaggio.
 ## Comandi (da lanciare via Bash, dalla root del repo)
 
 ```bash
-node --env-file=.env.local scripts/wego-trip-sync.mjs list
-node --env-file=.env.local scripts/wego-trip-sync.mjs pull "<nome o share_code>"
-node --env-file=.env.local scripts/wego-trip-sync.mjs push "<nome o share_code>" <file.json>
-node --env-file=.env.local scripts/wego-trip-sync.mjs create <file.json>
+node --env-file-if-exists=.env.local scripts/wego-trip-sync.mjs list
+node --env-file-if-exists=.env.local scripts/wego-trip-sync.mjs pull "<nome o share_code>"
+node --env-file-if-exists=.env.local scripts/wego-trip-sync.mjs push "<nome o share_code>" <file.json>
+node --env-file-if-exists=.env.local scripts/wego-trip-sync.mjs create <file.json>
 ```
 
 ## Conferma obbligatoria prima di scrivere
