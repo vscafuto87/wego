@@ -1,5 +1,6 @@
 import { forwardRef, lazy, Suspense, useImperativeHandle, useMemo, useState } from 'react'
 import { Plus, Mountain, Waves, Utensils, ExternalLink, Check, Ruler, Clock, TrendingUp, MapPin, Bus, ArrowRight, GripVertical, Phone } from 'lucide-react'
+import { ACCENT_GRADIENT } from '../theme/themes.js'
 import EditIcon from '../components/EditIcon.jsx'
 import DeleteIcon from '../components/DeleteIcon.jsx'
 import Btn from '../components/Btn.jsx'
@@ -476,11 +477,12 @@ const Days = forwardRef(function Days({ trip, onUpdate, activeDisplayName, onNav
                     key={day.id}
                     onClick={() => setSelectedDayId(day.id)}
                     aria-pressed={active}
-                    className={`flex-shrink-0 flex flex-col items-center justify-center gap-0.5 h-14 w-[52px] rounded-2xl font-mono ${
-                      active ? 'bg-[var(--tint)] border-2 border-[var(--accent)] text-[var(--accent)]' : 'bg-[var(--card)] border border-[var(--line)] text-[var(--muted)]'
+                    style={active ? { background: ACCENT_GRADIENT } : undefined}
+                    className={`flex-shrink-0 flex flex-col items-center justify-center gap-0.5 h-14 w-[52px] rounded-full font-mono transition-transform duration-150 ease-out active:scale-[0.97] ${
+                      active ? 'text-[var(--paper)] shadow-[0_10px_20px_-10px_rgb(var(--accent-rgb)/0.55)]' : 'bg-[var(--tint)] text-[var(--muted)]'
                     }`}
                   >
-                    <span className="text-[10px] uppercase tracking-wide">{weekday}</span>
+                    <span className={`text-[10px] uppercase tracking-wide ${active ? 'opacity-80' : ''}`}>{weekday}</span>
                     <span className={`text-[15px] ${active ? 'font-semibold' : 'font-medium'}`}>{dayNum}</span>
                   </button>
                 )
@@ -488,6 +490,16 @@ const Days = forwardRef(function Days({ trip, onUpdate, activeDisplayName, onNav
             </div>
             {trip.days.length > 5 && (
               <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-[var(--paper)] to-transparent" />
+            )}
+            {trip.days.length > 1 && (
+              <div className="flex items-center justify-center gap-1.5 mt-2.5">
+                {trip.days.map((day) => (
+                  <span
+                    key={day.id}
+                    className={`h-1 rounded-full transition-all duration-150 ${day.id === selectedDay.id ? 'w-4 bg-[var(--accent)]' : 'w-1 bg-[var(--line)]'}`}
+                  />
+                ))}
+              </div>
             )}
           </div>
 
