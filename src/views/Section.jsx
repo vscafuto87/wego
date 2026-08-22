@@ -88,7 +88,11 @@ function isValidISODate(value) {
 
 function isFixedSection(section) {
   if (section.type === 'transport' || section.type === 'lodging' || section.type === 'map') return true
-  return isRistoranti(section)
+  // Anche "Spiagge e cale" è agganciata per titolo esatto all'Itinerario
+  // (vedi DATE_GROUP_CONFIG/DAY_ITINERARY_CARD_SECTIONS): rinominarla
+  // romperebbe silenziosamente quell'aggancio, quindi resta fissa come
+  // Ristoranti.
+  return dateGroupConfig(section) !== null
 }
 
 const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'

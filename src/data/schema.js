@@ -333,7 +333,7 @@ export function parseAddressFromMapsLink(url) {
 // giorno corrispondente dell'Itinerario (vedi collectExternalDayItems sotto).
 // Ristoranti = prenotazione confermata; Spiagge e cale = spiaggia programmata
 // per quel giorno. Altre sezioni cards restano solo consultabili dalla loro tab.
-const DAY_ITINERARY_CARD_SECTIONS = ['Ristoranti', 'Spiagge e cale']
+export const DAY_ITINERARY_CARD_SECTIONS = ['Ristoranti', 'Spiagge e cale']
 
 // Voci Trasporti e schede delle sezioni sopra con una data, mostrate anche nel
 // giorno corrispondente dell'Itinerario. Calcolo derivato come

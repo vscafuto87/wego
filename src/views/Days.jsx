@@ -10,7 +10,7 @@ import Empty from '../components/Empty.jsx'
 import { TRANSPORT_MODES } from './Transport.jsx'
 
 const DayMiniMap = lazy(() => import('./DayMiniMap.jsx'))
-import { stampModified, dayItemFieldsForKind, collectExternalDayItems, buildDayTimeline } from '../data/schema.js'
+import { stampModified, dayItemFieldsForKind, collectExternalDayItems, buildDayTimeline, DAY_ITINERARY_CARD_SECTIONS } from '../data/schema.js'
 import ModifiedBy from '../components/ModifiedBy.jsx'
 import CoordsInput from '../components/CoordsInput.jsx'
 import { DndContext, DragOverlay, PointerSensor, KeyboardSensor, useSensor, useSensors, closestCenter } from '@dnd-kit/core'
@@ -374,7 +374,16 @@ const Days = forwardRef(function Days({ trip, onUpdate, activeDisplayName, onNav
     const reordered = arrayMove(timeline, oldIndex, newIndex)
     const newItems = reordered.filter((e) => e.type === 'item').map((e) => e.item)
     const newTransportIds = reordered.filter((e) => e.type === 'transport').map((e) => e.item.id)
-    const newCardIds = reordered.filter((e) => e.type === 'card').map((e) => e.item.id)
+    // Le card possono venire da più sezioni (Ristoranti, Spiagge e cale): si
+    // riordina ciascuna sezione solo con gli id che le appartengono, altrimenti
+    // il controllo di lunghezza in reorderSubset le scarta tutte (vedi bug fix).
+    const newCardIdsBySection = new Map()
+    reordered.filter((e) => e.type === 'card').forEach((e) => {
+      const key = e.item.origin.tab
+      const list = newCardIdsBySection.get(key) ?? []
+      list.push(e.item.id)
+      newCardIdsBySection.set(key, list)
+    })
     const newOrder = reordered.map((e) => e.type)
 
     function reorderSubset(items, ids) {
@@ -395,7 +404,9 @@ const Days = forwardRef(function Days({ trip, onUpdate, activeDisplayName, onNav
       days: t.days.map((d) => (d.id === selectedDay.id ? { ...d, items: newItems, order: newOrder } : d)),
       sections: t.sections.map((s) => {
         if (s.type === 'transport') return { ...s, items: reorderSubset(s.items, newTransportIds) }
-        if (s.type === 'cards' && s.title === 'Ristoranti') return { ...s, items: reorderSubset(s.items, newCardIds) }
+        if (s.type === 'cards' && DAY_ITINERARY_CARD_SECTIONS.includes(s.title)) {
+          return { ...s, items: reorderSubset(s.items, newCardIdsBySection.get(s.id) ?? []) }
+        }
         return s
       })
     }))

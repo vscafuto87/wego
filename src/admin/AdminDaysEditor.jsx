@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Plus, Mountain, Waves, Utensils, GripVertical, Bus, ExternalLink, ArrowRight } from 'lucide-react'
 import EditIcon from '../components/EditIcon.jsx'
 import DeleteIcon from '../components/DeleteIcon.jsx'
-import { stampModified, dayItemFieldsForKind, collectExternalDayItems, buildDayTimeline } from '../data/schema.js'
+import { stampModified, dayItemFieldsForKind, collectExternalDayItems, buildDayTimeline, DAY_ITINERARY_CARD_SECTIONS } from '../data/schema.js'
 import { sentieroStats } from '../views/Days.jsx'
 
 const inputClass = 'border border-[var(--line)] bg-[var(--paper)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
@@ -74,7 +74,15 @@ export default function AdminDaysEditor({ trip, onUpdate, activeDisplayName, onN
     entries.splice(toIdx, 0, moved)
     const newItems = entries.filter((e) => e.type === 'item').map((e) => e.item)
     const newTransportIds = entries.filter((e) => e.type === 'transport').map((e) => e.item.id)
-    const newCardIds = entries.filter((e) => e.type === 'card').map((e) => e.item.id)
+    // Le card possono venire da più sezioni (Ristoranti, Spiagge e cale): si
+    // riordina ciascuna sezione solo con gli id che le appartengono.
+    const newCardIdsBySection = new Map()
+    entries.filter((e) => e.type === 'card').forEach((e) => {
+      const key = e.item.origin.tab
+      const list = newCardIdsBySection.get(key) ?? []
+      list.push(e.item.id)
+      newCardIdsBySection.set(key, list)
+    })
     const newOrder = entries.map((e) => e.type)
 
     function reorderSubset(items, ids) {
@@ -92,7 +100,9 @@ export default function AdminDaysEditor({ trip, onUpdate, activeDisplayName, onN
       days: t.days.map((d) => (d.id === day.id ? { ...d, items: newItems, order: newOrder } : d)),
       sections: t.sections.map((s) => {
         if (s.type === 'transport') return { ...s, items: reorderSubset(s.items, newTransportIds) }
-        if (s.type === 'cards' && s.title === 'Ristoranti') return { ...s, items: reorderSubset(s.items, newCardIds) }
+        if (s.type === 'cards' && DAY_ITINERARY_CARD_SECTIONS.includes(s.title)) {
+          return { ...s, items: reorderSubset(s.items, newCardIdsBySection.get(s.id) ?? []) }
+        }
         return s
       })
     }))
@@ -236,7 +246,7 @@ export default function AdminDaysEditor({ trip, onUpdate, activeDisplayName, onN
                           <>
                             <div className="flex-1">
                               {item.time && <span className="font-mono text-sm text-[var(--muted)] mr-2">{item.time}</span>}
-                              <Utensils size={15} className="inline mr-1.5 -mt-0.5 text-[var(--muted)]" />
+                              <KindIcon kind={item.kind} />
                               <span className="text-base">{item.title}</span>
                               {item.note && <p className="text-sm text-[var(--muted)] mt-0.5">{item.note}</p>}
                             </div>
@@ -246,7 +256,7 @@ export default function AdminDaysEditor({ trip, onUpdate, activeDisplayName, onN
                               </a>
                             )}
                             {onNavigate && (
-                              <button onClick={() => onNavigate(item.origin.tab)} aria-label="Vai a Ristoranti" className="p-1.5 text-[var(--muted)]">
+                              <button onClick={() => onNavigate(item.origin.tab)} aria-label={`Vai a ${item.origin.sectionTitle ?? 'Ristoranti'}`} className="p-1.5 text-[var(--muted)]">
                                 <ArrowRight size={14} />
                               </button>
                             )}

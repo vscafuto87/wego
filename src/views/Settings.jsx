@@ -8,6 +8,7 @@ import Label from '../components/Label.jsx'
 import Stat from '../components/Stat.jsx'
 import Modal from '../components/Modal.jsx'
 import ExportPanel from './ExportPanel.jsx'
+import { DAY_ITINERARY_CARD_SECTIONS } from '../data/schema.js'
 
 export const ICONS = { map: Map, check: CheckSquare, note: StickyNote, ticket: Ticket, food: Utensils, bed: Bed, bus: Bus, star: Star, people: Users }
 const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
@@ -82,7 +83,9 @@ export default function Settings({ trip, onUpdate, onDelete, shareCode, onRestor
 
   function isFixedSection(section) {
     if (section.type === 'transport' || section.type === 'lodging' || section.type === 'map') return true
-    return section.type === 'cards' && section.title === 'Ristoranti'
+    // "Spiagge e cale" è agganciata per titolo esatto all'Itinerario come
+    // Ristoranti: eliminarla o rinominarla romperebbe quell'aggancio.
+    return section.type === 'cards' && DAY_ITINERARY_CARD_SECTIONS.includes(section.title)
   }
 
   function copyShareLink() {
