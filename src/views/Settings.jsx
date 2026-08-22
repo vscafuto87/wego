@@ -54,8 +54,9 @@ export default function Settings({ trip, onUpdate, onDelete, shareCode, onRestor
 
   function addSection(e) {
     e.preventDefault()
-    if (sectionForm.type === 'cards' && sectionForm.title.trim() === 'Ristoranti') {
-      setSectionError('"Ristoranti" è già una sezione fissa: scegli un altro titolo.')
+    const trimmedTitle = sectionForm.title.trim()
+    if (sectionForm.type === 'cards' && DAY_ITINERARY_CARD_SECTIONS.includes(trimmedTitle)) {
+      setSectionError(`"${trimmedTitle}" è già una sezione fissa: scegli un altro titolo.`)
       return
     }
     const section = {

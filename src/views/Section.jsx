@@ -6,7 +6,7 @@ import Btn from '../components/Btn.jsx'
 import Label from '../components/Label.jsx'
 import Modal from '../components/Modal.jsx'
 import Empty from '../components/Empty.jsx'
-import { stampModified, dayItemFieldsForKind } from '../data/schema.js'
+import { stampModified, dayItemFieldsForKind, DAY_ITINERARY_CARD_SECTIONS } from '../data/schema.js'
 import ModifiedBy from '../components/ModifiedBy.jsx'
 import CoordsInput from '../components/CoordsInput.jsx'
 import Transport from './Transport.jsx'
@@ -88,11 +88,10 @@ function isValidISODate(value) {
 
 function isFixedSection(section) {
   if (section.type === 'transport' || section.type === 'lodging' || section.type === 'map') return true
-  // Anche "Spiagge e cale" è agganciata per titolo esatto all'Itinerario
-  // (vedi DATE_GROUP_CONFIG/DAY_ITINERARY_CARD_SECTIONS): rinominarla
-  // romperebbe silenziosamente quell'aggancio, quindi resta fissa come
-  // Ristoranti.
-  return dateGroupConfig(section) !== null
+  // Stessa lista di schema.js/Settings.jsx/AdminTripEditor.jsx: le sezioni
+  // agganciate per titolo esatto all'Itinerario restano fisse come
+  // Ristoranti, altrimenti rinominarle romperebbe l'aggancio in silenzio.
+  return section.type === 'cards' && DAY_ITINERARY_CARD_SECTIONS.includes(section.title)
 }
 
 const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
