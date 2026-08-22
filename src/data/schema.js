@@ -335,6 +335,18 @@ export function parseAddressFromMapsLink(url) {
 // per quel giorno. Altre sezioni cards restano solo consultabili dalla loro tab.
 export const DAY_ITINERARY_CARD_SECTIONS = ['Ristoranti', 'Spiagge e cale']
 
+// Vero per le sezioni che l'utente non può rinominare/eliminare dalla gestione
+// manuale: transport/lodging/map esistono in una sola copia per viaggio
+// (garantita da withFixedSections sopra), le cards di
+// DAY_ITINERARY_CARD_SECTIONS sono agganciate per titolo esatto
+// all'Itinerario (vedi collectExternalDayItems). Unica fonte di verità: le
+// viste (Section.jsx, Settings.jsx, AdminTripEditor.jsx) la usano invece di
+// reimplementarla, per non disallinearsi tra loro.
+export function isFixedSection(section) {
+  if (section.type === 'transport' || section.type === 'lodging' || section.type === 'map') return true
+  return section.type === 'cards' && DAY_ITINERARY_CARD_SECTIONS.includes(section.title)
+}
+
 // Voci Trasporti e schede delle sezioni sopra con una data, mostrate anche nel
 // giorno corrispondente dell'Itinerario. Calcolo derivato come
 // collectExternalMapPoints: nessuna copia salvata, ogni voce resta editabile

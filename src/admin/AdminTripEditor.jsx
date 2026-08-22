@@ -9,18 +9,11 @@ import { themeStyle } from '../theme/themes.js'
 import AdminMetaForm from './AdminMetaForm.jsx'
 import AdminDaysEditor from './AdminDaysEditor.jsx'
 import AdminSectionEditor from './AdminSectionEditor.jsx'
-import { DAY_ITINERARY_CARD_SECTIONS } from '../data/schema.js'
+import { DAY_ITINERARY_CARD_SECTIONS, isFixedSection } from '../data/schema.js'
 
 const ICONS = { map: Map, check: CheckSquare, note: StickyNote, ticket: Ticket, food: Utensils, bed: Bed, bus: Bus, star: Star, people: Users }
 const inputClass = 'border border-[var(--line)] bg-[var(--paper)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
 const SYNC_DEBOUNCE_MS = 2000
-
-function isFixedSection(section) {
-  if (section.type === 'transport' || section.type === 'lodging' || section.type === 'map') return true
-  // "Spiagge e cale" è agganciata per titolo esatto all'Itinerario come
-  // Ristoranti: eliminarla o rinominarla romperebbe quell'aggancio.
-  return section.type === 'cards' && DAY_ITINERARY_CARD_SECTIONS.includes(section.title)
-}
 
 export default function AdminTripEditor({ trip, onBack, onUpdate, onDelete }) {
   const [activeTab, setActiveTab] = useState('info')
@@ -172,7 +165,7 @@ export default function AdminTripEditor({ trip, onBack, onUpdate, onDelete }) {
     }
     const section = {
       id: crypto.randomUUID(),
-      title: sectionForm.title,
+      title: trimmedTitle,
       icon: sectionForm.icon,
       type: sectionForm.type,
       ...(sectionForm.type === 'notes' ? { text: '' } : { items: [] })

@@ -6,7 +6,7 @@ import Btn from '../components/Btn.jsx'
 import Label from '../components/Label.jsx'
 import Modal from '../components/Modal.jsx'
 import Empty from '../components/Empty.jsx'
-import { stampModified, dayItemFieldsForKind, DAY_ITINERARY_CARD_SECTIONS } from '../data/schema.js'
+import { stampModified, dayItemFieldsForKind, isFixedSection, DAY_ITINERARY_CARD_SECTIONS } from '../data/schema.js'
 import ModifiedBy from '../components/ModifiedBy.jsx'
 import CoordsInput from '../components/CoordsInput.jsx'
 import Transport from './Transport.jsx'
@@ -84,14 +84,6 @@ function isValidISODate(value) {
   const d = new Date(`${value}T00:00:00`)
   if (Number.isNaN(d.getTime())) return false
   return d.getFullYear() === y && d.getMonth() === m - 1 && d.getDate() === day
-}
-
-function isFixedSection(section) {
-  if (section.type === 'transport' || section.type === 'lodging' || section.type === 'map') return true
-  // Stessa lista di schema.js/Settings.jsx/AdminTripEditor.jsx: le sezioni
-  // agganciate per titolo esatto all'Itinerario restano fisse come
-  // Ristoranti, altrimenti rinominarle romperebbe l'aggancio in silenzio.
-  return section.type === 'cards' && DAY_ITINERARY_CARD_SECTIONS.includes(section.title)
 }
 
 const inputClass = 'border border-[var(--line)] bg-[var(--card)] rounded-2xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40'
@@ -245,6 +237,7 @@ function SortableCard({ item, onEdit, onRemove, dateBadgeLabel = 'Prenotato' }) 
 
 const Section = forwardRef(function Section({ trip, section, onUpdate, activeDisplayName, onNavigate, syncState }, ref) {
   const [headerForm, setHeaderForm] = useState(null)
+  const [headerError, setHeaderError] = useState('')
   const [cardForm, setCardForm] = useState(null)
   const [checklistText, setChecklistText] = useState('')
   const [notesDraft, setNotesDraft] = useState(section.text ?? '')
@@ -356,7 +349,15 @@ const Section = forwardRef(function Section({ trip, section, onUpdate, activeDis
 
   function saveHeader(e) {
     e.preventDefault()
-    onUpdate((t) => updateSection(t, section.id, (s) => ({ ...s, title: headerForm.title })))
+    const title = headerForm.title.trim()
+    // Una sezione libera non può prendere il titolo esatto di Ristoranti/
+    // Spiagge e cale: altrimenti si aggancerebbe all'Itinerario e diventerebbe
+    // a sua volta fissa (vedi isFixedSection), un comportamento a sorpresa.
+    if (section.type === 'cards' && DAY_ITINERARY_CARD_SECTIONS.includes(title)) {
+      setHeaderError(`"${title}" è già una sezione fissa: scegli un altro titolo.`)
+      return
+    }
+    onUpdate((t) => updateSection(t, section.id, (s) => ({ ...s, title })))
     setHeaderForm(null)
   }
 
@@ -409,7 +410,7 @@ const Section = forwardRef(function Section({ trip, section, onUpdate, activeDis
       <div className="flex items-center justify-between">
         <h2 className="font-display font-semibold text-3xl">{section.title}</h2>
         {!isFixedSection(section) && (
-          <button onClick={() => setHeaderForm({ title: section.title })} aria-label="Rinomina sezione" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
+          <button onClick={() => { setHeaderError(''); setHeaderForm({ title: section.title }) }} aria-label="Rinomina sezione" className="min-h-12 min-w-12 flex items-center justify-center text-[var(--muted)]">
             <EditIcon size={17} />
           </button>
         )}
@@ -561,10 +562,11 @@ const Section = forwardRef(function Section({ trip, section, onUpdate, activeDis
         </Suspense>
       )}
 
-      <Modal open={!!headerForm} title="Rinomina sezione" onClose={() => setHeaderForm(null)}>
+      <Modal open={!!headerForm} title="Rinomina sezione" onClose={() => { setHeaderError(''); setHeaderForm(null) }}>
         {headerForm && (
           <form onSubmit={saveHeader} className="flex flex-col gap-3">
-            <input required value={headerForm.title} onChange={(e) => setHeaderForm({ title: e.target.value })} className={inputClass} />
+            <input required value={headerForm.title} onChange={(e) => { setHeaderError(''); setHeaderForm({ title: e.target.value }) }} className={inputClass} />
+            {headerError && <p className="text-base text-[var(--accent)]">{headerError}</p>}
             <Btn type="submit">Salva</Btn>
           </form>
         )}
